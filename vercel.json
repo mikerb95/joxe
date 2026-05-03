@@ -7,6 +7,9 @@
     { "source": "/lobby",   "destination": "/JOXE Lobby.html" },
     { "source": "/",        "destination": "/JOXE Asesores de Imagen.html" }
   ],
+  "functions": {
+    "api/crm.js": { "memory": 128, "maxDuration": 10 }
+  },
   "headers": [
     {
       "source": "/(.*)\\.jsx",
