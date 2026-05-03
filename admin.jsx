@@ -1,12 +1,23 @@
 // JOXE Admin Portal — Panel de gestión del barbero
 
-// ==================== STORES ====================
+// ==================== STORES (Turso via API + localStorage cache) ====================
 const ADMIN_KEY = "joxe_admin_v1";
 const APPT_KEY  = "joxe_turnos_v1";
-const SES_KEY   = "joxe_admin_session";
+const SES_KEY   = "joxe_admin_session"; // stores the password as session token
 
-const defaultAdmin = () => ({
-  password: "joxe2026",
+// ---- Auth helpers ----
+const getToken  = () => sessionStorage.getItem(SES_KEY) ?? "";
+const isAuthed  = () => !!sessionStorage.getItem(SES_KEY);
+const doLogin   = (pw) => sessionStorage.setItem(SES_KEY, pw);
+const doLogout  = () => sessionStorage.removeItem(SES_KEY);
+
+const adminHeaders = () => ({
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${getToken()}`,
+});
+
+// ---- Admin store (services, revenue, settings) ----
+const DEFAULT_ADMIN = () => ({
   salonName: "JOXE",
   stylists: ["Joxe G.", "Laura M.", "Camila R."],
   cancelledIds: [],
@@ -23,59 +34,110 @@ const defaultAdmin = () => ({
   revenue: [],
 });
 
-const loadAdminData = () => {
+const loadAdminCache = () => {
   try {
     const s = JSON.parse(localStorage.getItem(ADMIN_KEY));
-    if (!s) return defaultAdmin();
-    const d = defaultAdmin();
-    return { ...d, ...s, services: s.services || d.services };
-  } catch { return defaultAdmin(); }
+    const d = DEFAULT_ADMIN();
+    return s ? { ...d, ...s, services: s.services || d.services } : d;
+  } catch { return DEFAULT_ADMIN(); }
 };
-const saveAdminData = (s) => localStorage.setItem(ADMIN_KEY, JSON.stringify(s));
 
 const useAdmin = () => {
-  const [a, setA] = React.useState(loadAdminData);
-  return [a, (fn) => {
-    const next = typeof fn === "function" ? fn(loadAdminData()) : fn;
-    saveAdminData(next);
+  const [a, setA] = React.useState(loadAdminCache);
+
+  const pull = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin", { headers: adminHeaders() });
+      if (res.status === 401) { doLogout(); return; }
+      if (!res.ok) return;
+      const data = await res.json();
+      localStorage.setItem(ADMIN_KEY, JSON.stringify(data));
+      setA(prev => ({ ...prev, ...data }));
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    if (!isAuthed()) return;
+    pull();
+    const t = setInterval(pull, 8000);
+    return () => clearInterval(t);
+  }, [pull]);
+
+  const setAdmin = React.useCallback(async (fn) => {
+    const current = loadAdminCache();
+    const next = typeof fn === "function" ? fn(current) : fn;
     setA(next);
-  }];
+    localStorage.setItem(ADMIN_KEY, JSON.stringify(next));
+    try {
+      await fetch("/api/admin", {
+        method: "POST",
+        headers: adminHeaders(),
+        body: JSON.stringify(next),
+      });
+    } catch (err) {
+      console.warn("[admin] save failed", err.message);
+    }
+  }, []);
+
+  return [a, setAdmin];
 };
 
-const loadAppts = () => {
+// ---- Appointment store (shared with portal) ----
+const DEFAULT_APPTS = () => ({ appointments:[], active:[], completed:[], blockedSlots:[] });
+
+const loadApptCache = () => {
   try {
     const s = JSON.parse(localStorage.getItem(APPT_KEY));
-    return s ? { appointments:[], active:[], completed:[], blockedSlots:[], ...s }
-             : { appointments:[], active:[], completed:[], blockedSlots:[] };
-  } catch { return { appointments:[], active:[], completed:[], blockedSlots:[] }; }
+    return s ? { ...DEFAULT_APPTS(), ...s } : DEFAULT_APPTS();
+  } catch { return DEFAULT_APPTS(); }
 };
-const saveAppts = (s) => {
-  localStorage.setItem(APPT_KEY, JSON.stringify(s));
-  try { new BroadcastChannel("joxe_turnos").postMessage({ type:"update" }); } catch {}
-};
+
 const useAppts = () => {
-  const [s, setS] = React.useState(loadAppts);
+  const [s, setS] = React.useState(loadApptCache);
+
+  const pull = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/store");
+      if (!res.ok) return;
+      const data = await res.json();
+      localStorage.setItem(APPT_KEY, JSON.stringify(data));
+      setS(data);
+    } catch {}
+  }, []);
+
   React.useEffect(() => {
+    pull();
+    const t = setInterval(pull, 5000);
     let bc;
     try {
       bc = new BroadcastChannel("joxe_turnos");
-      const refresh = () => setS(loadAppts());
-      bc.addEventListener("message", refresh);
-      window.addEventListener("storage", refresh);
-      return () => { bc.close(); window.removeEventListener("storage", refresh); };
+      bc.addEventListener("message", pull);
     } catch {}
-  }, []);
-  return [s, (fn) => {
-    const next = typeof fn === "function" ? fn(loadAppts()) : fn;
-    saveAppts(next);
-    setS(next);
-  }];
-};
+    return () => {
+      clearInterval(t);
+      try { bc?.close(); } catch {}
+    };
+  }, [pull]);
 
-// ==================== AUTH ====================
-const isAuthed  = () => sessionStorage.getItem(SES_KEY) === "1";
-const doLogin   = () => sessionStorage.setItem(SES_KEY, "1");
-const doLogout  = () => sessionStorage.removeItem(SES_KEY);
+  const setAppts = React.useCallback(async (fn) => {
+    const current = loadApptCache();
+    const next = typeof fn === "function" ? fn(current) : fn;
+    setS(next);
+    localStorage.setItem(APPT_KEY, JSON.stringify(next));
+    try {
+      await fetch("/api/store", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      try { new BroadcastChannel("joxe_turnos").postMessage({ type:"update" }); } catch {}
+    } catch (err) {
+      console.warn("[appts] save failed", err.message);
+    }
+  }, []);
+
+  return [s, setAppts];
+};
 
 // ==================== HELPERS ====================
 const todayStr = () => new Date().toISOString().split("T")[0];
