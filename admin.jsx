@@ -1001,130 +1001,313 @@ const AppointmentsView = () => {
   );
 };
 
-// ==================== CLIENTS ====================
-const ClientsView = () => {
+// ==================== CRM ====================
+const CrmView = () => {
   const [appts] = useAppts();
   const [admin] = useAdmin();
-  const [search,setSearch] = React.useState("");
-  const [expanded,setExpanded] = React.useState(null);
+  const [crm, setCrm] = useCrm();
+  const [search, setSearch] = React.useState("");
+  const [filter, setFilter] = React.useState("all");
+  const [expanded, setExpanded] = React.useState(null);
+  const [editing, setEditing] = React.useState(null);
+  const [editForm, setEditForm] = React.useState({});
 
-  const all = getAllAppts(appts, admin.cancelledIds||[]);
+  const loyalty = admin.loyalty || { enabled: false, target: 10, reward: "Corte gratis" };
+
+  const all = getAllAppts(appts, admin.cancelledIds || []);
   const byPhone = {};
-  all.filter(a=>a.phone).forEach(a=>{
-    const k = (a.phone||"").replace(/\D/g,"");
-    if (!byPhone[k]) byPhone[k]={name:a.name,phone:a.phone,appts:[]};
+  all.filter(a => a.phone).forEach(a => {
+    const k = (a.phone || "").replace(/\D/g, "");
+    if (!byPhone[k]) byPhone[k] = { name: a.name, phone: k, rawPhone: a.phone, appts: [] };
     byPhone[k].appts.push(a);
-    if (!byPhone[k].name || a.createdAt>=(byPhone[k].latestAt||0)) {
-      byPhone[k].name=a.name; byPhone[k].latestAt=a.createdAt||0;
+    if (a.createdAt >= (byPhone[k].latestAt || 0)) {
+      byPhone[k].name = a.name; byPhone[k].latestAt = a.createdAt || 0;
     }
   });
 
-  const clients = Object.values(byPhone).map(c=>({
-    ...c,
-    totalVisits: c.appts.filter(a=>a.computedStatus==="completed").length,
-    lastVisit: c.appts.filter(a=>a.computedStatus==="completed")
-      .sort((a,b)=>(b.date||"").localeCompare(a.date||""))[0]?.date || null,
-    totalSpent: (admin.revenue||[]).filter(r=>
-      c.appts.some(a=>a.id===r.apptId)
-    ).reduce((s,r)=>s+Number(r.amount||0),0),
-  })).sort((a,b)=>b.appts.length-a.appts.length);
+  const clients = Object.entries(byPhone).map(([phone, base]) => {
+    const cd = crm[phone] || {};
+    const completed = base.appts.filter(a => a.computedStatus === "completed");
+    return {
+      phone, name: base.name, rawPhone: base.rawPhone,
+      email: cd.email || "", birthday: cd.birthday || "", notes: cd.notes || "",
+      loyaltyVisits: cd.loyaltyVisits || 0, loyaltyRedeemed: cd.loyaltyRedeemed || 0,
+      totalVisits: completed.length,
+      lastVisit: completed.sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0]?.date || null,
+      totalSpent: (admin.revenue || []).filter(r => base.appts.some(a => a.id === r.apptId))
+        .reduce((s, r) => s + Number(r.amount || 0), 0),
+      appts: base.appts,
+    };
+  }).sort((a, b) => b.appts.length - a.appts.length);
 
-  const filtered = clients.filter(c=>{
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return c.name.toLowerCase().includes(q) || c.phone.includes(q);
+  const readyCount = loyalty.enabled ? clients.filter(c => c.loyaltyVisits >= loyalty.target).length : 0;
+
+  const filtered = clients.filter(c => {
+    if (filter === "loyalty" && c.loyaltyVisits === 0) return false;
+    if (filter === "ready" && c.loyaltyVisits < loyalty.target) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return c.name.toLowerCase().includes(q) || c.phone.includes(q);
+    }
+    return true;
   });
+
+  const startEdit = (c) => {
+    setEditing(c.phone);
+    setEditForm({ email: c.email, birthday: c.birthday, notes: c.notes });
+  };
+
+  const saveEdit = (phone) => {
+    setCrm(d => ({ ...d, [phone]: { ...(d[phone] || {}), ...editForm, updatedAt: Date.now() } }));
+    setEditing(null);
+  };
+
+  const addVisit = (phone) => setCrm(d => ({
+    ...d, [phone]: { ...(d[phone]||{}), loyaltyVisits:(d[phone]?.loyaltyVisits||0)+1, updatedAt:Date.now() }
+  }));
+
+  const removeVisit = (phone) => {
+    const cur = crm[phone]?.loyaltyVisits || 0;
+    if (cur <= 0) return;
+    setCrm(d => ({ ...d, [phone]: { ...(d[phone]||{}), loyaltyVisits:cur-1, updatedAt:Date.now() } }));
+  };
+
+  const redeem = (phone, c) => {
+    if (!confirm(`¿Canjear "${loyalty.reward}" para ${c.name}?`)) return;
+    setCrm(d => ({
+      ...d, [phone]: {
+        ...(d[phone]||{}),
+        loyaltyVisits: Math.max(0, (d[phone]?.loyaltyVisits||0) - loyalty.target),
+        loyaltyRedeemed: (d[phone]?.loyaltyRedeemed||0) + 1,
+        updatedAt: Date.now(),
+      }
+    }));
+  };
+
+  const LoyaltyDots = ({ visits, target }) => {
+    const dots = Math.min(target, 20);
+    return (
+      <div style={{ display:"flex", gap:3, flexWrap:"wrap", maxWidth:180 }}>
+        {Array.from({length:dots}).map((_,i) => (
+          <div key={i} style={{
+            width:8, height:8,
+            background: i < visits ? (visits >= target ? C.green : C.gold) : C.s3,
+            border: `1px solid ${i < visits ? (visits >= target ? C.green : C.gold) : C.bdr}`,
+            transition:"background 0.2s",
+          }} />
+        ))}
+        {visits > dots && <Mono style={{fontSize:8,color:C.muted}}>+{visits-dots}</Mono>}
+      </div>
+    );
+  };
 
   return (
     <div>
-      <PageHeader title="Clientes" subtitle="Directorio · Historial"
+      <PageHeader title="CRM · Clientes" subtitle="Fidelización · Historial"
         action={
-          <div style={{fontSize:12,color:C.muted,padding:"11px 0"}}>
-            {clients.length} cliente{clients.length!==1?"s":""}
+          <div style={{display:"flex",gap:12,alignItems:"center"}}>
+            {loyalty.enabled && readyCount > 0 && (
+              <span style={{
+                padding:"6px 14px",background:"rgba(102,196,153,0.1)",
+                border:`1px solid ${C.green}40`,color:C.green,
+                fontFamily:"'JetBrains Mono',monospace",fontSize:10,letterSpacing:"0.1em",
+              }}>
+                {readyCount} listo{readyCount!==1?"s":""} para canjear
+              </span>
+            )}
+            <div style={{fontSize:12,color:C.muted}}>{clients.length} cliente{clients.length!==1?"s":""}</div>
           </div>
         }
       />
-      <div style={{padding:"16px 32px"}}>
+
+      <div style={{padding:"16px 32px",borderBottom:`1px solid ${C.bdr}`,display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
         <FieldInput placeholder="Buscar por nombre o teléfono…" value={search}
-          onChange={e=>setSearch(e.target.value)} style={{maxWidth:360,marginBottom:20}} />
+          onChange={e=>setSearch(e.target.value)} style={{minWidth:240,flex:1}} />
+        <div style={{display:"flex",gap:4}}>
+          {[
+            {id:"all",label:"Todos"},
+            {id:"loyalty",label:"Con puntos"},
+            {id:"ready",label:"Para canjear"},
+          ].map(f=>(
+            <button key={f.id} onClick={()=>setFilter(f.id)} style={{
+              padding:"8px 14px",background:filter===f.id?C.gold:"transparent",
+              color:filter===f.id?"#0C0C0C":C.muted,
+              border:`1px solid ${filter===f.id?C.gold:C.bdr}`,
+              cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontSize:11,letterSpacing:"0.08em",
+            }}>{f.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{padding:"16px 32px"}}>
+        {loyalty.enabled && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:16,marginBottom:24}}>
+            <StatCard label="Total clientes" value={String(clients.length).padStart(2,"0")} small />
+            <StatCard label="Con puntos activos" value={String(clients.filter(c=>c.loyaltyVisits>0).length).padStart(2,"0")} small color={C.blue} />
+            <StatCard label="Para canjear" value={String(readyCount).padStart(2,"0")} small color={readyCount>0?C.green:C.muted} />
+            <StatCard label="Canjes totales" value={String(clients.reduce((s,c)=>s+c.loyaltyRedeemed,0)).padStart(2,"0")} small color={C.gold} />
+          </div>
+        )}
 
         {filtered.length===0 ? (
           <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
-            <Mono style={{fontSize:10}}>Sin clientes registrados</Mono>
+            <div style={{fontSize:32,marginBottom:12}}>—</div>
+            <Mono style={{fontSize:10}}>Sin clientes</Mono>
           </div>
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:4}}>
-            {filtered.map((c,i)=>{
+            {filtered.map(c=>{
               const isExp = expanded===c.phone;
+              const isEditing = editing===c.phone;
+              const ready = loyalty.enabled && c.loyaltyVisits >= loyalty.target;
               return (
-                <div key={c.phone} style={{border:`1px solid ${C.bdr}`,background:C.s1}}>
-                  <div onClick={()=>setExpanded(isExp?null:c.phone)}
-                    style={{
-                      display:"grid",gridTemplateColumns:"200px 140px 80px 80px 100px auto",
-                      gap:12,padding:"14px 18px",cursor:"pointer",alignItems:"center",
-                    }}>
+                <div key={c.phone} style={{border:`1px solid ${ready?C.green+"60":C.bdr}`,background:C.s1}}>
+                  <div onClick={()=>setExpanded(isExp?null:c.phone)} style={{
+                    display:"grid",
+                    gridTemplateColumns:loyalty.enabled?"200px 110px 60px 100px 1fr auto":"200px 110px 60px 100px auto",
+                    gap:12,padding:"14px 18px",cursor:"pointer",alignItems:"center",
+                  }}>
                     <div>
                       <div style={{fontSize:14}}>{c.name}</div>
-                      <div style={{fontSize:11,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>
-                        {c.phone}
-                      </div>
+                      <div style={{fontSize:11,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{c.phone}</div>
                     </div>
                     <div style={{fontSize:12,color:C.muted}}>
-                      Última: {c.lastVisit?fmtDateShort(c.lastVisit):"—"}
+                      {c.lastVisit?fmtDateShort(c.lastVisit):"—"}
                     </div>
                     <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:20,fontFamily:"'Marcellus',serif",color:C.gold}}>
-                        {c.totalVisits}
-                      </div>
+                      <div style={{fontSize:20,fontFamily:"'Marcellus',serif",color:C.gold}}>{c.totalVisits}</div>
                       <Mono style={{fontSize:8,color:C.muted}}>visitas</Mono>
                     </div>
-                    <div style={{textAlign:"center"}}>
+                    <div style={{textAlign:"right"}}>
                       <div style={{fontSize:14,color:c.totalSpent>0?C.green:C.muted}}>
                         {c.totalSpent>0?fmtCOP(c.totalSpent):"—"}
                       </div>
                       <Mono style={{fontSize:8,color:C.muted}}>pagado</Mono>
                     </div>
-                    <div style={{textAlign:"center"}}>
-                      <div style={{fontSize:16,fontFamily:"'Marcellus',serif",color:C.muted}}>
-                        {c.appts.length}
+                    {loyalty.enabled && (
+                      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                        <LoyaltyDots visits={c.loyaltyVisits} target={loyalty.target} />
+                        {ready && <Mono style={{fontSize:8,color:C.green}}>✓ {loyalty.reward}</Mono>}
+                        {!ready && c.loyaltyVisits>0 && (
+                          <Mono style={{fontSize:8,color:C.muted}}>{c.loyaltyVisits}/{loyalty.target}</Mono>
+                        )}
                       </div>
-                      <Mono style={{fontSize:8,color:C.muted}}>citas total</Mono>
-                    </div>
+                    )}
                     <span style={{color:C.muted}}>{isExp?"▲":"▼"}</span>
                   </div>
 
                   {isExp && (
-                    <div style={{borderTop:`1px solid ${C.bdr}`,padding:"16px 18px",background:C.s2}}>
-                      <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:12}}>
-                        Historial de citas
-                      </Mono>
-                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                        {c.appts.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(a=>(
-                          <div key={a.id} style={{
-                            display:"grid",gridTemplateColumns:"56px 90px 1fr 120px auto",
-                            gap:12,padding:"10px 12px",background:C.s1,alignItems:"center",
-                          }}>
-                            <Mono style={{color:C.gold,fontSize:10}}>{a.time}</Mono>
-                            <Mono style={{fontSize:9,color:C.muted}}>{fmtDateShort(a.date)}</Mono>
-                            <div style={{fontSize:13}}>{a.service}</div>
-                            <div style={{fontSize:12,color:C.muted}}>{a.stylist}</div>
-                            <Badge status={a.computedStatus}/>
-                          </div>
-                        ))}
-                      </div>
-                      {c.phone && (
-                        <div style={{marginTop:12}}>
-                          <a href={`https://wa.me/57${c.phone.replace(/\D/g,"")}`}
-                            target="_blank" rel="noopener"
-                            style={{
-                              color:"#25D366",textDecoration:"none",
-                              fontFamily:"'Outfit',sans-serif",fontSize:12,
-                              letterSpacing:"0.1em",textTransform:"uppercase",
-                            }}>
-                            Escribir por WhatsApp →
-                          </a>
+                    <div style={{borderTop:`1px solid ${C.bdr}`,padding:"20px 18px",background:C.s2}}>
+                      <div style={{display:"grid",gridTemplateColumns:loyalty.enabled?"1fr 1fr 1.4fr":"1fr 1.8fr",gap:20}}>
+
+                        {/* Perfil */}
+                        <div>
+                          <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>Perfil</Mono>
+                          {isEditing ? (
+                            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                              <FieldInput label="Email" value={editForm.email}
+                                onChange={e=>setEditForm({...editForm,email:e.target.value})}
+                                placeholder="cliente@email.com" />
+                              <FieldInput label="Cumpleaños" type="date" value={editForm.birthday}
+                                onChange={e=>setEditForm({...editForm,birthday:e.target.value})} />
+                              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                                <Mono style={{color:C.muted,fontSize:9}}>Notas</Mono>
+                                <textarea value={editForm.notes}
+                                  onChange={e=>setEditForm({...editForm,notes:e.target.value})}
+                                  placeholder="Preferencias, alergias, estilo…"
+                                  style={{
+                                    background:C.s1,border:`1px solid ${C.bdr}`,color:C.text,
+                                    padding:"10px 12px",fontFamily:"'Outfit',sans-serif",
+                                    fontSize:13,resize:"vertical",minHeight:72,width:"100%",
+                                  }} />
+                              </div>
+                              <div style={{display:"flex",gap:8}}>
+                                <Btn small onClick={()=>saveEdit(c.phone)}>Guardar</Btn>
+                                <Btn small variant="ghost" onClick={()=>setEditing(null)}>Cancelar</Btn>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                              {[["Email",c.email],["Cumpleaños",c.birthday?fmtDateShort(c.birthday):null],["Notas",c.notes]].map(([k,v])=>(
+                                <div key={k}>
+                                  <Mono style={{color:C.muted,fontSize:9,display:"block"}}>{k}</Mono>
+                                  <div style={{fontSize:13,marginTop:2,color:v?C.text:C.muted}}>{v||"—"}</div>
+                                </div>
+                              ))}
+                              <div style={{display:"flex",gap:8,marginTop:4}}>
+                                <Btn small variant="subtle" onClick={()=>startEdit(c)}>✎ Editar</Btn>
+                                {c.rawPhone && (
+                                  <a href={`https://wa.me/57${c.rawPhone.replace(/\D/g,"")}`}
+                                    target="_blank" rel="noopener"
+                                    style={{
+                                      padding:"7px 14px",background:"transparent",
+                                      border:"1px solid rgba(37,211,102,0.3)",color:"#25D366",
+                                      textDecoration:"none",fontFamily:"'Outfit',sans-serif",
+                                      fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",
+                                    }}>WA →</a>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
+
+                        {/* Lealtad */}
+                        {loyalty.enabled && (
+                          <div>
+                            <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>Lealtad</Mono>
+                            <div style={{marginBottom:16}}>
+                              <div style={{fontFamily:"'Marcellus',serif",fontSize:36,color:ready?C.green:C.gold,lineHeight:1}}>
+                                {c.loyaltyVisits}
+                                <span style={{fontSize:18,color:C.muted}}>/{loyalty.target}</span>
+                              </div>
+                              <Mono style={{color:C.muted,fontSize:9}}>visitas acumuladas</Mono>
+                              <div style={{marginTop:10,height:5,background:C.s3,position:"relative"}}>
+                                <div style={{
+                                  position:"absolute",left:0,top:0,bottom:0,
+                                  background:ready?C.green:C.gold,
+                                  width:`${Math.min(c.loyaltyVisits/loyalty.target*100,100)}%`,
+                                  transition:"width 0.3s",
+                                }}/>
+                              </div>
+                              {c.loyaltyRedeemed>0 && (
+                                <div style={{fontSize:11,color:C.muted,marginTop:8}}>
+                                  {c.loyaltyRedeemed} canje{c.loyaltyRedeemed!==1?"s":""} totales
+                                </div>
+                              )}
+                            </div>
+                            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                              {ready && (
+                                <Btn small onClick={()=>redeem(c.phone,c)}
+                                  style={{background:C.green,color:"#0C0C0C",border:"none"}}>
+                                  ✓ Canjear {loyalty.reward}
+                                </Btn>
+                              )}
+                              <div style={{display:"flex",gap:6}}>
+                                <Btn small variant="subtle" onClick={()=>addVisit(c.phone)}>+ Visita</Btn>
+                                <Btn small variant="ghost" onClick={()=>removeVisit(c.phone)}>− Visita</Btn>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Historial */}
+                        <div>
+                          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:12}}>Historial de citas</Mono>
+                          <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:220,overflowY:"auto"}}>
+                            {c.appts.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(a=>(
+                              <div key={a.id} style={{
+                                display:"grid",gridTemplateColumns:"50px 76px 1fr auto",
+                                gap:8,padding:"8px 10px",background:C.s1,alignItems:"center",
+                              }}>
+                                <Mono style={{color:C.gold,fontSize:9}}>{a.time}</Mono>
+                                <Mono style={{fontSize:9,color:C.muted}}>{fmtDateShort(a.date)}</Mono>
+                                <div style={{fontSize:12}}>{a.service}</div>
+                                <Badge status={a.computedStatus}/>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
