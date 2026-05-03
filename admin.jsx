@@ -82,6 +82,57 @@ const useAdmin = () => {
   return [a, setAdmin];
 };
 
+// ---- CRM store (client profiles + loyalty) ----
+const CRM_KEY = "joxe_crm_v1";
+
+const loadCrmCache = () => {
+  try {
+    const s = JSON.parse(localStorage.getItem(CRM_KEY));
+    return s || {};
+  } catch { return {}; }
+};
+
+const useCrm = () => {
+  const [crm, setCrm] = React.useState(loadCrmCache);
+
+  const pull = React.useCallback(async () => {
+    if (!isAuthed()) return;
+    try {
+      const res = await fetch("/api/crm", { headers: adminHeaders() });
+      if (res.status === 401) { doLogout(); return; }
+      if (!res.ok) return;
+      const data = await res.json();
+      localStorage.setItem(CRM_KEY, JSON.stringify(data));
+      setCrm(data);
+    } catch {}
+  }, []);
+
+  React.useEffect(() => {
+    if (!isAuthed()) return;
+    pull();
+    const t = setInterval(pull, 10000);
+    return () => clearInterval(t);
+  }, [pull]);
+
+  const setCrmData = React.useCallback(async (fn) => {
+    const current = loadCrmCache();
+    const next = typeof fn === "function" ? fn(current) : fn;
+    setCrm(next);
+    localStorage.setItem(CRM_KEY, JSON.stringify(next));
+    try {
+      await fetch("/api/crm", {
+        method: "POST",
+        headers: adminHeaders(),
+        body: JSON.stringify(next),
+      });
+    } catch (err) {
+      console.warn("[crm] save failed", err.message);
+    }
+  }, []);
+
+  return [crm, setCrmData];
+};
+
 // ---- Appointment store (shared with portal) ----
 const DEFAULT_APPTS = () => ({ appointments:[], active:[], completed:[], blockedSlots:[] });
 
