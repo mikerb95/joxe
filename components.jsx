@@ -988,6 +988,56 @@ const BookingModal = ({ open, onClose }) => {
 };
 
 // ——————————————————————————————————————————————
+// MAPA DE UBICACIÓN
+// ——————————————————————————————————————————————
+const LocationMap = () => (
+  <section id="ubicacion" style={{ background: "var(--ivory)", color: "var(--noir)" }}>
+    <div style={{
+      maxWidth: 1400, margin: "0 auto",
+      padding: "80px 64px 40px",
+      display: "flex", justifyContent: "space-between",
+      alignItems: "flex-end", flexWrap: "wrap", gap: 24,
+    }}>
+      <div>
+        <Mono style={{ color: "var(--bronze)" }}>06 — Ubicación</Mono>
+        <h2 style={{
+          fontFamily: "var(--display)", fontWeight: 400,
+          fontSize: "clamp(32px, 3.5vw, 52px)", lineHeight: 1.05,
+          margin: "20px 0 0", letterSpacing: "-0.01em",
+        }}>
+          Nos encontrarás<br />
+          <em style={{ color: "var(--bronze)" }}>en San Mateo, Soacha.</em>
+        </h2>
+      </div>
+      <a
+        href="https://www.google.com/maps/place/Joxe+Asesores+De+Imagen/@4.5808563,-74.2037333,17.61z/"
+        target="_blank" rel="noopener noreferrer"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 10,
+          color: "var(--noir)", textDecoration: "none",
+          fontFamily: "var(--sans)", fontSize: 13, letterSpacing: "0.15em",
+          textTransform: "uppercase", padding: "14px 0",
+          borderBottom: "1px solid var(--noir)",
+        }}
+      >
+        Abrir en Google Maps ↗
+      </a>
+    </div>
+    <div style={{ width: "100%", height: "480px", position: "relative" }}>
+      <iframe
+        src="https://maps.google.com/maps?q=4.5808563,-74.2037333&hl=es&z=17&output=embed"
+        width="100%" height="100%"
+        style={{ border: 0, display: "block", filter: "grayscale(20%) contrast(1.05)" }}
+        allowFullScreen=""
+        loading="lazy"
+        referrerPolicy="no-referrer-when-downgrade"
+        title="Ubicación JOXE Asesores de Imagen"
+      />
+    </div>
+  </section>
+);
+
+// ——————————————————————————————————————————————
 // FOOTER
 // ——————————————————————————————————————————————
 const Footer = () => (
@@ -1058,5 +1108,5 @@ const Footer = () => (
 
 Object.assign(window, {
   Nav, Hero, Marquee, Services, Gallery, Testimonials,
-  Philosophy, BookingSection, BookingModal, Footer, Placeholder, Mono,
+  Philosophy, BookingSection, BookingModal, LocationMap, Footer, Placeholder, Mono,
 });
