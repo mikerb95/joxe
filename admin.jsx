@@ -785,15 +785,25 @@ const AppointmentsView = () => {
     setPayForm({
       apptId:appt.id, date:appt.date||todayStr(),
       amount:"", service:appt.service||"", client:appt.name||"",
-      method:"Efectivo", note:"",
+      phone:appt.phone||"", method:"Efectivo", note:"", addLoyalty:true,
     });
   };
 
   const submitPay = () => {
     if (!payForm.amount) return;
+    const {addLoyalty, phone, ...entry} = payForm;
     setAdmin(a=>({...a, revenue:[...a.revenue, {
-      id:genId(), ...payForm, amount:Number(payForm.amount), createdAt:Date.now(),
+      id:genId(), ...entry, amount:Number(entry.amount), createdAt:Date.now(),
     }]}));
+    if (addLoyalty && phone && (admin.loyalty?.enabled)) {
+      const key = phone.replace(/\D/g,"");
+      if (key) {
+        setCrm(d=>({...d, [key]:{...(d[key]||{}),
+          loyaltyVisits:(d[key]?.loyaltyVisits||0)+1,
+          updatedAt:Date.now(),
+        }}));
+      }
+    }
     setPayForm(null);
   };
 
