@@ -2068,7 +2068,7 @@ const AdminPortal = () => {
     dashboard:    DashboardView,
     agenda:       AgendaView,
     appointments: AppointmentsView,
-    clients:      ClientsView,
+    clients:      CrmView,
     blockslots:   BlockSlotsView,
     revenue:      RevenueView,
     services:     ServicesView,
