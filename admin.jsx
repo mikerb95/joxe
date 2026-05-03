@@ -327,7 +327,7 @@ const VIEWS = [
   {id:"dashboard",  label:"Dashboard",       icon:"◈"},
   {id:"agenda",     label:"Agenda",           icon:"▦"},
   {id:"appointments",label:"Citas",           icon:"≡"},
-  {id:"clients",    label:"Clientes",         icon:"◯"},
+  {id:"clients",    label:"CRM · Clientes",    icon:"◯"},
   {id:"blockslots", label:"Bloquear horas",   icon:"⊘"},
   {id:"revenue",    label:"Caja",             icon:"◎"},
   {id:"services",   label:"Servicios",        icon:"✦"},
@@ -1934,6 +1934,51 @@ const SettingsView = () => {
             <FieldInput value={newStylist} onChange={e=>setNewStylist(e.target.value)}
               placeholder="Nombre del estilista" style={{flex:1}} />
             <Btn onClick={addStylist} disabled={!newStylist.trim()}>Agregar</Btn>
+          </div>
+        </Card>
+
+        {/* Loyalty program */}
+        <Card>
+          <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Programa de lealtad</Mono>
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+              <div>
+                <div style={{fontSize:14}}>Acumular visitas para un premio</div>
+                <div style={{fontSize:12,color:C.muted,marginTop:4}}>
+                  Los clientes acumulan visitas y canjean un servicio gratis al llegar al objetivo.
+                </div>
+              </div>
+              <button onClick={()=>setAdmin(a=>({...a,loyalty:{...(a.loyalty||{}),enabled:!(a.loyalty?.enabled)}}))}
+                style={{
+                  padding:"8px 18px",flexShrink:0,
+                  background:admin.loyalty?.enabled?"rgba(102,196,153,0.1)":C.s3,
+                  border:`1px solid ${admin.loyalty?.enabled?C.green+"40":C.bdr}`,
+                  color:admin.loyalty?.enabled?C.green:C.muted,
+                  cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                  fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",
+                }}>
+                {admin.loyalty?.enabled?"Activo":"Inactivo"}
+              </button>
+            </div>
+
+            {admin.loyalty?.enabled && (
+              <>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                  <FieldInput label="Visitas para el premio" type="number"
+                    value={admin.loyalty?.target??10} min="1" max="50"
+                    onChange={e=>setAdmin(a=>({...a,loyalty:{...(a.loyalty||{}),target:Number(e.target.value)||10}}))} />
+                  <FieldInput label="Descripción del premio"
+                    value={admin.loyalty?.reward??"Corte gratis"}
+                    onChange={e=>setAdmin(a=>({...a,loyalty:{...(a.loyalty||{}),reward:e.target.value}}))}
+                    placeholder="Corte gratis" />
+                </div>
+                <div style={{padding:"12px 14px",background:C.s2,border:`1px solid ${C.bdr}`,fontSize:13,color:C.muted}}>
+                  Al llegar a <strong style={{color:C.text}}>{admin.loyalty?.target??10}</strong> visitas acumuladas,
+                  el cliente obtiene: <strong style={{color:C.gold}}>{admin.loyalty?.reward??"Corte gratis"}</strong>.
+                  Puedes sumar o restar visitas manualmente desde el panel CRM.
+                </div>
+              </>
+            )}
           </div>
         </Card>
 
