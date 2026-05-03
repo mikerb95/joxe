@@ -758,6 +758,7 @@ const AgendaView = () => {
 const AppointmentsView = () => {
   const [appts, setAppts] = useAppts();
   const [admin, setAdmin] = useAdmin();
+  const [crm, setCrm] = useCrm();
   const [filter,setFilter] = React.useState({status:"",date:"",search:""});
   const [expandedId,setExpandedId] = React.useState(null);
   const [payForm,setPayForm] = React.useState(null);
