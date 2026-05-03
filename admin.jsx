@@ -971,6 +971,24 @@ const AppointmentsView = () => {
                 <div style={{fontSize:13}}>{payForm.client} · {payForm.service}</div>
                 <div style={{fontSize:11,color:C.muted,marginTop:4}}>{fmtDateShort(payForm.date)}</div>
               </div>
+              {admin.loyalty?.enabled && (
+                <div style={{
+                  display:"flex",alignItems:"center",gap:10,
+                  padding:"10px 14px",background:C.s2,border:`1px solid ${C.bdr}`,
+                  cursor:"pointer",
+                }} onClick={()=>setPayForm(f=>({...f,addLoyalty:!f.addLoyalty}))}>
+                  <input type="checkbox" readOnly checked={payForm.addLoyalty}
+                    style={{accentColor:C.gold,width:15,height:15,pointerEvents:"none"}} />
+                  <div>
+                    <div style={{fontSize:13}}>Contar como visita de lealtad</div>
+                    <div style={{fontSize:10,color:C.muted,marginTop:2}}>
+                      {payForm.addLoyalty
+                        ? `Se sumará 1 visita al cliente`
+                        : "No afectará el contador de lealtad"}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{display:"flex",gap:10,marginTop:24}}>
               <Btn variant="ghost" onClick={()=>setPayForm(null)} style={{flex:1}}>Cancelar</Btn>
