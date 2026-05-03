@@ -272,15 +272,23 @@ const BookingPortal = () => {
               <div>
                 <PMono style={{ display: "block", marginBottom: 12, fontSize: 10 }}>Hora</PMono>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {times.map(t => (
-                    <button key={t} onClick={() => setForm({ ...form, time: t })} style={{
-                      padding: "16px", fontFamily: "'JetBrains Mono', monospace",
-                      background: form.time === t ? "#0C0C0C" : "#FFF",
-                      color: form.time === t ? "#F5F1EA" : "#0C0C0C",
-                      border: `1px solid ${form.time === t ? "#0C0C0C" : "rgba(12,12,12,0.2)"}`,
-                      cursor: "pointer", fontSize: 14,
-                    }}>{t}</button>
-                  ))}
+                  {times.map(t => {
+                    const isBlocked = form.date && (store.blockedSlots || []).some(b => b.date === form.date && b.time === t);
+                    return (
+                      <button key={t} disabled={isBlocked}
+                        onClick={() => !isBlocked && setForm({ ...form, time: t })}
+                        style={{
+                          padding: "16px", fontFamily: "'JetBrains Mono', monospace",
+                          background: isBlocked ? "rgba(12,12,12,0.04)" : form.time === t ? "#0C0C0C" : "#FFF",
+                          color: isBlocked ? "rgba(12,12,12,0.3)" : form.time === t ? "#F5F1EA" : "#0C0C0C",
+                          border: `1px solid ${isBlocked ? "rgba(12,12,12,0.1)" : form.time === t ? "#0C0C0C" : "rgba(12,12,12,0.2)"}`,
+                          cursor: isBlocked ? "not-allowed" : "pointer", fontSize: 14,
+                          textDecoration: isBlocked ? "line-through" : "none",
+                        }}>
+                        {isBlocked ? <><span>{t}</span><br/><span style={{fontSize:9,letterSpacing:"0.1em"}}>NO DISP.</span></> : t}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>
@@ -942,10 +950,17 @@ const HomePortal = () => {
         subtitle="Sistema de turnos"
         title="JOXE · Portal"
         right={
-          <a href="JOXE Asesores de Imagen.html" style={{
-            color: "#F5F1EA", textDecoration: "none", fontSize: 12,
-            letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
-          }}>Sitio web ↗</a>
+          <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+            <a href="JOXE Asesores de Imagen.html" style={{
+              color: "#F5F1EA", textDecoration: "none", fontSize: 12,
+              letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
+            }}>Sitio web ↗</a>
+            <a href="JOXE Admin.html" style={{
+              color: "#C29E66", textDecoration: "none", fontSize: 11,
+              letterSpacing: "0.15em", textTransform: "uppercase",
+              padding: "8px 14px", border: "1px solid rgba(194,158,102,0.4)",
+            }}>Admin ⊛</a>
+          </div>
         }
       />
     }>
