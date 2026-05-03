@@ -405,13 +405,21 @@ const LoginView = ({onSuccess}) => {
   const [err,setErr] = React.useState("");
   const [loading,setLoading] = React.useState(false);
 
-  const attempt = () => {
+  const attempt = async () => {
     setLoading(true);
-    setTimeout(()=>{
-      const admin = loadAdminData();
-      if (pw === admin.password) { doLogin(); onSuccess(); }
+    try {
+      const res  = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      const data = await res.json();
+      if (data.ok) { doLogin(pw); onSuccess(); }
       else { setErr("Contraseña incorrecta. Intenta de nuevo."); setLoading(false); }
-    },400);
+    } catch {
+      setErr("Error de conexión. Verifica tu internet.");
+      setLoading(false);
+    }
   };
 
   return (
@@ -1588,23 +1596,33 @@ const SettingsView = () => {
   const [pwMsg,setPwMsg] = React.useState(null);
   const [newStylist,setNewStylist] = React.useState("");
 
-  const changePw = () => {
-    if (pwForm.current!==admin.password) {
-      setPwMsg({type:"error",text:"Contraseña actual incorrecta."});
+  const changePw = async () => {
+    if (pwForm.newPw.length < 4) {
+      setPwMsg({type:"error", text:"La contraseña debe tener al menos 4 caracteres."});
       return;
     }
-    if (pwForm.newPw.length<4) {
-      setPwMsg({type:"error",text:"La contraseña debe tener al menos 4 caracteres."});
+    if (pwForm.newPw !== pwForm.confirm) {
+      setPwMsg({type:"error", text:"Las contraseñas no coinciden."});
       return;
     }
-    if (pwForm.newPw!==pwForm.confirm) {
-      setPwMsg({type:"error",text:"Las contraseñas no coinciden."});
-      return;
+    // Verify current password via API
+    try {
+      const res  = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pwForm.current }),
+      });
+      const data = await res.json();
+      if (!data.ok) { setPwMsg({type:"error", text:"Contraseña actual incorrecta."}); return; }
+    } catch {
+      setPwMsg({type:"error", text:"Error de conexión al verificar contraseña."}); return;
     }
-    setAdmin(a=>({...a,password:pwForm.newPw}));
-    setPwForm({current:"",newPw:"",confirm:""});
-    setPwMsg({type:"success",text:"Contraseña actualizada correctamente."});
-    setTimeout(()=>setPwMsg(null),3000);
+    // Save new password and update session token so future API calls still work
+    await setAdmin(a => ({ ...a, password: pwForm.newPw }));
+    doLogin(pwForm.newPw);
+    setPwForm({current:"", newPw:"", confirm:""});
+    setPwMsg({type:"success", text:"Contraseña actualizada. Sesión renovada."});
+    setTimeout(() => setPwMsg(null), 4000);
   };
 
   const addStylist = () => {
