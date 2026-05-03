@@ -1,0 +1,65 @@
+import { initTables, kvGet, kvSet } from "./db.js";
+
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+};
+
+const DEFAULT_ADMIN = () => ({
+  salonName: "JOXE",
+  stylists: ["Joxe G.", "Laura M.", "Camila R."],
+  cancelledIds: [],
+  services: [
+    { id: "s1", name: "Corte mujer",        price: 85000,  dur: 60,  active: true },
+    { id: "s2", name: "Corte hombre",       price: 45000,  dur: 40,  active: true },
+    { id: "s3", name: "Balayage",           price: 280000, dur: 180, active: true, note: "desde" },
+    { id: "s4", name: "Color correction",   price: 320000, dur: 240, active: true, note: "desde" },
+    { id: "s5", name: "Color raíz",         price: 120000, dur: 90,  active: true },
+    { id: "s6", name: "Keratina",           price: 260000, dur: 180, active: true, note: "desde" },
+    { id: "s7", name: "Asesoría de imagen", price: 180000, dur: 90,  active: true },
+    { id: "s8", name: "Peinado novia",      price: 220000, dur: 120, active: true, note: "desde" },
+  ],
+  revenue: [],
+});
+
+async function getStoredPassword() {
+  const admin = await kvGet("admin_store");
+  return admin?.password ?? "joxe2026";
+}
+
+async function validateAuth(req) {
+  const auth  = req.headers.authorization ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token) return false;
+  return token === (await getStoredPassword());
+}
+
+export default async function handler(req, res) {
+  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  if (req.method === "OPTIONS") return res.status(200).end();
+
+  try {
+    await initTables();
+
+    if (req.method === "GET") {
+      if (!(await validateAuth(req))) return res.status(401).json({ error: "Unauthorized" });
+      const stored = await kvGet("admin_store");
+      const data   = { ...DEFAULT_ADMIN(), ...(stored || {}) };
+      // Never expose the stored password over the wire
+      const { password: _pw, ...safe } = data;
+      return res.status(200).json(safe);
+    }
+
+    if (req.method === "POST") {
+      if (!(await validateAuth(req))) return res.status(401).json({ error: "Unauthorized" });
+      await kvSet("admin_store", req.body);
+      return res.status(200).json({ ok: true });
+    }
+
+    return res.status(405).json({ error: "Method not allowed" });
+  } catch (err) {
+    console.error("[admin]", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+}
