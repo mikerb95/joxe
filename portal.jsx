@@ -2,41 +2,71 @@
 // Shared store + components
 
 // ============================================================
-// STORE — localStorage + BroadcastChannel
+// STORE — Turso (via /api/store) + localStorage cache
 // ============================================================
 const STORE_KEY = "joxe_turnos_v1";
-const bc = new BroadcastChannel("joxe_turnos");
+const STORE_DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [] });
 
-const loadStore = () => {
+const loadCache = () => {
   try {
     const s = JSON.parse(localStorage.getItem(STORE_KEY));
-    return s ? { appointments: [], active: [], completed: [], blockedSlots: [], ...s }
-             : { appointments: [], active: [], completed: [], blockedSlots: [] };
-  } catch {
-    return { appointments: [], active: [], completed: [], blockedSlots: [] };
-  }
+    return s ? { ...STORE_DEFAULT(), ...s } : STORE_DEFAULT();
+  } catch { return STORE_DEFAULT(); }
 };
-const saveStore = (s) => {
-  localStorage.setItem(STORE_KEY, JSON.stringify(s));
-  bc.postMessage({ type: "update" });
+
+const broadcastUpdate = () => {
+  try { new BroadcastChannel("joxe_turnos").postMessage({ type: "update" }); } catch {}
 };
 
 const useStore = () => {
-  const [store, setStore] = React.useState(loadStore());
-  React.useEffect(() => {
-    const refresh = () => setStore(loadStore());
-    bc.addEventListener("message", refresh);
-    window.addEventListener("storage", refresh);
-    return () => {
-      bc.removeEventListener("message", refresh);
-      window.removeEventListener("storage", refresh);
-    };
+  const [store, setStore] = React.useState(loadCache);
+
+  // Fetch from Turso and update local cache
+  const pull = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/store");
+      if (!res.ok) return;
+      const data = await res.json();
+      localStorage.setItem(STORE_KEY, JSON.stringify(data));
+      setStore(data);
+    } catch {}
   }, []);
-  return [store, (updater) => {
-    const next = typeof updater === "function" ? updater(loadStore()) : updater;
-    saveStore(next);
+
+  React.useEffect(() => {
+    pull();
+    const interval = setInterval(pull, 5000); // live sync every 5 s
+    let bc;
+    try {
+      bc = new BroadcastChannel("joxe_turnos");
+      bc.addEventListener("message", pull);
+    } catch {}
+    window.addEventListener("storage", () => setStore(loadCache()));
+    return () => {
+      clearInterval(interval);
+      try { bc?.close(); } catch {}
+    };
+  }, [pull]);
+
+  const update = React.useCallback(async (updater) => {
+    const current = loadCache();
+    const next = typeof updater === "function" ? updater(current) : updater;
+    // Optimistic: apply immediately
     setStore(next);
-  }];
+    localStorage.setItem(STORE_KEY, JSON.stringify(next));
+    // Persist to Turso
+    try {
+      await fetch("/api/store", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(next),
+      });
+      broadcastUpdate();
+    } catch (err) {
+      console.warn("[store] save failed, using local cache", err.message);
+    }
+  }, []);
+
+  return [store, update];
 };
 
 const genTicket = () => {
