@@ -9,9 +9,11 @@ const bc = new BroadcastChannel("joxe_turnos");
 
 const loadStore = () => {
   try {
-    return JSON.parse(localStorage.getItem(STORE_KEY)) || { appointments: [], active: [], completed: [] };
+    const s = JSON.parse(localStorage.getItem(STORE_KEY));
+    return s ? { appointments: [], active: [], completed: [], blockedSlots: [], ...s }
+             : { appointments: [], active: [], completed: [], blockedSlots: [] };
   } catch {
-    return { appointments: [], active: [], completed: [] };
+    return { appointments: [], active: [], completed: [], blockedSlots: [] };
   }
 };
 const saveStore = (s) => {
