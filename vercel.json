@@ -1,17 +1,23 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/JOXE Asesores de Imagen.html" },
-    { "source": "/admin", "destination": "/JOXE Admin.html" },
-    { "source": "/portal", "destination": "/JOXE Portal.html" },
+    { "source": "/admin",   "destination": "/JOXE Admin.html" },
+    { "source": "/portal",  "destination": "/JOXE Portal.html" },
     { "source": "/booking", "destination": "/JOXE Booking.html" },
-    { "source": "/scan", "destination": "/JOXE Scan.html" },
-    { "source": "/lobby", "destination": "/JOXE Lobby.html" }
+    { "source": "/scan",    "destination": "/JOXE Scan.html" },
+    { "source": "/lobby",   "destination": "/JOXE Lobby.html" },
+    { "source": "/",        "destination": "/JOXE Asesores de Imagen.html" }
   ],
   "headers": [
     {
       "source": "/(.*)\\.jsx",
       "headers": [
         { "key": "Content-Type", "value": "text/plain; charset=utf-8" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
       ]
     }
   ]
