@@ -69,6 +69,7 @@ function App() {
       <Testimonials />
       <Philosophy />
       <BookingSection onReserveClick={() => setReserveOpen(true)} />
+      <LocationMap />
       <Footer />
       <BookingModal open={reserveOpen} onClose={() => setReserveOpen(false)} />
 
