@@ -1510,6 +1510,36 @@ const RevenueView = () => {
     if (r.service) byService[r.service]=(byService[r.service]||0)+Number(r.amount||0);
   });
 
+  // Per-employee stats for current period
+  const byEmployee = {};
+  filtered.forEach(r=>{
+    if (!r.stylist) return;
+    if (!byEmployee[r.stylist]) byEmployee[r.stylist]={total:0,count:0,services:{}};
+    byEmployee[r.stylist].total += Number(r.amount||0);
+    byEmployee[r.stylist].count += 1;
+    if (r.service) byEmployee[r.stylist].services[r.service]=(byEmployee[r.stylist].services[r.service]||0)+1;
+  });
+
+  // Today's entries for day-close summary
+  const todayEntries = revenue.filter(r=>r.date===todayD);
+  const todayTotal   = todayEntries.reduce((s,r)=>s+Number(r.amount||0),0);
+  const todayByEmp   = {};
+  todayEntries.forEach(r=>{
+    if (!r.stylist) {
+      if (!todayByEmp["Sin asignar"]) todayByEmp["Sin asignar"]={total:0,count:0,services:{}};
+      todayByEmp["Sin asignar"].total += Number(r.amount||0);
+      todayByEmp["Sin asignar"].count += 1;
+      if (r.service) todayByEmp["Sin asignar"].services[r.service]=(todayByEmp["Sin asignar"].services[r.service]||0)+1;
+      return;
+    }
+    if (!todayByEmp[r.stylist]) todayByEmp[r.stylist]={total:0,count:0,services:{}};
+    todayByEmp[r.stylist].total += Number(r.amount||0);
+    todayByEmp[r.stylist].count += 1;
+    if (r.service) todayByEmp[r.stylist].services[r.service]=(todayByEmp[r.stylist].services[r.service]||0)+1;
+  });
+  const todayByMethod={};
+  todayEntries.forEach(r=>{ todayByMethod[r.method]=(todayByMethod[r.method]||0)+Number(r.amount||0); });
+
   const submitEntry = () => {
     if (!form.amount||!form.date) return;
     setAdmin(a=>({...a, revenue:[...a.revenue,{
@@ -1535,9 +1565,14 @@ const RevenueView = () => {
     <div>
       <PageHeader title="Caja" subtitle="Ingresos · Pagos"
         action={
-          <Btn onClick={()=>setShowForm(!showForm)}>
-            {showForm?"Cancelar":"+ Registrar ingreso"}
-          </Btn>
+          <div style={{display:"flex",gap:8}}>
+            <Btn variant="ghost" onClick={()=>setShowDaySummary(s=>!s)}>
+              {showDaySummary?"Ocultar cierre":"Cierre del día"}
+            </Btn>
+            <Btn onClick={()=>setShowForm(!showForm)}>
+              {showForm?"Cancelar":"+ Registrar ingreso"}
+            </Btn>
+          </div>
         }
       />
 
