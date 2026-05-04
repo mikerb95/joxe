@@ -636,7 +636,7 @@ const BookingPortal = () => {
           </>
         )}
 
-        {step === 4 && ticket && (
+        {step === 5 && ticket && (
           <div style={{ textAlign: "center", padding: "20px 0" }}>
             <PMono style={{ color: "#C29E66" }}>Paso final — Confirma tu reserva</PMono>
             <h1 style={{
