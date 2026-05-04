@@ -529,7 +529,7 @@ const Gallery = () => {
                   Estilista
                 </Mono>
                 <div style={{ fontFamily: "var(--sans)", fontSize: 14 }}>
-                  Joxe G.
+                  Joxe
                 </div>
               </div>
             </div>
