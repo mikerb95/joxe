@@ -1079,7 +1079,7 @@ const Footer = () => (
         <Mono style={{ color: "var(--bronze)", display: "block", marginBottom: 18 }}>Contacto</Mono>
         <div style={{ display: "flex", flexDirection: "column", gap: 10,
           fontFamily: "var(--sans)", fontSize: 14, opacity: 0.75 }}>
-          <span>+57 300 123 4567</span>
+          <span>+57 312 449 9862</span>
           <span>hola@joxe.co</span>
           <span>San Mateo, Soacha</span>
         </div>
