@@ -437,11 +437,11 @@ const BookingPortal = () => {
               </div>
             </div>
             <div style={{ marginTop: 32, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <a href="JOXE Portal.html" style={{
+              <a href="JOXE Cuenta.html" style={{
                 background: "#0C0C0C", color: "#F5F1EA",
                 padding: "16px 28px", fontSize: 12, letterSpacing: "0.2em",
                 textTransform: "uppercase", textDecoration: "none",
-              }}>Volver al inicio</a>
+              }}>Ver mi cuenta →</a>
               <a href={`JOXE Scan.html#${ticket.id}`} style={{
                 background: "transparent", color: "#0C0C0C",
                 padding: "16px 28px", fontSize: 12, letterSpacing: "0.2em",
@@ -449,6 +449,16 @@ const BookingPortal = () => {
                 border: "1px solid #0C0C0C",
               }}>Simular escaneo →</a>
             </div>
+            <p style={{
+              marginTop: 20, fontSize: 12, color: "rgba(12,12,12,0.45)",
+              textAlign: "center", lineHeight: 1.6,
+            }}>
+              Accede a{" "}
+              <a href="JOXE Cuenta.html" style={{ color: "#0C0C0C", opacity: 0.7 }}>
+                Mi Cuenta
+              </a>{" "}
+              para ver el estado en vivo y tus puntos de lealtad.
+            </p>
           </div>
         )}
 
