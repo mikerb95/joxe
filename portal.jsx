@@ -1681,20 +1681,33 @@ const CuentaPortal = () => {
                         </div>
                       </div>
 
-                      {/* QR toggle — only for upcoming non-live */}
-                      {a.computedStatus === "scheduled" && (
-                        <button onClick={() => setShowQR(isQROpen ? null : a.id)} style={{
-                          background: "transparent",
-                          border: "1px solid rgba(245,241,234,0.15)",
-                          color: "rgba(245,241,234,0.5)", cursor: "pointer",
-                          padding: "8px 16px",
-                          fontFamily: "'Outfit', sans-serif", fontSize: 11,
-                          letterSpacing: "0.1em", textTransform: "uppercase",
-                          whiteSpace: "nowrap",
-                        }}>
-                          {isQROpen ? "Ocultar QR" : "Ver QR ⊡"}
-                        </button>
-                      )}
+                      {/* Actions for upcoming appointments */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+                        {a.computedStatus === "scheduled" && (
+                          <button onClick={() => setShowQR(isQROpen ? null : a.id)} style={{
+                            background: "transparent",
+                            border: "1px solid rgba(245,241,234,0.15)",
+                            color: "rgba(245,241,234,0.5)", cursor: "pointer",
+                            padding: "8px 16px",
+                            fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                            letterSpacing: "0.1em", textTransform: "uppercase",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {isQROpen ? "Ocultar QR" : "Ver QR ⊡"}
+                          </button>
+                        )}
+                        {a.date === todayStr && (a.computedStatus === "scheduled" || a.computedStatus === "waiting") && (
+                          <a href="JOXE CheckIn.html" style={{
+                            background: "rgba(194,158,102,0.12)",
+                            border: "1px solid rgba(194,158,102,0.35)",
+                            color: "#C29E66", textDecoration: "none",
+                            padding: "8px 16px",
+                            fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                            letterSpacing: "0.1em", textTransform: "uppercase",
+                            whiteSpace: "nowrap",
+                          }}>Check-In →</a>
+                        )}
+                      </div>
                     </div>
 
                     {isQROpen && (
