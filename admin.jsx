@@ -340,15 +340,15 @@ const Card = ({children,style}) => (
 
 // ==================== LAYOUT ====================
 const VIEWS = [
-  {id:"dashboard",  label:"Dashboard",       icon:"◈"},
-  {id:"agenda",     label:"Agenda",           icon:"▦"},
-  {id:"appointments",label:"Citas",           icon:"≡"},
-  {id:"clients",    label:"CRM · Clientes",    icon:"◯"},
-  {id:"blockslots", label:"Bloquear horas",   icon:"⊘"},
-  {id:"revenue",    label:"Caja",             icon:"◎"},
-  {id:"employees",  label:"Empleados",        icon:"◉"},
-  {id:"services",   label:"Servicios",        icon:"✦"},
-  {id:"settings",   label:"Configuración",    icon:"⊛"},
+  {id:"dashboard",   label:"Dashboard",       icon:"◈", tooltip:"Resumen general del negocio"},
+  {id:"agenda",      label:"Agenda",           icon:"▦", tooltip:"Vista semanal de citas por estilista"},
+  {id:"appointments",label:"Citas",            icon:"≡", tooltip:"Listado y gestión de todas las citas"},
+  {id:"clients",     label:"CRM · Clientes",   icon:"◯", tooltip:"Perfiles, historial y fidelización de clientes"},
+  {id:"blockslots",  label:"Bloquear horas",   icon:"⊘", tooltip:"Bloquear horarios para evitar reservas"},
+  {id:"revenue",     label:"Caja",             icon:"◎", tooltip:"Registro de ingresos y pagos"},
+  {id:"employees",   label:"Empleados",        icon:"◉", tooltip:"Gestión del equipo y sus PINs"},
+  {id:"services",    label:"Servicios",        icon:"✦", tooltip:"Catálogo de servicios y precios"},
+  {id:"settings",    label:"Configuración",    icon:"⊛", tooltip:"Ajustes generales del salón"},
 ];
 
 const Sidebar = ({active,onNav,onLogout,open,onClose}) => {
