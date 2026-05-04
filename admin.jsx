@@ -43,7 +43,7 @@ const loadAdminCache = () => {
   try {
     const s = JSON.parse(localStorage.getItem(ADMIN_KEY));
     const d = DEFAULT_ADMIN();
-    return s ? { ...d, ...s, services: s.services || d.services } : d;
+    return s ? { ...d, ...s, services: s.services || d.services, employees: s.employees || d.employees } : d;
   } catch { return DEFAULT_ADMIN(); }
 };
 
