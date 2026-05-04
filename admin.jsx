@@ -1603,6 +1603,111 @@ const RevenueView = () => {
         </div>
       )}
 
+      {/* ---- Cierre del día ---- */}
+      {showDaySummary && (
+        <div style={{padding:"24px 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:20}}>
+            <div>
+              <Mono style={{color:C.gold,fontSize:11}}>Cierre del día</Mono>
+              <div style={{fontSize:11,color:C.muted,marginTop:4}}>{fmtDateMed(todayD)}</div>
+            </div>
+            <div style={{fontFamily:"'Marcellus',serif",fontSize:32,color:C.green}}>
+              {fmtCOP(todayTotal)}
+            </div>
+          </div>
+
+          {todayEntries.length===0 ? (
+            <div style={{textAlign:"center",padding:"24px",color:C.muted}}>
+              <Mono style={{fontSize:10}}>Sin ingresos registrados hoy</Mono>
+            </div>
+          ) : (
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {/* Per-employee cards */}
+              <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12}}>
+                {Object.entries(todayByEmp).map(([name,data])=>(
+                  <div key={name} style={{
+                    background:C.s2,border:`1px solid ${C.bdr}`,padding:"16px 18px",
+                  }}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                      <div>
+                        <div style={{fontSize:14,fontFamily:"'Marcellus',serif"}}>{name}</div>
+                        <Mono style={{fontSize:9,color:C.muted}}>{data.count} servicio{data.count!==1?"s":""}</Mono>
+                      </div>
+                      <div style={{fontFamily:"'Marcellus',serif",fontSize:22,color:C.green}}>{fmtCOP(data.total)}</div>
+                    </div>
+                    {Object.entries(data.services).map(([svc,cnt])=>(
+                      <div key={svc} style={{
+                        display:"flex",justifyContent:"space-between",
+                        padding:"4px 0",borderTop:`1px solid ${C.bdr}`,
+                        fontSize:12,
+                      }}>
+                        <span style={{color:C.muted}}>{svc}</span>
+                        <Mono style={{fontSize:10,color:C.text}}>×{cnt}</Mono>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              {/* Totals by method */}
+              <div style={{
+                display:"flex",gap:16,flexWrap:"wrap",padding:"14px 18px",
+                background:C.s2,border:`1px solid ${C.bdr}`,
+              }}>
+                <Mono style={{color:C.muted,fontSize:9,alignSelf:"center",marginRight:8}}>
+                  Por método:
+                </Mono>
+                {Object.entries(todayByMethod).map(([m,v])=>(
+                  <div key={m} style={{display:"flex",gap:8,alignItems:"center"}}>
+                    <span style={{
+                      padding:"2px 8px",fontSize:10,fontFamily:"'JetBrains Mono',monospace",
+                      letterSpacing:"0.1em",textTransform:"uppercase",
+                      background:`${PAY_COLORS[m]||C.gold}15`,
+                      color:PAY_COLORS[m]||C.gold,
+                      border:`1px solid ${PAY_COLORS[m]||C.gold}30`,
+                    }}>{m}</span>
+                    <span style={{fontSize:13,color:C.text}}>{fmtCOP(v)}</span>
+                  </div>
+                ))}
+                <div style={{marginLeft:"auto",fontSize:13,color:C.green}}>
+                  Total: <strong>{fmtCOP(todayTotal)}</strong>
+                </div>
+              </div>
+
+              {/* Summary text for copy */}
+              <div style={{padding:"14px 18px",background:C.bg,border:`1px solid ${C.bdr}`}}>
+                <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>Resumen texto · copiar</Mono>
+                <pre style={{
+                  fontFamily:"'JetBrains Mono',monospace",fontSize:11,
+                  color:C.text,lineHeight:1.7,whiteSpace:"pre-wrap",margin:0,
+                }}>
+{`CIERRE DEL DÍA · ${fmtDateMed(todayD).toUpperCase()}
+${"─".repeat(36)}
+${Object.entries(todayByEmp).map(([n,d])=>
+  `${n.padEnd(18)} ${String(d.count+" svc").padEnd(8)} ${fmtCOP(d.total)}`
+).join("\n")}
+${"─".repeat(36)}
+TOTAL                       ${fmtCOP(todayTotal)}
+${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).join("\n")}`}
+                </pre>
+                <button
+                  onClick={()=>{
+                    const txt=`CIERRE DEL DÍA · ${fmtDateMed(todayD).toUpperCase()}\n${"─".repeat(36)}\n${Object.entries(todayByEmp).map(([n,d])=>`${n.padEnd(18)} ${String(d.count+" svc").padEnd(8)} ${fmtCOP(d.total)}`).join("\n")}\n${"─".repeat(36)}\nTOTAL                       ${fmtCOP(todayTotal)}\n${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).join("\n")}`;
+                    navigator.clipboard?.writeText(txt);
+                  }}
+                  style={{
+                    marginTop:10,padding:"6px 14px",background:C.s3,
+                    border:`1px solid ${C.bdr}`,color:C.muted,cursor:"pointer",
+                    fontFamily:"'JetBrains Mono',monospace",fontSize:9,letterSpacing:"0.1em",
+                    textTransform:"uppercase",
+                  }}
+                >Copiar resumen</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{padding:"24px 32px"}}>
         {/* Period filter */}
         <div style={{display:"flex",gap:4,marginBottom:24}}>
