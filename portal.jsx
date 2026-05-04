@@ -243,29 +243,77 @@ const BookingPortal = () => {
   const employees = catalog.employees;
   const times = TIMES;
 
+  // Employees that offer the currently selected service
+  const eligibleEmployees = React.useMemo(() => {
+    if (!form.serviceId) return employees;
+    return employees.filter(e => (e.services || []).includes(form.serviceId));
+  }, [form.serviceId, employees]);
+
+  // Max bookable date = today + 2
+  const maxDate = addDays(todayStr(), 2);
+  const availableDates = [todayStr(), addDays(todayStr(), 1), addDays(todayStr(), 2)];
+
+  // Check if a time slot is available for a given date + stylist
+  const isSlotTaken = (date, time, stylistName) => {
+    if (!date) return false;
+    const adminBlocked = (store.blockedSlots || []).some(b => b.date === date && b.time === time);
+    if (adminBlocked) return true;
+    const aptsAtSlot = (store.appointments || []).filter(
+      a => a.date === date && a.time === time && !["cancelled"].includes(a.status)
+    );
+    if (stylistName === "Sin preferencia") {
+      // Blocked only if every eligible stylist is taken
+      return eligibleEmployees.every(e => aptsAtSlot.some(a => a.stylist === e.name));
+    }
+    return aptsAtSlot.some(a => a.stylist === stylistName);
+  };
+
   const submit = () => {
+    let assignedStylist = form.stylist;
+    // Assign least-busy eligible stylist when "Sin preferencia"
+    if (form.stylist === "Sin preferencia") {
+      const counts = eligibleEmployees.map(e => ({
+        name: e.name,
+        count: (store.appointments || []).filter(
+          a => a.date === form.date && a.stylist === e.name && !["cancelled"].includes(a.status)
+        ).length,
+      }));
+      const free = counts.filter(e => !isSlotTaken(form.date, form.time, e.name));
+      assignedStylist = free.length > 0
+        ? free.sort((a, b) => a.count - b.count)[0].name
+        : counts.sort((a, b) => a.count - b.count)[0].name;
+    }
     const id = crypto.randomUUID ? crypto.randomUUID() : String(Math.random());
     const code = genTicket();
     const appt = {
-      id, code, ...form,
+      id, code,
+      service: form.service,
+      stylist: assignedStylist,
+      date: form.date,
+      time: form.time,
+      name: form.name,
+      phone: form.phone,
+      cedula: form.cedula,
       createdAt: Date.now(),
       status: "scheduled",
     };
     setStore(s => ({ ...s, appointments: [...s.appointments, appt] }));
     setTicket(appt);
-    setStep(4);
+    setStep(5);
   };
 
-  const canNext = (step === 1 && form.service)
-    || (step === 2 && form.date && form.time && form.stylist)
-    || (step === 3 && form.name && form.phone && form.cedula);
+  const TOTAL_STEPS = 4;
+  const canNext = (step === 1 && !!form.service)
+    || (step === 2 && !!form.stylist)
+    || (step === 3 && !!form.date && !!form.time)
+    || (step === 4 && !!form.name && !!form.phone && !!form.cedula);
 
   return (
     <PortalShell tone="ivory" header={
       <PortalHeader
         tone="ivory"
         subtitle="Portal · Paso"
-        title={step < 4 ? `${step} de 3 — Reservar cita` : "Reserva confirmada"}
+        title={step < 5 ? `${step} de ${TOTAL_STEPS} — Reservar cita` : "Reserva confirmada"}
         right={
           <a href="JOXE Portal.html" style={{
             textDecoration: "none", color: "#0C0C0C",
@@ -277,13 +325,13 @@ const BookingPortal = () => {
       />
     }>
       <main style={{
-        flex: 1, padding: "56px 40px", maxWidth: 880,
+        flex: 1, padding: "56px 40px", maxWidth: 900,
         margin: "0 auto", width: "100%",
       }}>
         {/* Progress bar */}
-        {step < 4 && (
+        {step < 5 && (
           <div style={{ display: "flex", gap: 6, marginBottom: 48 }}>
-            {[1, 2, 3].map(n => (
+            {Array.from({ length: TOTAL_STEPS }, (_, i) => i + 1).map(n => (
               <div key={n} style={{
                 flex: 1, height: 2,
                 background: n <= step ? "#C29E66" : "rgba(12,12,12,0.1)",
@@ -293,34 +341,34 @@ const BookingPortal = () => {
           </div>
         )}
 
+        {/* ── STEP 1: Service ── */}
         {step === 1 && (
           <>
             <PMono style={{ color: "#C29E66" }}>01 — Servicio</PMono>
             <h1 style={{
-              fontFamily: "'Marcellus', serif", fontSize: 56, fontWeight: 400,
+              fontFamily: "'Marcellus', serif", fontSize: 52, fontWeight: 400,
               margin: "20px 0 40px", letterSpacing: "-0.01em", lineHeight: 1.05,
             }}>¿Qué necesitas hoy?</h1>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {services.map(s => {
-                const sel = form.service === s.name;
+                const sel = form.serviceId === s.id;
                 return (
-                  <button key={s.name} onClick={() => setForm({ ...form, service: s.name })} style={{
-                    padding: "22px 24px", textAlign: "left", cursor: "pointer",
-                    background: sel ? "#0C0C0C" : "#FFF",
-                    color: sel ? "#F5F1EA" : "#0C0C0C",
-                    border: `1px solid ${sel ? "#0C0C0C" : "rgba(12,12,12,0.15)"}`,
-                    transition: "all 0.2s",
-                  }}>
-                    <div style={{
-                      fontFamily: "'Marcellus', serif", fontSize: 22,
-                      marginBottom: 6,
-                    }}>{s.name}</div>
+                  <button key={s.id}
+                    onClick={() => setForm({ ...form, service: s.name, serviceId: s.id, stylist: "", stylistId: "", date: "", time: "" })}
+                    style={{
+                      padding: "22px 24px", textAlign: "left", cursor: "pointer",
+                      background: sel ? "#0C0C0C" : "#FFF",
+                      color: sel ? "#F5F1EA" : "#0C0C0C",
+                      border: `1px solid ${sel ? "#0C0C0C" : "rgba(12,12,12,0.15)"}`,
+                      transition: "all 0.2s",
+                    }}>
+                    <div style={{ fontFamily: "'Marcellus', serif", fontSize: 20, marginBottom: 6 }}>{s.name}</div>
                     <div style={{
                       display: "flex", justifyContent: "space-between",
                       fontSize: 12, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace",
                     }}>
                       <span>{s.dur} min</span>
-                      <span>{s.price}</span>
+                      <span>{s.note ? s.note + " " : ""}{fmtCOP(s.price)}</span>
                     </div>
                   </button>
                 );
@@ -329,81 +377,196 @@ const BookingPortal = () => {
           </>
         )}
 
+        {/* ── STEP 2: Stylist ── */}
         {step === 2 && (
           <>
-            <PMono style={{ color: "#C29E66" }}>02 — Fecha, hora y estilista</PMono>
+            <PMono style={{ color: "#C29E66" }}>02 — Tu estilista</PMono>
             <h1 style={{
-              fontFamily: "'Marcellus', serif", fontSize: 56, fontWeight: 400,
-              margin: "20px 0 40px", letterSpacing: "-0.01em", lineHeight: 1.05,
-            }}>Elige tu momento.</h1>
-            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-              <div>
-                <PMono style={{ display: "block", marginBottom: 12, fontSize: 10 }}>Fecha</PMono>
-                <input type="date" value={form.date}
-                  min={new Date().toISOString().split("T")[0]}
-                  onChange={e => setForm({ ...form, date: e.target.value })}
-                  style={{
-                    width: "100%", padding: "18px 20px",
-                    border: "1px solid rgba(12,12,12,0.2)",
-                    fontFamily: "'Outfit', sans-serif", fontSize: 15,
-                    background: "#FFF", color: "#0C0C0C",
-                  }} />
-              </div>
-              <div>
-                <PMono style={{ display: "block", marginBottom: 12, fontSize: 10 }}>Hora</PMono>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
-                  {times.map(t => {
-                    const namedStylists = ["Joxe G.", "Laura M.", "Camila R."];
-                    const aptsAtSlot = form.date
-                      ? (store.appointments || []).filter(a => a.date === form.date && a.time === t && a.status === "scheduled")
-                      : [];
-                    const allBusy = namedStylists.every(s => aptsAtSlot.some(a => a.stylist === s));
-                    const selectedBusy = form.stylist && form.stylist !== "Sin preferencia" && aptsAtSlot.some(a => a.stylist === form.stylist);
-                    const isBlocked = form.date && (
-                      (store.blockedSlots || []).some(b => b.date === form.date && b.time === t) ||
-                      allBusy ||
-                      selectedBusy
-                    );
-                    return (
-                      <button key={t} disabled={isBlocked}
-                        onClick={() => !isBlocked && setForm({ ...form, time: t })}
-                        style={{
-                          padding: "16px", fontFamily: "'JetBrains Mono', monospace",
-                          background: isBlocked ? "rgba(12,12,12,0.04)" : form.time === t ? "#0C0C0C" : "#FFF",
-                          color: isBlocked ? "rgba(12,12,12,0.3)" : form.time === t ? "#F5F1EA" : "#0C0C0C",
-                          border: `1px solid ${isBlocked ? "rgba(12,12,12,0.1)" : form.time === t ? "#0C0C0C" : "rgba(12,12,12,0.2)"}`,
-                          cursor: isBlocked ? "not-allowed" : "pointer", fontSize: 14,
-                          textDecoration: isBlocked ? "line-through" : "none",
-                        }}>
-                        {isBlocked ? <><span>{t}</span><br/><span style={{fontSize:9,letterSpacing:"0.1em"}}>NO DISP.</span></> : t}
-                      </button>
-                    );
-                  })}
+              fontFamily: "'Marcellus', serif", fontSize: 52, fontWeight: 400,
+              margin: "20px 0 12px", letterSpacing: "-0.01em", lineHeight: 1.05,
+            }}>¿Con quién prefieres?</h1>
+            <p style={{ fontSize: 14, color: "rgba(12,12,12,0.55)", marginBottom: 40, fontFamily: "'Outfit',sans-serif" }}>
+              Servicio seleccionado: <strong>{form.service}</strong>
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {/* "Sin preferencia" always shown first */}
+              {(() => {
+                const sp = "Sin preferencia";
+                const sel = form.stylist === sp;
+                return (
+                  <button key={sp}
+                    onClick={() => setForm({ ...form, stylist: sp, stylistId: "", date: "", time: "" })}
+                    style={{
+                      padding: "20px 24px", textAlign: "left", cursor: "pointer",
+                      background: sel ? "#0C0C0C" : "#FFF",
+                      color: sel ? "#F5F1EA" : "#0C0C0C",
+                      border: `2px dashed ${sel ? "#0C0C0C" : "rgba(12,12,12,0.2)"}`,
+                      transition: "all 0.2s", display: "flex", justifyContent: "space-between", alignItems: "center",
+                    }}>
+                    <div>
+                      <div style={{ fontFamily: "'Marcellus', serif", fontSize: 18 }}>Sin preferencia</div>
+                      <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>
+                        Se asignará al profesional con mayor disponibilidad
+                      </div>
+                    </div>
+                    {sel && <span style={{ fontSize: 20 }}>✓</span>}
+                  </button>
+                );
+              })()}
+
+              {eligibleEmployees.map(e => {
+                const sel = form.stylistId === e.id;
+                // Count today's appointments for this stylist (availability hint)
+                const todayApts = (store.appointments || []).filter(
+                  a => a.date === todayStr() && a.stylist === e.name && !["cancelled"].includes(a.status)
+                ).length;
+                const availSlots = availableDates.reduce((acc, d) =>
+                  acc + times.filter(t => !isSlotTaken(d, t, e.name)).length, 0
+                );
+                return (
+                  <button key={e.id}
+                    onClick={() => setForm({ ...form, stylist: e.name, stylistId: e.id, date: "", time: "" })}
+                    style={{
+                      padding: "20px 24px", textAlign: "left", cursor: "pointer",
+                      background: sel ? "#0C0C0C" : "#FFF",
+                      color: sel ? "#F5F1EA" : "#0C0C0C",
+                      border: `1px solid ${sel ? "#0C0C0C" : "rgba(12,12,12,0.2)"}`,
+                      transition: "all 0.2s", display: "flex", justifyContent: "space-between", alignItems: "center",
+                    }}>
+                    <div>
+                      <div style={{ fontFamily: "'Marcellus', serif", fontSize: 20 }}>{e.name}</div>
+                      <div style={{
+                        fontSize: 11, opacity: 0.6, marginTop: 4,
+                        fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.08em",
+                        textTransform: "uppercase",
+                      }}>{e.role}</div>
+                    </div>
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <div style={{
+                        fontSize: 11, fontFamily: "'JetBrains Mono', monospace",
+                        color: sel ? "rgba(245,241,234,0.7)" : availSlots > 0 ? "#2a7a50" : "rgba(12,12,12,0.4)",
+                        letterSpacing: "0.08em",
+                      }}>
+                        {availSlots > 0 ? `${availSlots} turnos libres` : "Sin disponibilidad"}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {eligibleEmployees.length === 0 && (
+                <div style={{
+                  padding: "24px", textAlign: "center",
+                  border: "1px solid rgba(12,12,12,0.1)", color: "rgba(12,12,12,0.5)",
+                  fontFamily: "'Outfit',sans-serif", fontSize: 14,
+                }}>
+                  No hay profesionales disponibles para este servicio en este momento.
                 </div>
-              </div>
-              <div>
-                <PMono style={{ display: "block", marginBottom: 12, fontSize: 10 }}>Estilista</PMono>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  {stylists.map(s => (
-                    <button key={s} onClick={() => setForm({ ...form, stylist: s })} style={{
-                      padding: "16px 20px", textAlign: "left",
-                      background: form.stylist === s ? "#0C0C0C" : "#FFF",
-                      color: form.stylist === s ? "#F5F1EA" : "#0C0C0C",
-                      border: `1px solid ${form.stylist === s ? "#0C0C0C" : "rgba(12,12,12,0.2)"}`,
-                      cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: 14,
-                    }}>{s}</button>
-                  ))}
-                </div>
-              </div>
+              )}
             </div>
           </>
         )}
 
+        {/* ── STEP 3: Agenda (date + time) ── */}
         {step === 3 && (
           <>
-            <PMono style={{ color: "#C29E66" }}>03 — Tus datos</PMono>
+            <PMono style={{ color: "#C29E66" }}>03 — Elige tu momento</PMono>
             <h1 style={{
-              fontFamily: "'Marcellus', serif", fontSize: 56, fontWeight: 400,
+              fontFamily: "'Marcellus', serif", fontSize: 52, fontWeight: 400,
+              margin: "20px 0 12px", letterSpacing: "-0.01em", lineHeight: 1.05,
+            }}>¿Cuándo te vemos?</h1>
+            <p style={{ fontSize: 14, color: "rgba(12,12,12,0.55)", marginBottom: 36, fontFamily: "'Outfit',sans-serif" }}>
+              {form.stylist !== "Sin preferencia" ? form.stylist : "Cualquier profesional"} · {form.service}
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+              {availableDates.map(date => {
+                const isSelectedDate = form.date === date;
+                return (
+                  <div key={date} style={{
+                    border: `1px solid ${isSelectedDate ? "#0C0C0C" : "rgba(12,12,12,0.15)"}`,
+                    background: isSelectedDate ? "rgba(12,12,12,0.03)" : "#FFF",
+                    transition: "border 0.2s",
+                  }}>
+                    {/* Date header */}
+                    <div style={{
+                      padding: "14px 16px", borderBottom: "1px solid rgba(12,12,12,0.1)",
+                      background: isSelectedDate ? "#0C0C0C" : "transparent",
+                      color: isSelectedDate ? "#F5F1EA" : "#0C0C0C",
+                    }}>
+                      <div style={{ fontFamily: "'Marcellus', serif", fontSize: 16 }}>
+                        {fmtDateLabel(date)}
+                      </div>
+                      <div style={{
+                        fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+                        letterSpacing: "0.08em", textTransform: "uppercase",
+                        opacity: 0.6, marginTop: 2,
+                      }}>{fmtDateSub(date)}</div>
+                    </div>
+
+                    {/* Time slots */}
+                    <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+                      {times.map(t => {
+                        const blocked = isSlotTaken(date, t, form.stylist);
+                        const isSelected = form.date === date && form.time === t;
+                        return (
+                          <button key={t}
+                            disabled={blocked}
+                            onClick={() => !blocked && setForm({ ...form, date, time: t })}
+                            style={{
+                              padding: "10px 8px",
+                              fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
+                              background: isSelected ? "#C29E66"
+                                : blocked ? "rgba(12,12,12,0.03)" : "#FFF",
+                              color: isSelected ? "#0C0C0C"
+                                : blocked ? "rgba(12,12,12,0.25)" : "#0C0C0C",
+                              border: `1px solid ${isSelected ? "#C29E66"
+                                : blocked ? "rgba(12,12,12,0.07)" : "rgba(12,12,12,0.15)"}`,
+                              cursor: blocked ? "not-allowed" : "pointer",
+                              textDecoration: blocked ? "line-through" : "none",
+                              transition: "all 0.15s",
+                              letterSpacing: "0.05em",
+                            }}>
+                            {blocked
+                              ? <><span>{t}</span> <span style={{ fontSize: 9 }}>NO DISP.</span></>
+                              : t
+                            }
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {form.date && form.time && (
+              <div style={{
+                marginTop: 24, padding: "14px 20px",
+                background: "#0C0C0C", color: "#F5F1EA",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+              }}>
+                <div>
+                  <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 4 }}>
+                    Turno seleccionado
+                  </PMono>
+                  <div style={{ fontFamily: "'Marcellus', serif", fontSize: 18 }}>
+                    {fmtDateLabel(form.date)} · {form.time}
+                  </div>
+                  <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>{fmtDateSub(form.date)}</div>
+                </div>
+                <div style={{ fontSize: 28, color: "#C29E66" }}>✓</div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── STEP 4: Personal data ── */}
+        {step === 4 && (
+          <>
+            <PMono style={{ color: "#C29E66" }}>04 — Tus datos</PMono>
+            <h1 style={{
+              fontFamily: "'Marcellus', serif", fontSize: 52, fontWeight: 400,
               margin: "20px 0 40px", letterSpacing: "-0.01em", lineHeight: 1.05,
             }}>Un último paso.</h1>
             <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 520 }}>
@@ -420,7 +583,7 @@ const BookingPortal = () => {
               <div>
                 <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>WhatsApp</PMono>
                 <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                  placeholder="300 123 4567"
+                  placeholder="300 123 4567" inputMode="tel"
                   style={{
                     width: "100%", padding: "18px 20px",
                     border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
@@ -430,40 +593,34 @@ const BookingPortal = () => {
               <div>
                 <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>Cédula de ciudadanía</PMono>
                 <input value={form.cedula} onChange={e => setForm({ ...form, cedula: e.target.value.replace(/\D/g, "") })}
-                  placeholder="1234567890"
-                  inputMode="numeric"
+                  placeholder="1234567890" inputMode="numeric"
                   style={{
                     width: "100%", padding: "18px 20px",
                     border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
                     fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: "#0C0C0C",
                     letterSpacing: "0.08em",
                   }} />
-                <div style={{
-                  marginTop: 6, fontSize: 11, color: "rgba(12,12,12,0.45)",
-                  fontFamily: "'Outfit', sans-serif",
-                }}>
+                <div style={{ marginTop: 6, fontSize: 11, color: "rgba(12,12,12,0.45)", fontFamily: "'Outfit', sans-serif" }}>
                   Con tu cédula podrás consultar tu historial de visitas en cualquier momento.
                 </div>
               </div>
-              <div style={{
-                padding: 20, background: "#0C0C0C", color: "#F5F1EA", marginTop: 8,
-              }}>
+
+              {/* Summary card */}
+              <div style={{ padding: 20, background: "#0C0C0C", color: "#F5F1EA" }}>
                 <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 10 }}>
                   Resumen de tu cita
                 </PMono>
-                <div style={{ fontFamily: "'Marcellus', serif", fontSize: 22, lineHeight: 1.4 }}>
-                  {form.service}
+                <div style={{ fontFamily: "'Marcellus', serif", fontSize: 22, lineHeight: 1.4 }}>{form.service}</div>
+                <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, opacity: 0.7, marginTop: 6, letterSpacing: "0.05em" }}>
+                  {fmtDateLabel(form.date)} {fmtDateSub(form.date)} · {form.time}
                 </div>
-                <div style={{
-                  fontFamily: "'JetBrains Mono', monospace", fontSize: 12,
-                  opacity: 0.7, marginTop: 6, letterSpacing: "0.05em",
-                }}>
-                  {form.date} · {form.time} · {form.stylist}
+                <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
+                  {form.stylist}
                 </div>
               </div>
+
               <div style={{
-                padding: "16px 20px",
-                background: "rgba(37,211,102,0.08)",
+                padding: "16px 20px", background: "rgba(37,211,102,0.08)",
                 border: "1px solid rgba(37,211,102,0.3)",
                 display: "flex", gap: 12, alignItems: "flex-start",
               }}>
