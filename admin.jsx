@@ -1578,13 +1578,17 @@ const RevenueView = () => {
 
       {showForm && (
         <div style={{padding:"20px 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,maxWidth:900}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,maxWidth:1000}}>
             <FieldInput label="Fecha" type="date" value={form.date}
               onChange={e=>setForm({...form,date:e.target.value})} />
             <FieldInput label="Monto (COP)" type="number" value={form.amount}
               onChange={e=>setForm({...form,amount:e.target.value})} placeholder="45000" />
-            <FieldInput label="Servicio" value={form.service}
-              onChange={e=>setForm({...form,service:e.target.value})} placeholder="Corte hombre" />
+            <FieldSelect label="Empleado" value={form.stylist}
+              onChange={e=>setForm({...form,stylist:e.target.value})}
+              options={[{value:"",label:"Sin asignar"},...employees.map(e=>({value:e.name,label:`${e.name} · ${e.role}`}))]} />
+            <FieldSelect label="Servicio" value={form.service}
+              onChange={e=>setForm({...form,service:e.target.value})}
+              options={[{value:"",label:"Otro/Manual"},...(admin.services||[]).filter(s=>s.active).map(s=>({value:s.name,label:s.name}))]} />
             <FieldInput label="Cliente" value={form.client}
               onChange={e=>setForm({...form,client:e.target.value})} placeholder="Nombre" />
             <FieldSelect label="Método" value={form.method}
