@@ -2586,21 +2586,27 @@ const SettingsView = () => {
               placeholder="573124499862"
             />
             <FieldInput
-              label="Mensaje del botón (texto al pasar el cursor)"
+              label="Etiqueta del botón (texto al pasar el cursor)"
               value={admin.whatsappMsg||"Escríbenos"}
               onChange={e=>setAdmin(a=>({...a,whatsappMsg:e.target.value}))}
               placeholder="Escríbenos"
+            />
+            <FieldInput
+              label="Mensaje predeterminado al abrir el chat"
+              value={admin.whatsappChatMsg||""}
+              onChange={e=>setAdmin(a=>({...a,whatsappChatMsg:e.target.value}))}
+              placeholder="Hola, me gustaría reservar una cita..."
             />
             <div style={{padding:"12px 14px",background:C.s2,border:`1px solid ${C.bdr}`,fontSize:13,color:C.muted}}>
               El botón flotante apuntará a{" "}
               <strong style={{color:C.text}}>
                 wa.me/{admin.whatsappNumber||"573124499862"}
-              </strong>{" "}
-              y mostrará el texto{" "}
-              <strong style={{color:C.gold}}>
-                "{admin.whatsappMsg||"Escríbenos"}"
-              </strong>{" "}
-              al pasar el cursor.
+              </strong>
+              {admin.whatsappChatMsg ? (
+                <> con el mensaje: <strong style={{color:C.gold}}>"{admin.whatsappChatMsg}"</strong></>
+              ) : (
+                <> sin mensaje predeterminado</>
+              )}.
             </div>
           </div>
         </Card>
