@@ -378,6 +378,24 @@ const BookingPortal = () => {
                     fontFamily: "'Outfit', sans-serif", fontSize: 15, color: "#0C0C0C",
                   }} />
               </div>
+              <div>
+                <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>Cédula de ciudadanía</PMono>
+                <input value={form.cedula} onChange={e => setForm({ ...form, cedula: e.target.value.replace(/\D/g, "") })}
+                  placeholder="1234567890"
+                  inputMode="numeric"
+                  style={{
+                    width: "100%", padding: "18px 20px",
+                    border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: "#0C0C0C",
+                    letterSpacing: "0.08em",
+                  }} />
+                <div style={{
+                  marginTop: 6, fontSize: 11, color: "rgba(12,12,12,0.45)",
+                  fontFamily: "'Outfit', sans-serif",
+                }}>
+                  Con tu cédula podrás consultar tu historial de visitas en cualquier momento.
+                </div>
+              </div>
               <div style={{
                 padding: 20, background: "#0C0C0C", color: "#F5F1EA", marginTop: 8,
               }}>
