@@ -2173,12 +2173,21 @@ const EmployeesView = () => {
                   </div>
                 ) : (
                   <div style={{padding:"18px 20px",background:C.s2}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,maxWidth:500,marginBottom:14}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,maxWidth:680,marginBottom:14}}>
                       <FieldInput label="Nombre" value={editForm.name}
                         onChange={e=>setEditForm({...editForm,name:e.target.value})} />
                       <FieldSelect label="Rol" value={editForm.role}
                         onChange={e=>setEditForm({...editForm,role:e.target.value})}
                         options={ROLES} />
+                      <div>
+                        <FieldInput label="PIN (4–6 dígitos)" type="password"
+                          value={editForm.pin||""}
+                          placeholder="••••"
+                          onChange={e=>setEditForm({...editForm,pin:e.target.value.replace(/\D/g,"").slice(0,6)})} />
+                        <div style={{fontSize:10,color:C.muted,marginTop:4}}>
+                          {editForm.pin ? `${editForm.pin.length} dígitos configurados` : "Sin PIN · no puede iniciar sesión"}
+                        </div>
+                      </div>
                     </div>
                     <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios</Mono>
                     <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>

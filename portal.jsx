@@ -1079,19 +1079,19 @@ const LobbyPortal = () => {
 // ============================================================
 // PAGE 4 — MI CUENTA (cliente)
 // ============================================================
-const ACCT_KEY = "joxe_cuenta_phone";
+const ACCT_KEY = "joxe_cuenta_cedula";
 
 const CuentaPortal = () => {
-  const [phone,    setPhone]    = React.useState(() => localStorage.getItem(ACCT_KEY) || "");
+  const [cedula,   setCedula]   = React.useState(() => localStorage.getItem(ACCT_KEY) || "");
   const [input,    setInput]    = React.useState("");
   const [data,     setData]     = React.useState(null);
   const [loading,  setLoading]  = React.useState(false);
   const [error,    setError]    = React.useState("");
   const [showQR,   setShowQR]   = React.useState(null);
 
-  const fetchData = React.useCallback(async (ph, silent = false) => {
+  const fetchData = React.useCallback(async (cc, silent = false) => {
     try {
-      const res = await fetch(`/api/client?phone=${encodeURIComponent(ph)}`);
+      const res = await fetch(`/api/client?cedula=${encodeURIComponent(cc)}`);
       if (!res.ok) throw new Error("error");
       const d = await res.json();
       setData(d);
@@ -1103,27 +1103,27 @@ const CuentaPortal = () => {
   // Auto-load + live poll
   React.useEffect(() => {
     const saved = localStorage.getItem(ACCT_KEY);
-    if (saved) { setPhone(saved); fetchData(saved, true); }
+    if (saved) { setCedula(saved); fetchData(saved, true); }
   }, [fetchData]);
 
   React.useEffect(() => {
-    if (!phone) return;
-    const t = setInterval(() => fetchData(phone, true), 8000);
+    if (!cedula) return;
+    const t = setInterval(() => fetchData(cedula, true), 8000);
     return () => clearInterval(t);
-  }, [phone, fetchData]);
+  }, [cedula, fetchData]);
 
   const login = async () => {
     const clean = input.replace(/\D/g, "");
-    if (clean.length < 7) { setError("Ingresa un número válido."); return; }
+    if (clean.length < 6) { setError("Ingresa una cédula válida."); return; }
     setLoading(true); setError("");
     await fetchData(clean);
-    setPhone(clean);
+    setCedula(clean);
     localStorage.setItem(ACCT_KEY, clean);
     setLoading(false);
   };
 
   const logout = () => {
-    setPhone(""); setData(null); setInput(""); localStorage.removeItem(ACCT_KEY);
+    setCedula(""); setData(null); setInput(""); localStorage.removeItem(ACCT_KEY);
   };
 
   const todayStr  = new Date().toISOString().split("T")[0];
