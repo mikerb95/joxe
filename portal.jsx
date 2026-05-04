@@ -765,7 +765,7 @@ const BookingPortal = () => {
           </div>
         )}
 
-        {step < 4 && (
+        {step < 5 && (
           <div style={{
             display: "flex", justifyContent: "space-between", marginTop: 48,
           }}>
@@ -775,13 +775,13 @@ const BookingPortal = () => {
               opacity: step > 1 ? 0.7 : 0.3, padding: "18px 0", color: "#0C0C0C",
               fontFamily: "'Outfit', sans-serif",
             }}>← Atrás</button>
-            <button disabled={!canNext} onClick={() => step === 3 ? submit() : setStep(step + 1)} style={{
+            <button disabled={!canNext} onClick={() => step === TOTAL_STEPS ? submit() : setStep(step + 1)} style={{
               background: canNext ? "#0C0C0C" : "rgba(12,12,12,0.2)",
               color: "#F5F1EA", border: "none",
               padding: "18px 36px", cursor: canNext ? "pointer" : "not-allowed",
               fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase",
               fontFamily: "'Outfit', sans-serif",
-            }}>{step === 3 ? "Confirmar reserva" : "Continuar →"}</button>
+            }}>{step === TOTAL_STEPS ? "Confirmar reserva" : "Continuar →"}</button>
           </div>
         )}
       </main>
