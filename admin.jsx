@@ -1483,9 +1483,10 @@ const RevenueView = () => {
   const [showDaySummary,setShowDaySummary] = React.useState(false);
   const [form,setForm] = React.useState({date:todayStr(),amount:"",service:"",client:"",method:"Efectivo",note:"",stylist:""});
 
-  const revenue = admin.revenue||[];
-  const todayD  = todayStr();
-  const now     = new Date();
+  const revenue   = admin.revenue||[];
+  const employees = (admin.employees||[]).filter(e=>e.active);
+  const todayD    = todayStr();
+  const now       = new Date();
   const weekStart = (() => {
     const d=new Date(now); d.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1));
     return d.toISOString().split("T")[0];
