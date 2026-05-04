@@ -260,6 +260,37 @@ const Mono = ({children,style,as:Tag="span"}) => (
   </Tag>
 );
 
+const pseudoQR = (text) => {
+  const size = 25;
+  const grid = Array.from({length:size},()=>Array(size).fill(false));
+  let h = 0;
+  for (let i=0;i<text.length;i++) h=(h*31+text.charCodeAt(i))>>>0;
+  for (let y=0;y<size;y++) for (let x=0;x<size;x++) { h=(h*1103515245+12345)>>>0; grid[y][x]=(h&0xff)<128; }
+  const finder=(cx,cy)=>{
+    for (let y=0;y<7;y++) for (let x=0;x<7;x++) {
+      const on=(x===0||x===6||y===0||y===6)||(x>=2&&x<=4&&y>=2&&y<=4);
+      if(cx+x<size&&cy+y<size) grid[cy+y][cx+x]=on;
+    }
+    for (let y=-1;y<=7;y++) for (let x=-1;x<=7;x++)
+      if(x===-1||x===7||y===-1||y===7) if(cx+x>=0&&cx+x<size&&cy+y>=0&&cy+y<size) grid[cy+y][cx+x]=false;
+  };
+  finder(0,0); finder(size-7,0); finder(0,size-7);
+  return grid;
+};
+
+const QRCode = ({value,size=120,fg=C.text,bg=C.s2}) => {
+  const grid = pseudoQR(value);
+  const cell = size/grid.length;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{display:"block"}}>
+      <rect width={size} height={size} fill={bg}/>
+      {grid.map((row,y)=>row.map((on,x)=>on&&(
+        <rect key={`${x}-${y}`} x={x*cell} y={y*cell} width={cell} height={cell} fill={fg}/>
+      )))}
+    </svg>
+  );
+};
+
 const Btn = ({children,onClick,variant="primary",small,disabled,style}) => {
   const v = {
     primary:{bg:C.gold,color:"#0C0C0C",border:"none"},
