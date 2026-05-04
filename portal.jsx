@@ -666,7 +666,7 @@ const BookingPortal = () => {
                     `🗓️ *Nueva reserva JOXE*`,
                     `Nombre: ${ticket.name}`,
                     `Servicio: ${ticket.service}`,
-                    `Fecha: ${ticket.date} a las ${ticket.time}`,
+                    `Fecha: ${fmtDateLabel(ticket.date)} (${ticket.date}) a las ${ticket.time}`,
                     `Estilista: ${ticket.stylist}`,
                     `Tel: ${ticket.phone}`,
                     ``,
