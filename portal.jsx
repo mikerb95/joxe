@@ -1572,7 +1572,7 @@ const CuentaPortal = () => {
               opacity: 0.15, marginBottom: 16,
             }}>◯</div>
             <div style={{ fontSize: 15, opacity: 0.5, lineHeight: 1.7 }}>
-              No encontramos citas con este número.<br/>
+              No encontramos citas con esta cédula.<br/>
               <a href="JOXE Booking.html" style={{ color: "#C29E66", textDecoration: "none" }}>
                 Reserva tu primera cita →
               </a>
