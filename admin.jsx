@@ -5,11 +5,19 @@ const ADMIN_KEY = "joxe_admin_v1";
 const APPT_KEY  = "joxe_turnos_v1";
 const SES_KEY   = "joxe_admin_session"; // stores the password as session token
 
-// ---- Auth helpers ----
-const getToken  = () => sessionStorage.getItem(SES_KEY) ?? "";
-const isAuthed  = () => !!sessionStorage.getItem(SES_KEY);
-const doLogin   = (pw) => sessionStorage.setItem(SES_KEY, pw);
-const doLogout  = () => sessionStorage.removeItem(SES_KEY);
+const EMP_SES_KEY = "joxe_emp_session"; // { id, name, role } for employee sessions
+
+// ---- Auth helpers — admin ----
+const getToken   = () => sessionStorage.getItem(SES_KEY) ?? "";
+const isAuthed   = () => !!sessionStorage.getItem(SES_KEY);
+const doLogin    = (pw) => sessionStorage.setItem(SES_KEY, pw);
+const doLogout   = () => { sessionStorage.removeItem(SES_KEY); sessionStorage.removeItem(EMP_SES_KEY); };
+
+// ---- Auth helpers — employee ----
+const getEmpSession  = () => { try { return JSON.parse(sessionStorage.getItem(EMP_SES_KEY)); } catch { return null; } };
+const isEmpAuthed    = () => !!sessionStorage.getItem(EMP_SES_KEY);
+const doEmpLogin     = (emp) => sessionStorage.setItem(EMP_SES_KEY, JSON.stringify(emp));
+const doEmpLogout    = () => sessionStorage.removeItem(EMP_SES_KEY);
 
 const adminHeaders = () => ({
   "Content-Type": "application/json",
