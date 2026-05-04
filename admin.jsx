@@ -2024,7 +2024,7 @@ const EmployeesView = () => {
     const stylists = [...(admin.stylists||[])];
     if (!stylists.includes(emp.name)) stylists.push(emp.name);
     setAdmin(a=>({...a, employees:[...(a.employees||[]),emp], stylists}));
-    setNewEmp({name:"",role:"Estilista",services:[]});
+    setNewEmp({name:"",role:"Estilista",services:[],pin:""});
     setShowAdd(false);
   };
 
