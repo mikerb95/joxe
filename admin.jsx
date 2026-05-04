@@ -364,7 +364,7 @@ const Sidebar = ({active,onNav,onLogout,open,onClose}) => {
         {VIEWS.map(v=>{
           const isA = active===v.id;
           return (
-            <button key={v.id} onClick={()=>{onNav(v.id);onClose&&onClose();}} style={{
+            <button key={v.id} title={v.tooltip} onClick={()=>{onNav(v.id);onClose&&onClose();}} style={{
               width:"100%",padding:"10px 12px",display:"flex",alignItems:"center",gap:12,
               background:isA?"rgba(194,158,102,0.1)":"transparent",border:"none",
               borderLeft:`2px solid ${isA?C.gold:"transparent"}`,
