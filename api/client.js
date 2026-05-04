@@ -14,8 +14,9 @@ export default async function handler(req, res) {
   try {
     await initTables();
 
-    const phone = (req.query.phone || "").replace(/\D/g, "");
-    if (!phone) return res.status(400).json({ error: "Missing phone" });
+    const cedula = (req.query.cedula || "").replace(/\D/g, "");
+    const phone  = (req.query.phone  || "").replace(/\D/g, "");
+    if (!cedula && !phone) return res.status(400).json({ error: "Missing cedula or phone" });
 
     const store     = await kvGet("turno_store") || { appointments: [], active: [], completed: [], blockedSlots: [] };
     const adminData = await kvGet("admin_store")  || {};
@@ -25,7 +26,7 @@ export default async function handler(req, res) {
     const completedSet = new Set((store.completed || []).map(a => a.id));
     const cancelledIds = adminData.cancelledIds || [];
 
-    // Merge all lists, deduplicate, filter by phone
+    // Merge all lists, deduplicate, filter by cedula or phone
     const seen = new Set();
     const all  = [
       ...(store.appointments || []),
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
     ].filter(a => {
       if (seen.has(a.id)) return false;
       seen.add(a.id);
+      if (cedula) return (a.cedula || "").replace(/\D/g, "") === cedula;
       return (a.phone || "").replace(/\D/g, "") === phone;
     });
 
@@ -48,7 +50,11 @@ export default async function handler(req, res) {
       return { ...a, computedStatus };
     });
 
-    const clientCrm = crmStore[phone] || {};
+    // CRM/loyalty data is keyed by phone — derive it from found appointments
+    const crmKey    = cedula
+      ? ((all.find(a => a.phone) || {}).phone || "").replace(/\D/g, "")
+      : phone;
+    const clientCrm = crmStore[crmKey] || {};
     const loyalty   = adminData.loyalty?.enabled
       ? {
           enabled:  true,
