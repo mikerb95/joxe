@@ -86,7 +86,7 @@ const Nav = ({ onReserveClick, scrolled }) => {
               opacity: 0.85,
             }}>{label}</a>
           ))}
-          <a href="JOXE CheckIn.html" style={{
+          <a href="CheckIn.html" style={{
             color: "var(--bronze)", textDecoration: "none",
             fontFamily: "var(--sans)", fontSize: 12, letterSpacing: "0.15em",
             textTransform: "uppercase", opacity: 0.9,
@@ -129,7 +129,7 @@ const Nav = ({ onReserveClick, scrolled }) => {
               fontFamily: "var(--display)", fontSize: 34, letterSpacing: "0.02em",
             }}>{label}</a>
           ))}
-          <a href="JOXE CheckIn.html" onClick={() => setOpen(false)} style={{
+          <a href="CheckIn.html" onClick={() => setOpen(false)} style={{
             color: "var(--bronze)", textDecoration: "none",
             fontFamily: "var(--sans)", fontSize: 15, letterSpacing: "0.2em",
             textTransform: "uppercase",

@@ -106,7 +106,7 @@ const PortalHeader = ({ title, subtitle, right, tone = "noir" }) => (
     flexWrap: "wrap", gap: 16,
   }}>
     <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-      <a href="JOXE Portal.html" style={{
+      <a href="Portal.html" style={{
         fontFamily: "'Marcellus', serif", fontSize: 22,
         letterSpacing: "0.3em", textDecoration: "none", color: "inherit",
       }}>JOXE</a>
@@ -315,7 +315,7 @@ const BookingPortal = () => {
         subtitle="Portal · Paso"
         title={step < 5 ? `${step} de ${TOTAL_STEPS} — Reservar cita` : "Reserva confirmada"}
         right={
-          <a href="JOXE Portal.html" style={{
+          <a href="Portal.html" style={{
             textDecoration: "none", color: "#0C0C0C",
             fontFamily: "'Outfit', sans-serif", fontSize: 12,
             letterSpacing: "0.15em", textTransform: "uppercase",
@@ -742,12 +742,12 @@ const BookingPortal = () => {
               </div>
             </div>
             <div style={{ marginTop: 32, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <a href="JOXE Cuenta.html" style={{
+              <a href="Cuenta.html" style={{
                 background: "#0C0C0C", color: "#F5F1EA",
                 padding: "16px 28px", fontSize: 12, letterSpacing: "0.2em",
                 textTransform: "uppercase", textDecoration: "none",
               }}>Ver mi cuenta →</a>
-              <a href={`JOXE Scan.html#${ticket.id}`} style={{
+              <a href={`Scan.html#${ticket.id}`} style={{
                 background: "transparent", color: "#0C0C0C",
                 padding: "16px 28px", fontSize: 12, letterSpacing: "0.2em",
                 textTransform: "uppercase", textDecoration: "none",
@@ -759,7 +759,7 @@ const BookingPortal = () => {
               textAlign: "center", lineHeight: 1.6,
             }}>
               Accede a{" "}
-              <a href="JOXE Cuenta.html" style={{ color: "#0C0C0C", opacity: 0.7 }}>
+              <a href="Cuenta.html" style={{ color: "#0C0C0C", opacity: 0.7 }}>
                 Mi Cuenta
               </a>{" "}
               para ver el estado en vivo y tus puntos de lealtad.
@@ -847,7 +847,7 @@ const ScanPortal = () => {
         subtitle="Recepción · Escaneo"
         title="Activa tu turno"
         right={
-          <a href="JOXE Portal.html" style={{
+          <a href="Portal.html" style={{
             textDecoration: "none", color: "#F5F1EA",
             fontFamily: "'Outfit', sans-serif", fontSize: 12,
             letterSpacing: "0.15em", textTransform: "uppercase",
@@ -1048,7 +1048,7 @@ const ScanPortal = () => {
                     {scanned.name}, toma asiento. Tu nombre aparecerá en la pantalla
                     de sala cuando sea tu turno.
                   </p>
-                  <a href="JOXE Lobby.html" style={{
+                  <a href="Lobby.html" style={{
                     color: "#C29E66", textDecoration: "none",
                     fontFamily: "'Outfit', sans-serif", fontSize: 12,
                     letterSpacing: "0.2em", textTransform: "uppercase",
@@ -1129,7 +1129,7 @@ const LobbyPortal = () => {
               fontSize: 10, letterSpacing: "0.15em", textTransform: "uppercase",
               cursor: "pointer", fontFamily: "'Outfit', sans-serif",
             }}>Reset</button>
-            <a href="JOXE Portal.html" style={{
+            <a href="Portal.html" style={{
               color: "#F5F1EA", textDecoration: "none", fontSize: 12,
               letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
             }}>Inicio</a>
@@ -1352,7 +1352,7 @@ const CuentaPortal = () => {
       <PortalShell tone="noir" header={
         <PortalHeader subtitle="Portal · Cliente" title="Mi Cuenta"
           right={
-            <a href="JOXE Portal.html" style={{
+            <a href="Portal.html" style={{
               color: "#F5F1EA", textDecoration: "none", fontSize: 12,
               letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
             }}>← Inicio</a>
@@ -1412,7 +1412,7 @@ const CuentaPortal = () => {
             </div>
 
             <div style={{ marginTop: 24, textAlign: "center" }}>
-              <a href="JOXE Booking.html" style={{
+              <a href="Booking.html" style={{
                 color: "rgba(245,241,234,0.4)", textDecoration: "none",
                 fontFamily: "'Outfit', sans-serif", fontSize: 12,
                 letterSpacing: "0.15em", textTransform: "uppercase",
@@ -1450,7 +1450,7 @@ const CuentaPortal = () => {
         title={clientName ? clientName.split(" ")[0] : "Mi Cuenta"}
         right={
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-            <a href="JOXE Booking.html" style={{
+            <a href="Booking.html" style={{
               color: "#C29E66", textDecoration: "none", fontSize: 11,
               letterSpacing: "0.15em", textTransform: "uppercase",
               padding: "8px 14px", border: "1px solid rgba(194,158,102,0.4)",
@@ -1507,7 +1507,7 @@ const CuentaPortal = () => {
                 </div>
               )}
             </div>
-            <a href="JOXE Lobby.html" style={{
+            <a href="Lobby.html" style={{
               padding: "12px 20px", background: "transparent",
               border: "1px solid rgba(245,241,234,0.2)", color: "#F5F1EA",
               textDecoration: "none", fontSize: 11, letterSpacing: "0.15em",
@@ -1613,7 +1613,7 @@ const CuentaPortal = () => {
               Próximas citas
               {upcoming.length > 0 && ` · ${upcoming.length}`}
             </PMono>
-            <a href="JOXE Booking.html" style={{
+            <a href="Booking.html" style={{
               color: "rgba(245,241,234,0.4)", textDecoration: "none",
               fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
               fontFamily: "'Outfit', sans-serif",
@@ -1631,7 +1631,7 @@ const CuentaPortal = () => {
               }}>—</div>
               <div style={{ fontSize: 14, opacity: 0.5, lineHeight: 1.7 }}>
                 No tienes citas próximas.<br/>
-                <a href="JOXE Booking.html" style={{ color: "#C29E66", textDecoration: "none" }}>
+                <a href="Booking.html" style={{ color: "#C29E66", textDecoration: "none" }}>
                   Reserva una ahora →
                 </a>
               </div>
@@ -1697,7 +1697,7 @@ const CuentaPortal = () => {
                           </button>
                         )}
                         {a.date === todayStr && (a.computedStatus === "scheduled" || a.computedStatus === "waiting") && (
-                          <a href="JOXE CheckIn.html" style={{
+                          <a href="CheckIn.html" style={{
                             background: "rgba(194,158,102,0.12)",
                             border: "1px solid rgba(194,158,102,0.35)",
                             color: "#C29E66", textDecoration: "none",
@@ -1794,7 +1794,7 @@ const CuentaPortal = () => {
             }}>◯</div>
             <div style={{ fontSize: 15, opacity: 0.5, lineHeight: 1.7 }}>
               No encontramos citas con esta cédula.<br/>
-              <a href="JOXE Booking.html" style={{ color: "#C29E66", textDecoration: "none" }}>
+              <a href="Booking.html" style={{ color: "#C29E66", textDecoration: "none" }}>
                 Reserva tu primera cita →
               </a>
             </div>
@@ -1818,15 +1818,15 @@ const HomePortal = () => {
         title="JOXE · Portal"
         right={
           <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-            <a href="JOXE Asesores de Imagen.html" style={{
+            <a href="Asesores de Imagen.html" style={{
               color: "#F5F1EA", textDecoration: "none", fontSize: 12,
               letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
             }}>Sitio web ↗</a>
-            <a href="JOXE CheckIn.html" style={{
+            <a href="CheckIn.html" style={{
               color: "#F5F1EA", textDecoration: "none", fontSize: 12,
               letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.75,
             }}>Check-In</a>
-            <a href="JOXE Admin.html" style={{
+            <a href="Admin.html" style={{
               color: "#C29E66", textDecoration: "none", fontSize: 11,
               letterSpacing: "0.15em", textTransform: "uppercase",
               padding: "8px 14px", border: "1px solid rgba(194,158,102,0.4)",
@@ -1863,28 +1863,28 @@ const HomePortal = () => {
             {
               n: "01", title: "Agendar cita", subtitle: "Cliente",
               desc: "Elige servicio, fecha y estilista. Recibe tu QR personal.",
-              href: "JOXE Booking.html", cta: "Reservar ahora",
+              href: "Booking.html", cta: "Reservar ahora",
               primary: true,
             },
             {
               n: "02", title: "Mi Cuenta", subtitle: "Cliente",
               desc: "Consulta tus citas, el estado en sala y tus puntos de lealtad.",
-              href: "JOXE Cuenta.html", cta: "Ver mi cuenta",
+              href: "Cuenta.html", cta: "Ver mi cuenta",
             },
             {
               n: "03", title: "Escanear QR", subtitle: "Recepción",
               desc: "Valida el ticket y activa el turno al llegar al salón.",
-              href: "JOXE Scan.html", cta: "Abrir escáner",
+              href: "Scan.html", cta: "Abrir escáner",
             },
             {
               n: "04", title: "Pantalla de sala", subtitle: "Lobby",
               desc: "Muestra la cola en vivo — proyecta en pantalla grande.",
-              href: "JOXE Lobby.html", cta: "Ver sala",
+              href: "Lobby.html", cta: "Ver sala",
             },
             {
               n: "05", title: "Check-In", subtitle: "Cliente · Silla",
               desc: "Escanea el QR de tu silla para confirmar asistencia o cerrar el servicio.",
-              href: "JOXE CheckIn.html", cta: "Ir a Check-In",
+              href: "CheckIn.html", cta: "Ir a Check-In",
             },
           ].map(c => (
             <a key={c.n} href={c.href} style={{
@@ -2030,7 +2030,7 @@ const CheckInPortal = () => {
   };
 
   const headerRight = (
-    <a href="JOXE Portal.html" style={{
+    <a href="Portal.html" style={{
       color: "#F5F1EA", textDecoration: "none", fontSize: 12,
       letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
     }}>← Inicio</a>

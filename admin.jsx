@@ -794,7 +794,7 @@ const DashboardView = ({onNav}) => {
                 {[
                   {label:"+ Bloquear horario",view:"blockslots"},
                   {label:"+ Registrar pago",view:"revenue"},
-                  {label:"Ver cola en vivo →",href:"JOXE Lobby.html"},
+                  {label:"Ver cola en vivo →",href:"Lobby.html"},
                 ].map(item=>(
                   item.href
                     ? <a key={item.label} href={item.href} style={{
@@ -987,7 +987,7 @@ const AppointmentsView = () => {
     <div>
       <PageHeader title="Citas" subtitle="Gestión · Historial"
         action={
-          <a href="JOXE Booking.html" style={{
+          <a href="Booking.html" style={{
             padding:"11px 20px",background:C.gold,color:"#0C0C0C",textDecoration:"none",
             fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.12em",
             textTransform:"uppercase",
@@ -2245,7 +2245,7 @@ const EmployeesView = () => {
                             padding:"10px 14px",wordBreak:"break-all",lineHeight:1.5,
                             marginBottom:12,
                           }}>
-                            {window.location.origin}/JOXE CheckIn.html#chair-{emp.id}
+                            {window.location.origin}/CheckIn.html#chair-{emp.id}
                           </div>
                           <Mono style={{color:C.muted,fontSize:9,display:"block",lineHeight:1.6}}>
                             Pega esta URL en un generador de QR real (ej. qr-code-generator.com) e imprime el código para colocarlo en el espejo de la silla.
@@ -2741,10 +2741,10 @@ const SettingsView = () => {
           <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Accesos rápidos</Mono>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
             {[
-              {label:"Portal de reservas (cliente)",href:"JOXE Booking.html"},
-              {label:"Escáner QR (recepción)",href:"JOXE Scan.html"},
-              {label:"Pantalla de sala (lobby)",href:"JOXE Lobby.html"},
-              {label:"Página principal",href:"JOXE Asesores de Imagen.html"},
+              {label:"Portal de reservas (cliente)",href:"Booking.html"},
+              {label:"Escáner QR (recepción)",href:"Scan.html"},
+              {label:"Pantalla de sala (lobby)",href:"Lobby.html"},
+              {label:"Página principal",href:"Asesores de Imagen.html"},
             ].map(l=>(
               <a key={l.href} href={l.href} target="_blank" rel="noopener" style={{
                 display:"flex",justifyContent:"space-between",alignItems:"center",
