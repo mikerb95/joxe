@@ -31,6 +31,11 @@ const DEFAULT_ADMIN = () => ({
     { id:"s7", name:"Asesoría de imagen", price:180000, dur:90,  active:true },
     { id:"s8", name:"Peinado novia",      price:220000, dur:120, active:true, note:"desde" },
   ],
+  employees: [
+    { id:"e1", name:"Joxe",     role:"Estilista",   services:["s1","s2","s3","s4","s5","s6","s7","s8"], active:true },
+    { id:"e2", name:"Laura M.", role:"Estilista",   services:["s1","s2","s3","s5","s6","s8"], active:true },
+    { id:"e3", name:"Camila R.",role:"Colorista",   services:["s3","s4","s5","s6"], active:true },
+  ],
   revenue: [],
 });
 
