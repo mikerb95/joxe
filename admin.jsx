@@ -1991,7 +1991,7 @@ const EmployeesView = () => {
   const [showAdd,setShowAdd] = React.useState(false);
   const [editId,setEditId] = React.useState(null);
   const [editForm,setEditForm] = React.useState({});
-  const [newEmp,setNewEmp] = React.useState({name:"",role:"Estilista",services:[]});
+  const [newEmp,setNewEmp] = React.useState({name:"",role:"Estilista",services:[],pin:""});
 
   const employees = admin.employees || [];
   const services  = (admin.services||[]).filter(s=>s.active);
