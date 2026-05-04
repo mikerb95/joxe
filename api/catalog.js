@@ -18,9 +18,9 @@ const DEFAULT_SERVICES = [
 ];
 
 const DEFAULT_EMPLOYEES = [
-  { id:"e1", name:"Joxe",      role:"Estilista",  services:["s1","s2","s3","s4","s5","s6","s7","s8"] },
-  { id:"e2", name:"Laura M.",  role:"Estilista",  services:["s1","s2","s3","s5","s6","s8"] },
-  { id:"e3", name:"Camila R.", role:"Colorista",  services:["s3","s4","s5","s6"] },
+  { id:"e1", name:"Joxe",      role:"Estilista",  services:["s1","s2","s3","s4","s5","s6","s7","s8"], active:true },
+  { id:"e2", name:"Laura M.",  role:"Estilista",  services:["s1","s2","s3","s5","s6","s8"], active:true },
+  { id:"e3", name:"Camila R.", role:"Colorista",  services:["s3","s4","s5","s6"], active:true },
 ];
 
 export default async function handler(req, res) {
