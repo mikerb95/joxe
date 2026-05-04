@@ -1115,14 +1115,26 @@ const Footer = () => (
 // ——————————————————————————————————————————————
 // WHATSAPP BLOB
 // ——————————————————————————————————————————————
-const WA_NUMBER = "573124499862";
-const WA_URL = `https://wa.me/${WA_NUMBER}`;
+const WA_DEFAULT_NUMBER = "573124499862";
+const WA_DEFAULT_MSG    = "Escríbenos";
+
+const getWAConfig = () => {
+  try {
+    const stored = JSON.parse(localStorage.getItem("joxe_admin_v1") || "{}");
+    return {
+      number: stored.whatsappNumber || WA_DEFAULT_NUMBER,
+      msg:    stored.whatsappMsg    || WA_DEFAULT_MSG,
+    };
+  } catch { return { number: WA_DEFAULT_NUMBER, msg: WA_DEFAULT_MSG }; }
+};
 
 const WhatsAppBlob = () => {
   const [hovered, setHovered] = React.useState(false);
+  const cfg = getWAConfig();
+  const url = `https://wa.me/${cfg.number}`;
   return (
     <a
-      href={WA_URL}
+      href={url}
       target="_blank"
       rel="noopener noreferrer"
       onMouseEnter={() => setHovered(true)}
@@ -1146,7 +1158,7 @@ const WhatsAppBlob = () => {
           fontFamily: "'Outfit', sans-serif", fontSize: 14,
           fontWeight: 500, letterSpacing: "0.03em",
         }}>
-          Escríbenos
+          {cfg.msg}
         </span>
       )}
     </a>
