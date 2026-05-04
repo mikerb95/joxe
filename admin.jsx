@@ -1513,7 +1513,7 @@ const RevenueView = () => {
     setAdmin(a=>({...a, revenue:[...a.revenue,{
       id:genId(),...form,amount:Number(form.amount),createdAt:Date.now(),
     }]}));
-    setForm({date:todayStr(),amount:"",service:"",client:"",method:"Efectivo",note:""});
+    setForm({date:todayStr(),amount:"",service:"",client:"",method:"Efectivo",note:"",stylist:""});
     setShowForm(false);
   };
 
