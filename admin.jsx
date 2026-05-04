@@ -1732,6 +1732,35 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
           ))}
         </div>
 
+        {/* Employee breakdown */}
+        {Object.keys(byEmployee).length>0 && (
+          <Card style={{marginBottom:24}}>
+            <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Por empleado</Mono>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {Object.entries(byEmployee).sort((a,b)=>b[1].total-a[1].total).map(([name,data])=>(
+                <div key={name} style={{display:"flex",alignItems:"center",gap:12}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13}}>{name}</div>
+                    <Mono style={{fontSize:9,color:C.muted}}>{data.count} svc</Mono>
+                  </div>
+                  <div style={{
+                    height:6,flex:2,background:C.s3,position:"relative",overflow:"hidden",
+                  }}>
+                    <div style={{
+                      position:"absolute",left:0,top:0,bottom:0,
+                      background:C.blue,opacity:0.6,
+                      width:`${Math.round((data.total/total)*100)}%`,
+                    }}/>
+                  </div>
+                  <div style={{fontSize:13,color:C.blue,minWidth:90,textAlign:"right"}}>
+                    {fmtCOP(data.total)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
         {/* Service breakdown */}
         {Object.keys(byService).length>0 && (
           <Card style={{marginBottom:24}}>
