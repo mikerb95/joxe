@@ -2626,15 +2626,497 @@ const SettingsView = () => {
   );
 };
 
+// ==================== EMPLOYEE VIEWS ====================
+
+const EmpDashboardView = ({emp, onNav}) => {
+  const [appts]  = useAppts();
+  const [admin]  = useAdmin();
+  const todayD   = todayStr();
+
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
+  const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
+  const todayAll = myAppts.filter(a=>a.date===todayD);
+  const pending  = myAppts.filter(a=>a.computedStatus==="scheduled"&&!a.confirmedBy);
+  const upcoming = myAppts.filter(a=>a.date>todayD&&a.computedStatus==="scheduled").slice(0,5);
+  const todayRevenue = (admin.revenue||[])
+    .filter(r=>r.date===todayD&&r.stylist===emp.name)
+    .reduce((s,r)=>s+Number(r.amount||0),0);
+
+  return (
+    <div>
+      <PageHeader
+        title={emp.name}
+        subtitle={emp.role+" · Mi panel"}
+      />
+      <div style={{padding:"24px 32px"}}>
+        {/* Stats */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:16,marginBottom:32}}>
+          <StatCard label="Mis citas hoy"
+            value={String(todayAll.filter(a=>!["cancelled","completed"].includes(a.computedStatus)).length).padStart(2,"0")} />
+          <StatCard label="Pendientes confirmar"
+            value={String(pending.length).padStart(2,"0")}
+            color={pending.length>0?C.gold:C.muted} />
+          <StatCard label="Completadas hoy"
+            value={String(todayAll.filter(a=>a.computedStatus==="completed").length).padStart(2,"0")}
+            color={C.green} />
+          <StatCard label="Ingresos hoy"
+            value={todayRevenue>0?fmtCOP(todayRevenue):"$0"}
+            color={todayRevenue>0?C.green:C.muted} small />
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:20}}>
+          {/* Today */}
+          <Card>
+            <Mono style={{color:C.gold,display:"block",marginBottom:16}}>
+              Hoy · {fmtDateMed(todayD)}
+            </Mono>
+            {todayAll.length===0 ? (
+              <div style={{textAlign:"center",padding:"32px 0",color:C.muted}}>
+                <div style={{fontSize:28,marginBottom:8}}>—</div>
+                <Mono style={{fontSize:10}}>Sin citas hoy</Mono>
+              </div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {todayAll.map(a=>(
+                  <div key={a.id} style={{
+                    display:"grid",gridTemplateColumns:"50px 1fr auto",gap:10,
+                    padding:"12px 14px",background:C.s2,alignItems:"center",
+                  }}>
+                    <Mono style={{color:C.gold,fontSize:12}}>{a.time}</Mono>
+                    <div>
+                      <div style={{fontSize:14}}>{a.name}</div>
+                      <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
+                    </div>
+                    <Badge status={a.computedStatus}/>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            {/* Pending confirmation */}
+            {pending.length>0 && (
+              <Card style={{borderColor:C.gold+"40"}}>
+                <Mono style={{color:C.gold,display:"block",marginBottom:12}}>
+                  ⚠ Confirmar · {pending.length}
+                </Mono>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {pending.slice(0,4).map(a=>(
+                    <div key={a.id} style={{
+                      padding:"10px 12px",background:C.s2,border:`1px solid ${C.gold}20`,
+                    }}>
+                      <div style={{fontSize:13}}>{a.name}</div>
+                      <div style={{fontSize:11,color:C.muted}}>{fmtDateShort(a.date)} · {a.time} · {a.service}</div>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={()=>onNav("confirmaciones")} style={{
+                  marginTop:10,width:"100%",padding:"8px",background:"transparent",
+                  border:`1px solid ${C.gold}40`,color:C.gold,cursor:"pointer",
+                  fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.08em",
+                }}>Ver todas →</button>
+              </Card>
+            )}
+
+            {/* Upcoming */}
+            <Card>
+              <Mono style={{color:C.gold,display:"block",marginBottom:12}}>Próximas</Mono>
+              {upcoming.length===0 ? (
+                <div style={{color:C.muted,fontSize:12}}>Sin citas futuras.</div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  {upcoming.map(a=>(
+                    <div key={a.id} style={{
+                      display:"flex",justifyContent:"space-between",alignItems:"center",
+                      padding:"8px 0",borderBottom:`1px solid ${C.bdr}`,
+                    }}>
+                      <div>
+                        <div style={{fontSize:13}}>{a.name}</div>
+                        <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <Mono style={{color:C.gold,fontSize:10}}>{fmtDateShort(a.date)}</Mono>
+                        <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.time}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmpAgendaView = ({emp}) => {
+  const [appts]       = useAppts();
+  const [admin]       = useAdmin();
+  const [weekOffset,setWeekOffset] = React.useState(0);
+  const weekDates     = getWeekDates(weekOffset);
+  const todayD        = todayStr();
+
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
+  const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
+
+  const getSlotAppts = (date, time) =>
+    myAppts.filter(a=>a.date===date&&a.time===time&&a.computedStatus!=="cancelled");
+
+  const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+  return (
+    <div>
+      <PageHeader title="Mi Agenda" subtitle="Semana · Vista"/>
+      <div style={{padding:"24px 32px"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:20}}>
+          <button onClick={()=>setWeekOffset(w=>w-1)} style={{
+            padding:"7px 14px",background:C.s2,border:`1px solid ${C.bdr}`,
+            color:C.text,cursor:"pointer",
+          }}>←</button>
+          <Mono style={{color:C.gold,fontSize:11,flex:1,textAlign:"center"}}>
+            {fmtDateShort(weekDates[0])} — {fmtDateShort(weekDates[5])}
+            {weekOffset===0&&<span style={{color:C.muted}}> · semana actual</span>}
+          </Mono>
+          <button onClick={()=>setWeekOffset(w=>w+1)} style={{
+            padding:"7px 14px",background:C.s2,border:`1px solid ${C.bdr}`,
+            color:C.text,cursor:"pointer",
+          }}>→</button>
+          <button onClick={()=>setWeekOffset(0)} style={{
+            padding:"7px 14px",background:"transparent",border:`1px solid ${C.bdr}`,
+            color:C.muted,cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:9,
+          }}>Hoy</button>
+        </div>
+
+        <div style={{overflowX:"auto"}}>
+          <div style={{display:"grid",gridTemplateColumns:"70px repeat(6,1fr)",minWidth:640}}>
+            {/* Header */}
+            <div/>
+            {weekDates.map((d,i)=>(
+              <div key={d} style={{
+                padding:"10px 8px",textAlign:"center",
+                borderBottom:`2px solid ${d===todayD?C.gold:C.bdr}`,
+              }}>
+                <Mono style={{color:d===todayD?C.gold:C.muted,fontSize:9}}>{DAY_LABELS[i]}</Mono>
+                <div style={{fontSize:15,fontFamily:"'Marcellus',serif",color:d===todayD?C.gold:C.text,marginTop:2}}>
+                  {new Date(d+"T12:00").getDate()}
+                </div>
+              </div>
+            ))}
+
+            {/* Time rows */}
+            {TIMES.map(t=>(
+              <React.Fragment key={t}>
+                <div style={{
+                  padding:"12px 8px",textAlign:"right",
+                  borderRight:`1px solid ${C.bdr}`,
+                }}>
+                  <Mono style={{color:C.muted,fontSize:9}}>{t}</Mono>
+                </div>
+                {weekDates.map(d=>{
+                  const cell = getSlotAppts(d,t);
+                  return (
+                    <div key={d} style={{
+                      minHeight:60,padding:4,
+                      borderBottom:`1px solid ${C.bdr}`,
+                      borderRight:`1px solid ${C.bdr}`,
+                      background:d===todayD?"rgba(194,158,102,0.03)":"transparent",
+                    }}>
+                      {cell.map(a=>(
+                        <div key={a.id} style={{
+                          padding:"5px 8px",marginBottom:3,fontSize:11,
+                          background: a.confirmedBy
+                            ? "rgba(102,196,153,0.15)"
+                            : "rgba(194,158,102,0.12)",
+                          borderLeft:`3px solid ${a.confirmedBy?C.green:C.gold}`,
+                          color:C.text,lineHeight:1.4,
+                        }}>
+                          <div style={{fontWeight:500}}>{a.name}</div>
+                          <div style={{color:C.muted,fontSize:10}}>{a.service}</div>
+                          {a.confirmedBy && <Mono style={{fontSize:8,color:C.green}}>✓ conf</Mono>}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
+  const [appts,setAppts] = useAppts();
+  const [admin]          = useAdmin();
+  const [tab,setTab]     = React.useState(initTab);
+  const [search,setSearch] = React.useState("");
+
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
+  const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
+
+  const filtered = myAppts.filter(a=>{
+    if (tab==="confirmaciones") return a.computedStatus==="scheduled"&&!a.confirmedBy;
+    if (tab==="hoy") return a.date===todayStr();
+    if (search) return a.name?.toLowerCase().includes(search.toLowerCase())||a.service?.toLowerCase().includes(search.toLowerCase());
+    return true;
+  }).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(a.time||"").localeCompare(b.time||""));
+
+  const confirmAppt = async (apptId) => {
+    const confirmInList = (list) => list.map(a=>
+      a.id===apptId ? {...a, confirmedBy:emp.name, confirmedAt:Date.now()} : a
+    );
+    setAppts(s=>({
+      ...s,
+      appointments: confirmInList(s.appointments),
+      active: confirmInList(s.active),
+    }));
+  };
+
+  const rejectAppt = async (apptId) => {
+    if (!confirm("¿Rechazar esta cita? Se marcará como cancelada.")) return;
+    setAppts(s=>({
+      ...s,
+      appointments: s.appointments.map(a=>a.id===apptId?{...a,status:"cancelled"}:a),
+    }));
+  };
+
+  const pendingCount = myAppts.filter(a=>a.computedStatus==="scheduled"&&!a.confirmedBy).length;
+
+  const TABS = [
+    {id:"todas",label:"Todas"},
+    {id:"hoy",label:"Hoy"},
+    {id:"confirmaciones",label:`Confirmar${pendingCount>0?" · "+pendingCount:""}`},
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Mis Citas" subtitle="Historial · Confirmaciones"/>
+      <div style={{padding:"16px 32px",borderBottom:`1px solid ${C.bdr}`}}>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{
+              padding:"8px 18px",background:tab===t.id?C.gold:"transparent",
+              color:tab===t.id?"#0C0C0C":t.id==="confirmaciones"&&pendingCount>0?C.gold:C.muted,
+              border:`1px solid ${tab===t.id?C.gold:t.id==="confirmaciones"&&pendingCount>0?C.gold+"50":C.bdr}`,
+              cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.08em",
+            }}>{t.label}</button>
+          ))}
+          {tab!=="confirmaciones"&&(
+            <FieldInput placeholder="Buscar cliente o servicio…" value={search}
+              onChange={e=>setSearch(e.target.value)} style={{minWidth:220,marginLeft:"auto"}} />
+          )}
+        </div>
+      </div>
+
+      <div style={{padding:"16px 32px"}}>
+        {tab==="confirmaciones"&&filtered.length===0 && (
+          <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
+            <div style={{fontSize:32,marginBottom:8}}>✓</div>
+            <Mono style={{fontSize:10}}>Todas las citas están confirmadas</Mono>
+          </div>
+        )}
+        {tab!=="confirmaciones"&&filtered.length===0 && (
+          <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
+            <div style={{fontSize:32,marginBottom:8}}>—</div>
+            <Mono style={{fontSize:10}}>Sin citas</Mono>
+          </div>
+        )}
+
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {filtered.map(a=>(
+            <div key={a.id} style={{
+              border:`1px solid ${tab==="confirmaciones"?C.gold+"40":C.bdr}`,
+              background:C.s1,
+            }}>
+              <div style={{
+                display:"grid",gridTemplateColumns:"50px 60px 1fr 120px auto",
+                gap:12,padding:"14px 18px",alignItems:"center",
+              }}>
+                <Mono style={{color:C.gold,fontSize:11}}>{a.time||"—"}</Mono>
+                <Mono style={{color:C.muted,fontSize:9}}>{fmtDateShort(a.date)}</Mono>
+                <div>
+                  <div style={{fontSize:14}}>{a.name}</div>
+                  <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
+                  {a.phone&&<div style={{fontSize:11,color:C.muted}}>{a.phone}</div>}
+                </div>
+                <Badge status={a.computedStatus}/>
+                <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                  {a.computedStatus==="scheduled"&&!a.confirmedBy && (
+                    <>
+                      <button onClick={()=>confirmAppt(a.id)} style={{
+                        padding:"7px 16px",background:"rgba(102,196,153,0.1)",
+                        border:`1px solid ${C.green}40`,color:C.green,
+                        cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                        fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",
+                      }}>✓ Confirmar</button>
+                      <button onClick={()=>rejectAppt(a.id)} style={{
+                        padding:"7px 12px",background:"transparent",
+                        border:`1px solid ${C.red}30`,color:C.red,
+                        cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                        fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",
+                      }}>✕</button>
+                    </>
+                  )}
+                  {a.confirmedBy && (
+                    <Mono style={{fontSize:9,color:C.green}}>✓ Confirmada</Mono>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ---- Employee Shell ----
+const EMP_VIEWS = [
+  {id:"dashboard",     label:"Mi Resumen",     icon:"◈"},
+  {id:"agenda",        label:"Mi Agenda",       icon:"▦"},
+  {id:"confirmaciones",label:"Confirmar citas", icon:"◉"},
+  {id:"todas",         label:"Mis Citas",       icon:"≡"},
+];
+
+const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
+  const [mobileOpen,setMobileOpen] = React.useState(false);
+  const pendingAppts = (() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(APPT_KEY));
+      const d = s ? {...DEFAULT_APPTS(),...s} : DEFAULT_APPTS();
+      const a = JSON.parse(localStorage.getItem(ADMIN_KEY));
+      const cancelled = a?.cancelledIds||[];
+      return getAllAppts(d,cancelled).filter(x=>x.stylist===emp.name&&x.computedStatus==="scheduled"&&!x.confirmedBy).length;
+    } catch { return 0; }
+  })();
+
+  const navContent = (
+    <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
+      <div style={{padding:"28px 24px",borderBottom:`1px solid ${C.bdr}`}}>
+        <div style={{fontFamily:"'Marcellus',serif",fontSize:18,letterSpacing:"0.25em",color:C.text}}>
+          {emp.name}
+        </div>
+        <Mono style={{
+          color:C.gold,fontSize:9,display:"inline-block",marginTop:6,
+          padding:"2px 8px",background:"rgba(194,158,102,0.1)",
+          border:`1px solid ${C.gold}30`,
+        }}>{emp.role}</Mono>
+      </div>
+      <nav style={{flex:1,padding:"12px 10px",overflowY:"auto"}}>
+        {EMP_VIEWS.map(v=>{
+          const isA = activeView===v.id;
+          const hasBadge = v.id==="confirmaciones"&&pendingAppts>0;
+          return (
+            <button key={v.id} onClick={()=>{onNav(v.id);setMobileOpen(false);}} style={{
+              display:"flex",alignItems:"center",gap:12,
+              width:"100%",padding:"11px 14px",marginBottom:2,
+              background:isA?"rgba(194,158,102,0.1)":"transparent",
+              border:`1px solid ${isA?C.gold+"30":"transparent"}`,
+              color:isA?C.gold:C.muted,cursor:"pointer",textAlign:"left",
+              fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.08em",textTransform:"uppercase",
+            }}>
+              <span style={{fontSize:14,opacity:0.8}}>{v.icon}</span>
+              <span style={{flex:1}}>{v.label}</span>
+              {hasBadge&&<span style={{
+                padding:"1px 7px",fontSize:9,
+                background:"rgba(194,158,102,0.2)",color:C.gold,
+                fontFamily:"'JetBrains Mono',monospace",
+              }}>{pendingAppts}</span>}
+            </button>
+          );
+        })}
+      </nav>
+      <div style={{padding:"16px 24px",borderTop:`1px solid ${C.bdr}`}}>
+        <button onClick={onLogout} style={{
+          width:"100%",padding:"10px",background:"transparent",
+          border:`1px solid ${C.bdr}`,color:C.muted,cursor:"pointer",
+          fontFamily:"'Outfit',sans-serif",fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",
+        }}>Cerrar sesión</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{display:"flex",height:"100vh",background:C.bg,color:C.text,fontFamily:"'Outfit',sans-serif"}}>
+      {/* Desktop sidebar */}
+      <div style={{
+        width:220,flexShrink:0,borderRight:`1px solid ${C.bdr}`,
+        display:"flex",flexDirection:"column",
+      }} className="admin-sidebar-desktop">
+        {navContent}
+      </div>
+
+      {/* Mobile sidebar */}
+      {mobileOpen && (
+        <div style={{position:"fixed",inset:0,zIndex:100,display:"flex"}}>
+          <div style={{width:240,background:C.bg,borderRight:`1px solid ${C.bdr}`,height:"100%"}}>
+            {navContent}
+          </div>
+          <div style={{flex:1,background:"rgba(0,0,0,0.5)"}} onClick={()=>setMobileOpen(false)}/>
+        </div>
+      )}
+
+      <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        {/* Mobile topbar */}
+        <div style={{
+          padding:"12px 20px",borderBottom:`1px solid ${C.bdr}`,
+          display:"flex",alignItems:"center",justifyContent:"space-between",
+        }} className="admin-topbar-mobile">
+          <button onClick={()=>setMobileOpen(true)} style={{
+            background:"none",border:"none",color:C.text,cursor:"pointer",fontSize:20,
+          }}>☰</button>
+          <Mono style={{color:C.gold,fontSize:10}}>{emp.name}</Mono>
+          <button onClick={onLogout} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:11}}>✕</button>
+        </div>
+        <main style={{flex:1,overflowY:"auto"}}>
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};
+
 // ==================== ROOT ====================
 const AdminPortal = () => {
-  const [authed,setAuthed] = React.useState(isAuthed);
-  const [view,setView]   = React.useState("dashboard");
+  const [authed,setAuthed]   = React.useState(isAuthed);
+  const [empSes,setEmpSes]   = React.useState(getEmpSession);
+  const [view,setView]       = React.useState("dashboard");
 
-  const logout = () => { doLogout(); setAuthed(false); };
+  const isAdmin = authed;
+  const isEmp   = !authed && !!empSes;
 
-  if (!authed) return <LoginView onSuccess={()=>setAuthed(true)} />;
+  const logout = () => {
+    doLogout(); doEmpLogout();
+    setAuthed(false); setEmpSes(null);
+  };
 
+  if (!isAdmin && !isEmp) return (
+    <LoginView
+      onAdminSuccess={()=>setAuthed(true)}
+      onEmpSuccess={(e)=>setEmpSes(e)}
+    />
+  );
+
+  // --- Employee portal ---
+  if (isEmp) {
+    const EmpViewComponent = {
+      dashboard:      (p)=><EmpDashboardView      {...p} emp={empSes} onNav={setView}/>,
+      agenda:         (p)=><EmpAgendaView          {...p} emp={empSes}/>,
+      confirmaciones: (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="confirmaciones"/>,
+      todas:          (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="todas"/>,
+    }[view] || ((p)=><EmpDashboardView {...p} emp={empSes} onNav={setView}/>);
+    return (
+      <EmpShell emp={empSes} onLogout={logout} activeView={view} onNav={setView}>
+        <EmpViewComponent />
+      </EmpShell>
+    );
+  }
+
+  // --- Admin portal ---
   const ViewComponent = {
     dashboard:    DashboardView,
     agenda:       AgendaView,

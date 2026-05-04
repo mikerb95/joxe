@@ -177,7 +177,7 @@ const BookingPortal = () => {
   const [store, setStore] = useStore();
   const [step, setStep] = React.useState(1);
   const [form, setForm] = React.useState({
-    service: "", stylist: "", date: "", time: "", name: "", phone: "",
+    service: "", stylist: "", date: "", time: "", name: "", phone: "", cedula: "",
   });
   const [ticket, setTicket] = React.useState(null);
 
