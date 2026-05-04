@@ -970,6 +970,514 @@ const LobbyPortal = () => {
 };
 
 // ============================================================
+// PAGE 4 — MI CUENTA (cliente)
+// ============================================================
+const ACCT_KEY = "joxe_cuenta_phone";
+
+const CuentaPortal = () => {
+  const [phone,    setPhone]    = React.useState(() => localStorage.getItem(ACCT_KEY) || "");
+  const [input,    setInput]    = React.useState("");
+  const [data,     setData]     = React.useState(null);
+  const [loading,  setLoading]  = React.useState(false);
+  const [error,    setError]    = React.useState("");
+  const [showQR,   setShowQR]   = React.useState(null);
+
+  const fetchData = React.useCallback(async (ph, silent = false) => {
+    try {
+      const res = await fetch(`/api/client?phone=${encodeURIComponent(ph)}`);
+      if (!res.ok) throw new Error("error");
+      const d = await res.json();
+      setData(d);
+    } catch {
+      if (!silent) setError("No pudimos conectarnos. Intenta de nuevo.");
+    }
+  }, []);
+
+  // Auto-load + live poll
+  React.useEffect(() => {
+    const saved = localStorage.getItem(ACCT_KEY);
+    if (saved) { setPhone(saved); fetchData(saved, true); }
+  }, [fetchData]);
+
+  React.useEffect(() => {
+    if (!phone) return;
+    const t = setInterval(() => fetchData(phone, true), 8000);
+    return () => clearInterval(t);
+  }, [phone, fetchData]);
+
+  const login = async () => {
+    const clean = input.replace(/\D/g, "");
+    if (clean.length < 7) { setError("Ingresa un número válido."); return; }
+    setLoading(true); setError("");
+    await fetchData(clean);
+    setPhone(clean);
+    localStorage.setItem(ACCT_KEY, clean);
+    setLoading(false);
+  };
+
+  const logout = () => {
+    setPhone(""); setData(null); setInput(""); localStorage.removeItem(ACCT_KEY);
+  };
+
+  const todayStr  = new Date().toISOString().split("T")[0];
+  const fmtDate   = d => !d ? "—" : new Date(d + "T12:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
+  const fmtShort  = d => !d ? "—" : new Date(d + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" });
+
+  const STATUS = {
+    scheduled:   { label: "Agendada",      color: "#C29E66",              bg: "rgba(194,158,102,0.1)"  },
+    waiting:     { label: "En sala",        color: "#8ab0ff",              bg: "rgba(138,176,255,0.1)"  },
+    "in-service":{ label: "¡En silla!",    color: "#66C499",              bg: "rgba(102,196,153,0.15)" },
+    completed:   { label: "Completada",     color: "rgba(245,241,234,0.4)", bg: "rgba(245,241,234,0.05)"},
+    cancelled:   { label: "Cancelada",      color: "#C46666",              bg: "rgba(196,102,102,0.1)"  },
+  };
+
+  // ── LOGIN SCREEN ──────────────────────────────────────────
+  if (!phone || !data) {
+    return (
+      <PortalShell tone="noir" header={
+        <PortalHeader subtitle="Portal · Cliente" title="Mi Cuenta"
+          right={
+            <a href="JOXE Portal.html" style={{
+              color: "#F5F1EA", textDecoration: "none", fontSize: 12,
+              letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
+            }}>← Inicio</a>
+          }
+        />
+      }>
+        <main style={{
+          flex: 1, display: "flex", alignItems: "center",
+          justifyContent: "center", padding: "48px 20px",
+        }}>
+          <div style={{ width: "100%", maxWidth: 440 }}>
+            <PMono style={{ color: "#C29E66" }}>Tu espacio personal</PMono>
+            <h1 style={{
+              fontFamily: "'Marcellus', serif", fontSize: "clamp(36px, 7vw, 52px)",
+              fontWeight: 400, margin: "16px 0 12px",
+              letterSpacing: "-0.01em", lineHeight: 1.1,
+            }}>Bienvenido de vuelta.</h1>
+            <p style={{ fontSize: 15, opacity: 0.6, lineHeight: 1.6, marginBottom: 40 }}>
+              Ingresa tu número de WhatsApp para ver tus citas y puntos de lealtad.
+            </p>
+
+            <div style={{
+              background: "#141212", border: "1px solid rgba(245,241,234,0.1)", padding: 32,
+            }}>
+              <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 10 }}>
+                Número de WhatsApp
+              </PMono>
+              <input
+                value={input}
+                onChange={e => { setInput(e.target.value); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && login()}
+                placeholder="300 123 4567"
+                type="tel"
+                style={{
+                  width: "100%", padding: "18px 20px",
+                  background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
+                  color: "#F5F1EA", fontFamily: "'Outfit', sans-serif", fontSize: 16,
+                }}
+              />
+              {error && (
+                <div style={{ marginTop: 10, fontSize: 12, color: "#C46666" }}>{error}</div>
+              )}
+              <button
+                onClick={login}
+                disabled={loading || !input.trim()}
+                style={{
+                  width: "100%", marginTop: 16, padding: "18px",
+                  background: loading || !input.trim() ? "rgba(194,158,102,0.2)" : "#C29E66",
+                  color: "#0C0C0C", border: "none",
+                  fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  letterSpacing: "0.2em", textTransform: "uppercase",
+                  cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+                }}>
+                {loading ? "Buscando…" : "Ver mis citas →"}
+              </button>
+            </div>
+
+            <div style={{ marginTop: 24, textAlign: "center" }}>
+              <a href="JOXE Booking.html" style={{
+                color: "rgba(245,241,234,0.4)", textDecoration: "none",
+                fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                letterSpacing: "0.15em", textTransform: "uppercase",
+              }}>¿Primera vez? Reservar cita →</a>
+            </div>
+          </div>
+        </main>
+      </PortalShell>
+    );
+  }
+
+  // ── ACCOUNT SCREEN ────────────────────────────────────────
+  const appts  = data.appointments || [];
+  const loyalty = data.loyalty;
+
+  const clientName = appts.length > 0
+    ? appts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0]?.name || ""
+    : "";
+
+  const upcoming = appts
+    .filter(a => !["cancelled","completed"].includes(a.computedStatus)
+      && (a.date >= todayStr || a.computedStatus === "waiting" || a.computedStatus === "in-service"))
+    .sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.time || "").localeCompare(b.time || ""));
+
+  const history = appts
+    .filter(a => ["completed","cancelled"].includes(a.computedStatus))
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+  const liveAppt = appts.find(a => a.computedStatus === "waiting" || a.computedStatus === "in-service");
+
+  return (
+    <PortalShell tone="noir" header={
+      <PortalHeader
+        subtitle="Mi Cuenta · JOXE"
+        title={clientName ? clientName.split(" ")[0] : "Mi Cuenta"}
+        right={
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <a href="JOXE Booking.html" style={{
+              color: "#C29E66", textDecoration: "none", fontSize: 11,
+              letterSpacing: "0.15em", textTransform: "uppercase",
+              padding: "8px 14px", border: "1px solid rgba(194,158,102,0.4)",
+            }}>+ Nueva cita</a>
+            <button onClick={logout} style={{
+              background: "transparent", border: "none",
+              color: "rgba(245,241,234,0.4)", cursor: "pointer",
+              fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
+              fontFamily: "'Outfit', sans-serif",
+            }}>Salir</button>
+          </div>
+        }
+      />
+    }>
+      <main style={{
+        flex: 1, padding: "40px", maxWidth: 900,
+        margin: "0 auto", width: "100%",
+        display: "flex", flexDirection: "column", gap: 40,
+      }}>
+
+        {/* Live status banner */}
+        {liveAppt && (
+          <div style={{
+            padding: "20px 28px",
+            background: liveAppt.computedStatus === "in-service"
+              ? "rgba(102,196,153,0.07)" : "rgba(138,176,255,0.06)",
+            border: `1px solid ${liveAppt.computedStatus === "in-service"
+              ? "rgba(102,196,153,0.35)" : "rgba(138,176,255,0.3)"}`,
+            display: "flex", justifyContent: "space-between",
+            alignItems: "center", gap: 20, flexWrap: "wrap",
+            animation: "fadeIn 0.4s ease",
+          }}>
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <div style={{
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: liveAppt.computedStatus === "in-service" ? "#66C499" : "#8ab0ff",
+                  animation: "pulse 2s ease-in-out infinite",
+                }} />
+                <PMono style={{
+                  fontSize: 10,
+                  color: liveAppt.computedStatus === "in-service" ? "#66C499" : "#8ab0ff",
+                }}>
+                  {liveAppt.computedStatus === "in-service"
+                    ? "¡Estás en silla ahora!" : "Estás en sala · en espera"}
+                </PMono>
+              </div>
+              <div style={{ fontFamily: "'Marcellus', serif", fontSize: 28 }}>
+                {liveAppt.service}
+              </div>
+              {liveAppt.stylist && (
+                <div style={{ fontSize: 13, opacity: 0.55, marginTop: 4 }}>
+                  {liveAppt.stylist}
+                </div>
+              )}
+            </div>
+            <a href="JOXE Lobby.html" style={{
+              padding: "12px 20px", background: "transparent",
+              border: "1px solid rgba(245,241,234,0.2)", color: "#F5F1EA",
+              textDecoration: "none", fontSize: 11, letterSpacing: "0.15em",
+              textTransform: "uppercase", fontFamily: "'Outfit', sans-serif",
+            }}>Ver sala →</a>
+          </div>
+        )}
+
+        {/* Loyalty card */}
+        {loyalty && loyalty.enabled && (
+          <div style={{
+            background: "#141212",
+            border: `1px solid ${loyalty.visits >= loyalty.target
+              ? "rgba(102,196,153,0.3)" : "rgba(245,241,234,0.1)"}`,
+            padding: "28px 32px",
+          }}>
+            <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 20 }}>
+              Programa de lealtad · {loyalty.reward}
+            </PMono>
+            <div style={{
+              display: "grid", gridTemplateColumns: "auto 1fr",
+              gap: 32, alignItems: "center",
+            }} className="appt-grid">
+              <div>
+                <div style={{
+                  fontFamily: "'Marcellus', serif",
+                  fontSize: "clamp(48px, 8vw, 72px)",
+                  color: loyalty.visits >= loyalty.target ? "#66C499" : "#C29E66",
+                  lineHeight: 1,
+                }}>
+                  {loyalty.visits}
+                  <span style={{ fontSize: "0.4em", color: "rgba(245,241,234,0.35)" }}>
+                    /{loyalty.target}
+                  </span>
+                </div>
+                {loyalty.redeemed > 0 && (
+                  <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.35)", display: "block", marginTop: 8 }}>
+                    {loyalty.redeemed} canje{loyalty.redeemed !== 1 ? "s" : ""} previos
+                  </PMono>
+                )}
+              </div>
+              <div>
+                <div style={{ fontSize: 15, lineHeight: 1.5, marginBottom: 16 }}>
+                  {loyalty.visits >= loyalty.target ? (
+                    <span style={{ color: "#66C499" }}>
+                      ¡Felicidades! Tienes un <strong>{loyalty.reward}</strong>.
+                      Avisa en recepción cuando llegues.
+                    </span>
+                  ) : (
+                    <>
+                      Te faltan{" "}
+                      <strong style={{ color: "#C29E66" }}>
+                        {loyalty.target - loyalty.visits} visita{loyalty.target - loyalty.visits !== 1 ? "s" : ""}
+                      </strong>{" "}
+                      para tu {loyalty.reward}.
+                    </>
+                  )}
+                </div>
+                {/* Progress bar */}
+                <div style={{
+                  height: 4, background: "rgba(245,241,234,0.1)",
+                  position: "relative", marginBottom: 12,
+                }}>
+                  <div style={{
+                    position: "absolute", left: 0, top: 0, bottom: 0,
+                    background: loyalty.visits >= loyalty.target ? "#66C499" : "#C29E66",
+                    width: `${Math.min(loyalty.visits / loyalty.target * 100, 100)}%`,
+                    transition: "width 0.5s ease",
+                  }} />
+                </div>
+                {/* Dots */}
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {Array.from({ length: Math.min(loyalty.target, 20) }).map((_, i) => (
+                    <div key={i} style={{
+                      width: 11, height: 11,
+                      background: i < loyalty.visits
+                        ? (loyalty.visits >= loyalty.target ? "#66C499" : "#C29E66")
+                        : "rgba(245,241,234,0.08)",
+                      border: `1px solid ${i < loyalty.visits
+                        ? (loyalty.visits >= loyalty.target ? "#66C499" : "#C29E66")
+                        : "rgba(245,241,234,0.12)"}`,
+                      transition: "background 0.3s",
+                    }} />
+                  ))}
+                  {loyalty.visits > 20 && (
+                    <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.4)" }}>
+                      +{loyalty.visits - 20}
+                    </PMono>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Upcoming appointments */}
+        <div>
+          <div style={{
+            display: "flex", justifyContent: "space-between",
+            alignItems: "baseline", marginBottom: 20,
+          }}>
+            <PMono style={{ color: "#C29E66" }}>
+              Próximas citas
+              {upcoming.length > 0 && ` · ${upcoming.length}`}
+            </PMono>
+            <a href="JOXE Booking.html" style={{
+              color: "rgba(245,241,234,0.4)", textDecoration: "none",
+              fontSize: 11, letterSpacing: "0.15em", textTransform: "uppercase",
+              fontFamily: "'Outfit', sans-serif",
+            }}>+ Agendar →</a>
+          </div>
+
+          {upcoming.length === 0 ? (
+            <div style={{
+              padding: "52px 32px", background: "#141212",
+              border: "1px solid rgba(245,241,234,0.08)", textAlign: "center",
+            }}>
+              <div style={{
+                fontFamily: "'Marcellus', serif", fontSize: 40,
+                opacity: 0.15, marginBottom: 14,
+              }}>—</div>
+              <div style={{ fontSize: 14, opacity: 0.5, lineHeight: 1.7 }}>
+                No tienes citas próximas.<br/>
+                <a href="JOXE Booking.html" style={{ color: "#C29E66", textDecoration: "none" }}>
+                  Reserva una ahora →
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {upcoming.map(a => {
+                const s = STATUS[a.computedStatus] || STATUS.scheduled;
+                const isQROpen = showQR === a.id;
+                const isLive   = a.computedStatus === "waiting" || a.computedStatus === "in-service";
+                return (
+                  <div key={a.id} style={{
+                    background: "#141212",
+                    border: `1px solid ${isLive
+                      ? (a.computedStatus === "in-service" ? "rgba(102,196,153,0.35)" : "rgba(138,176,255,0.3)")
+                      : "rgba(245,241,234,0.1)"}`,
+                    animation: "fadeIn 0.3s ease",
+                  }}>
+                    <div style={{
+                      padding: "22px 26px",
+                      display: "grid", gridTemplateColumns: "1fr auto",
+                      gap: 16, alignItems: "start",
+                    }}>
+                      <div>
+                        <div style={{
+                          display: "flex", alignItems: "center",
+                          gap: 10, marginBottom: 12, flexWrap: "wrap",
+                        }}>
+                          <span style={{
+                            padding: "4px 12px", fontSize: 10,
+                            fontFamily: "'JetBrains Mono', monospace",
+                            letterSpacing: "0.1em", textTransform: "uppercase",
+                            background: s.bg, color: s.color,
+                            border: `1px solid ${s.color}30`,
+                          }}>{s.label}</span>
+                          <PMono style={{ color: "#C29E66", fontSize: 11 }}>{a.code}</PMono>
+                        </div>
+                        <div style={{
+                          fontFamily: "'Marcellus', serif",
+                          fontSize: "clamp(22px, 4vw, 30px)",
+                          marginBottom: 8, lineHeight: 1.1,
+                        }}>{a.service}</div>
+                        <div style={{ fontSize: 13, opacity: 0.55, lineHeight: 1.6 }}>
+                          {a.stylist && <>{a.stylist} · </>}
+                          {fmtDate(a.date)}
+                          {a.time && <> · {a.time}</>}
+                        </div>
+                      </div>
+
+                      {/* QR toggle — only for upcoming non-live */}
+                      {a.computedStatus === "scheduled" && (
+                        <button onClick={() => setShowQR(isQROpen ? null : a.id)} style={{
+                          background: "transparent",
+                          border: "1px solid rgba(245,241,234,0.15)",
+                          color: "rgba(245,241,234,0.5)", cursor: "pointer",
+                          padding: "8px 16px",
+                          fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                          letterSpacing: "0.1em", textTransform: "uppercase",
+                          whiteSpace: "nowrap",
+                        }}>
+                          {isQROpen ? "Ocultar QR" : "Ver QR ⊡"}
+                        </button>
+                      )}
+                    </div>
+
+                    {isQROpen && (
+                      <div style={{
+                        borderTop: "1px solid rgba(245,241,234,0.07)",
+                        padding: "28px", display: "flex", flexDirection: "column",
+                        alignItems: "center", gap: 14,
+                        animation: "fadeIn 0.25s ease",
+                      }}>
+                        <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.4)", textAlign: "center" }}>
+                          Muestra este código en recepción para activar tu turno
+                        </PMono>
+                        <div style={{ padding: 20, background: "#F5F1EA", display: "inline-block" }}>
+                          <QRCode value={a.id} size={200} />
+                        </div>
+                        <PMono style={{ color: "#C29E66", fontSize: 14, letterSpacing: "0.35em" }}>
+                          {a.code}
+                        </PMono>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* History */}
+        {history.length > 0 && (
+          <div>
+            <PMono style={{
+              color: "rgba(245,241,234,0.35)", display: "block", marginBottom: 16,
+            }}>
+              Historial · {history.length} visita{history.length !== 1 ? "s" : ""}
+            </PMono>
+            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+              {history.map(a => {
+                const s = STATUS[a.computedStatus] || STATUS.completed;
+                return (
+                  <div key={a.id} style={{
+                    display: "grid",
+                    gridTemplateColumns: "72px 1fr 60px auto",
+                    gap: 16, padding: "14px 20px",
+                    background: "#111",
+                    border: "1px solid rgba(245,241,234,0.05)",
+                    alignItems: "center",
+                  }} className="hist-grid">
+                    <PMono style={{ color: "#C29E66", fontSize: 10 }}>
+                      {fmtShort(a.date)}
+                    </PMono>
+                    <div>
+                      <div style={{ fontSize: 14 }}>{a.service}</div>
+                      {a.stylist && (
+                        <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>{a.stylist}</div>
+                      )}
+                    </div>
+                    <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.3)" }}>
+                      {a.time}
+                    </PMono>
+                    <span style={{
+                      padding: "3px 10px", fontSize: 9,
+                      fontFamily: "'JetBrains Mono', monospace",
+                      letterSpacing: "0.1em", textTransform: "uppercase",
+                      background: s.bg, color: s.color,
+                      border: `1px solid ${s.color}25`,
+                      whiteSpace: "nowrap",
+                    }}>{s.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {appts.length === 0 && (
+          <div style={{
+            textAlign: "center", padding: "60px 32px",
+            border: "1px dashed rgba(245,241,234,0.1)",
+          }}>
+            <div style={{
+              fontFamily: "'Marcellus', serif", fontSize: 48,
+              opacity: 0.15, marginBottom: 16,
+            }}>◯</div>
+            <div style={{ fontSize: 15, opacity: 0.5, lineHeight: 1.7 }}>
+              No encontramos citas con este número.<br/>
+              <a href="JOXE Booking.html" style={{ color: "#C29E66", textDecoration: "none" }}>
+                Reserva tu primera cita →
+              </a>
+            </div>
+          </div>
+        )}
+
+      </main>
+    </PortalShell>
+  );
+};
+
+// ============================================================
 // PAGE 0 — HOME
 // ============================================================
 const HomePortal = () => {
@@ -1016,7 +1524,7 @@ const HomePortal = () => {
         </p>
 
         <div style={{
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20,
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20,
         }} className="portal-cards">
           {[
             {
@@ -1026,12 +1534,17 @@ const HomePortal = () => {
               primary: true,
             },
             {
-              n: "02", title: "Escanear QR", subtitle: "Recepción",
+              n: "02", title: "Mi Cuenta", subtitle: "Cliente",
+              desc: "Consulta tus citas, el estado en sala y tus puntos de lealtad.",
+              href: "JOXE Cuenta.html", cta: "Ver mi cuenta",
+            },
+            {
+              n: "03", title: "Escanear QR", subtitle: "Recepción",
               desc: "Valida el ticket y activa el turno al llegar al salón.",
               href: "JOXE Scan.html", cta: "Abrir escáner",
             },
             {
-              n: "03", title: "Pantalla de sala", subtitle: "Lobby",
+              n: "04", title: "Pantalla de sala", subtitle: "Lobby",
               desc: "Muestra la cola en vivo — proyecta en pantalla grande.",
               href: "JOXE Lobby.html", cta: "Ver sala",
             },
