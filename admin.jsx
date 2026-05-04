@@ -468,60 +468,188 @@ const AdminShell = ({children,activeView,onNav,onLogout}) => {
 };
 
 // ==================== LOGIN ====================
-const LoginView = ({onSuccess}) => {
-  const [pw,setPw] = React.useState("");
-  const [err,setErr] = React.useState("");
+const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
+  const [mode,setMode]       = React.useState(null); // null | "admin" | "employee"
+  const [pw,setPw]           = React.useState("");
+  const [err,setErr]         = React.useState("");
   const [loading,setLoading] = React.useState(false);
+  // employee flow
+  const [empList,setEmpList]       = React.useState([]);
+  const [selEmpId,setSelEmpId]     = React.useState("");
+  const [pin,setPin]               = React.useState("");
+  const [pinErr,setPinErr]         = React.useState("");
 
-  const attempt = async () => {
-    setLoading(true);
+  React.useEffect(() => {
+    // Load employees from localStorage cache (set by admin on this device)
     try {
-      const res  = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pw }),
-      });
+      const cached = JSON.parse(localStorage.getItem(ADMIN_KEY));
+      if (cached?.employees) setEmpList(cached.employees.filter(e=>e.active&&e.pin));
+    } catch {}
+  }, []);
+
+  const attemptAdmin = async () => {
+    setLoading(true); setErr("");
+    try {
+      const res  = await fetch("/api/auth", { method:"POST",
+        headers:{"Content-Type":"application/json"}, body:JSON.stringify({password:pw}) });
       const data = await res.json();
-      if (data.ok) { doLogin(pw); onSuccess(); }
+      if (data.ok) { doLogin(pw); onAdminSuccess(); }
       else { setErr("Contraseña incorrecta. Intenta de nuevo."); setLoading(false); }
-    } catch {
-      setErr("Error de conexión. Verifica tu internet.");
-      setLoading(false);
-    }
+    } catch { setErr("Error de conexión."); setLoading(false); }
   };
 
-  return (
-    <div style={{
-      minHeight:"100vh",background:C.bg,display:"flex",
-      alignItems:"center",justifyContent:"center",padding:24,
-    }}>
+  const attemptEmp = () => {
+    setPinErr("");
+    const emp = empList.find(e=>e.id===selEmpId);
+    if (!emp) { setPinErr("Selecciona un empleado."); return; }
+    if (emp.pin !== pin) { setPinErr("PIN incorrecto. Intenta de nuevo."); setPin(""); return; }
+    doEmpLogin({ id:emp.id, name:emp.name, role:emp.role });
+    onEmpSuccess({ id:emp.id, name:emp.name, role:emp.role });
+  };
+
+  const logoBlock = (
+    <div style={{marginBottom:40,textAlign:"center"}}>
+      <div style={{fontFamily:"'Marcellus',serif",fontSize:36,letterSpacing:"0.4em",color:C.text,marginBottom:8}}>
+        JOXE
+      </div>
+      <Mono style={{color:C.gold,fontSize:10}}>Portal · Acceso</Mono>
+    </div>
+  );
+
+  // --- Role selector ---
+  if (!mode) return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
       <div style={{width:"100%",maxWidth:400}}>
-        <div style={{marginBottom:40,textAlign:"center"}}>
-          <div style={{fontFamily:"'Marcellus',serif",fontSize:36,letterSpacing:"0.4em",color:C.text,marginBottom:8}}>
-            JOXE
-          </div>
-          <Mono style={{color:C.gold,fontSize:10}}>Portal · Administración</Mono>
-        </div>
+        {logoBlock}
         <Card>
-          <h2 style={{fontFamily:"'Marcellus',serif",fontWeight:400,fontSize:24,
-            margin:"0 0 24px",color:C.text}}>Acceso al panel</h2>
+          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:20}}>¿Cómo deseas ingresar?</Mono>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            <button onClick={()=>setMode("employee")} style={{
+              padding:"18px 24px",background:C.s2,border:`1px solid ${C.bdr}`,
+              color:C.text,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",
+              fontFamily:"'Outfit',sans-serif",
+            }}>
+              <div>
+                <div style={{fontSize:16,marginBottom:4}}>Soy empleado/a</div>
+                <div style={{fontSize:12,color:C.muted}}>Accede con tu PIN personal</div>
+              </div>
+              <span style={{fontSize:20,color:C.gold}}>◉</span>
+            </button>
+            <button onClick={()=>setMode("admin")} style={{
+              padding:"18px 24px",background:C.s2,border:`1px solid ${C.bdr}`,
+              color:C.text,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center",
+              fontFamily:"'Outfit',sans-serif",
+            }}>
+              <div>
+                <div style={{fontSize:16,marginBottom:4}}>Soy administrador/a</div>
+                <div style={{fontSize:12,color:C.muted}}>Acceso completo al panel</div>
+              </div>
+              <span style={{fontSize:20,color:C.gold}}>⊛</span>
+            </button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+
+  // --- Admin login ---
+  if (mode==="admin") return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{width:"100%",maxWidth:400}}>
+        {logoBlock}
+        <Card>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+            <h2 style={{fontFamily:"'Marcellus',serif",fontWeight:400,fontSize:22,margin:0,color:C.text}}>
+              Administrador
+            </h2>
+            <button onClick={()=>setMode(null)} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12}}>← Volver</button>
+          </div>
           <FieldInput label="Contraseña" type="password" value={pw}
             onChange={e=>{setPw(e.target.value);setErr("");}}
-            placeholder="••••••••" />
+            placeholder="••••••••"
+            onKeyDown={e=>e.key==="Enter"&&pw&&!loading&&attemptAdmin()} />
           {err && (
-            <div style={{marginTop:12,padding:"10px 14px",
-              background:"rgba(196,102,102,0.1)",border:`1px solid ${C.red}40`,
-              fontSize:13,color:C.red}}>
-              {err}
-            </div>
+            <div style={{marginTop:12,padding:"10px 14px",background:"rgba(196,102,102,0.1)",border:`1px solid ${C.red}40`,fontSize:13,color:C.red}}>{err}</div>
           )}
-          <Btn onClick={attempt} disabled={!pw||loading}
-            style={{width:"100%",marginTop:20,padding:"14px"}}>
+          <Btn onClick={attemptAdmin} disabled={!pw||loading} style={{width:"100%",marginTop:20,padding:"14px"}}>
             {loading?"Verificando...":"Entrar →"}
           </Btn>
-          <div style={{marginTop:16,fontSize:12,color:C.muted,textAlign:"center"}}>
-            Contraseña por defecto: <Mono style={{color:C.gold,fontSize:10}}>joxe2026</Mono>
+        </Card>
+      </div>
+    </div>
+  );
+
+  // --- Employee login ---
+  return (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",padding:24}}>
+      <div style={{width:"100%",maxWidth:400}}>
+        {logoBlock}
+        <Card>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
+            <h2 style={{fontFamily:"'Marcellus',serif",fontWeight:400,fontSize:22,margin:0,color:C.text}}>
+              Empleado/a
+            </h2>
+            <button onClick={()=>{setMode(null);setPin("");setPinErr("");}} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12}}>← Volver</button>
           </div>
+
+          {empList.length===0 ? (
+            <div style={{padding:"20px 0",textAlign:"center"}}>
+              <div style={{fontSize:13,color:C.muted,lineHeight:1.6}}>
+                No hay empleados con PIN configurado.<br/>
+                El administrador debe asignar PINs desde el panel de empleados.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                <div>
+                  <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Selecciona tu nombre</Mono>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {empList.map(e=>(
+                      <button key={e.id} onClick={()=>{setSelEmpId(e.id);setPin("");setPinErr("");}} style={{
+                        padding:"12px 16px",background:selEmpId===e.id?"rgba(194,158,102,0.15)":C.s2,
+                        border:`1px solid ${selEmpId===e.id?C.gold+"60":C.bdr}`,
+                        color:C.text,cursor:"pointer",textAlign:"left",
+                        fontFamily:"'Outfit',sans-serif",fontSize:14,
+                        display:"flex",justifyContent:"space-between",alignItems:"center",
+                      }}>
+                        <span>{e.name}</span>
+                        <Mono style={{fontSize:9,color:C.muted}}>{e.role}</Mono>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {selEmpId && (
+                  <div>
+                    <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>PIN</Mono>
+                    <input
+                      type="password" inputMode="numeric" maxLength={6}
+                      value={pin} onChange={e=>{setPin(e.target.value.replace(/\D/g,""));setPinErr("");}}
+                      onKeyDown={e=>e.key==="Enter"&&pin&&attemptEmp()}
+                      placeholder="• • • •"
+                      style={{
+                        background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,
+                        padding:"14px",fontFamily:"'JetBrains Mono',monospace",
+                        fontSize:24,width:"100%",letterSpacing:"0.4em",textAlign:"center",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              {pinErr && (
+                <div style={{marginTop:12,padding:"10px 14px",background:"rgba(196,102,102,0.1)",border:`1px solid ${C.red}40`,fontSize:13,color:C.red}}>
+                  {pinErr}
+                </div>
+              )}
+
+              <Btn onClick={attemptEmp} disabled={!selEmpId||!pin}
+                style={{width:"100%",marginTop:20,padding:"14px"}}>
+                Ingresar →
+              </Btn>
+            </>
+          )}
         </Card>
       </div>
     </div>
