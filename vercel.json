@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/admin/payment", "destination": "/JOXE Payment.html" },
     { "source": "/admin",   "destination": "/JOXE Admin.html" },
     { "source": "/portal",  "destination": "/JOXE Portal.html" },
     { "source": "/booking", "destination": "/JOXE Booking.html" },
