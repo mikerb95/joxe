@@ -2164,6 +2164,13 @@ const EmployeesView = () => {
                         fontFamily:"'JetBrains Mono',monospace",fontSize:9,
                         letterSpacing:"0.1em",textTransform:"uppercase",
                       }}>{emp.active?"Activo":"Inactivo"}</button>
+                      <button onClick={()=>setChairQROpen(chairQROpen===emp.id?null:emp.id)} style={{
+                        background:chairQROpen===emp.id?"rgba(194,158,102,0.12)":C.s3,
+                        border:`1px solid ${chairQROpen===emp.id?C.gold+"40":C.bdr}`,
+                        color:chairQROpen===emp.id?C.gold:C.muted,
+                        cursor:"pointer",padding:"6px 10px",fontSize:11,
+                        fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.06em",
+                      }} title="QR de silla">⊡</button>
                       <button onClick={()=>startEdit(emp)} style={{
                         background:C.s3,border:`1px solid ${C.bdr}`,
                         color:C.muted,cursor:"pointer",padding:"6px 10px",fontSize:12,
@@ -2182,6 +2189,37 @@ const EmployeesView = () => {
                             background:C.s3,color:C.muted,border:`1px solid ${C.bdr}`,
                           }}>{s.name}</span>
                         ))}
+                      </div>
+                    )}
+                    {chairQROpen===emp.id && (
+                      <div style={{
+                        marginTop:16,padding:"20px 24px",
+                        background:C.s2,border:`1px solid ${C.bdr}`,
+                        display:"flex",gap:32,alignItems:"flex-start",flexWrap:"wrap",
+                      }}>
+                        <div>
+                          <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>
+                            QR de silla · {emp.name}
+                          </Mono>
+                          <QRCode value={`chair-${emp.id}`} size={120} fg={C.text} bg={C.s2} />
+                        </div>
+                        <div style={{flex:1,minWidth:200}}>
+                          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>
+                            URL del QR (imprime o comparte)
+                          </Mono>
+                          <div style={{
+                            fontFamily:"'JetBrains Mono',monospace",fontSize:11,
+                            color:C.gold,background:C.s1,
+                            border:`1px solid ${C.bdr}`,
+                            padding:"10px 14px",wordBreak:"break-all",lineHeight:1.5,
+                            marginBottom:12,
+                          }}>
+                            {window.location.origin}/JOXE CheckIn.html#chair-{emp.id}
+                          </div>
+                          <Mono style={{color:C.muted,fontSize:9,display:"block",lineHeight:1.6}}>
+                            Pega esta URL en un generador de QR real (ej. qr-code-generator.com) e imprime el código para colocarlo en el espejo de la silla.
+                          </Mono>
+                        </div>
                       </div>
                     )}
                   </div>
