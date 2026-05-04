@@ -1115,23 +1115,27 @@ const Footer = () => (
 // ——————————————————————————————————————————————
 // WHATSAPP BLOB
 // ——————————————————————————————————————————————
-const WA_DEFAULT_NUMBER = "573124499862";
-const WA_DEFAULT_MSG    = "Escríbenos";
+const WA_DEFAULT_NUMBER   = "573124499862";
+const WA_DEFAULT_MSG      = "Escríbenos";
+const WA_DEFAULT_CHAT_MSG = "";
 
 const getWAConfig = () => {
   try {
     const stored = JSON.parse(localStorage.getItem("joxe_admin_v1") || "{}");
     return {
-      number: stored.whatsappNumber || WA_DEFAULT_NUMBER,
-      msg:    stored.whatsappMsg    || WA_DEFAULT_MSG,
+      number:  stored.whatsappNumber  || WA_DEFAULT_NUMBER,
+      msg:     stored.whatsappMsg     || WA_DEFAULT_MSG,
+      chatMsg: stored.whatsappChatMsg ?? WA_DEFAULT_CHAT_MSG,
     };
-  } catch { return { number: WA_DEFAULT_NUMBER, msg: WA_DEFAULT_MSG }; }
+  } catch { return { number: WA_DEFAULT_NUMBER, msg: WA_DEFAULT_MSG, chatMsg: WA_DEFAULT_CHAT_MSG }; }
 };
 
 const WhatsAppBlob = () => {
   const [hovered, setHovered] = React.useState(false);
   const cfg = getWAConfig();
-  const url = `https://wa.me/${cfg.number}`;
+  const url = cfg.chatMsg
+    ? `https://wa.me/${cfg.number}?text=${encodeURIComponent(cfg.chatMsg)}`
+    : `https://wa.me/${cfg.number}`;
   return (
     <a
       href={url}
