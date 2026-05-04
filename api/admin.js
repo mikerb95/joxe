@@ -8,7 +8,7 @@ const CORS = {
 
 const DEFAULT_ADMIN = () => ({
   salonName: "JOXE",
-  stylists: ["Joxe G.", "Laura M.", "Camila R."],
+  stylists: ["Joxe", "Laura M.", "Camila R."],
   cancelledIds: [],
   services: [
     { id: "s1", name: "Corte mujer",        price: 85000,  dur: 60,  active: true },

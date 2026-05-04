@@ -190,7 +190,7 @@ const BookingPortal = () => {
     { name: "Asesoría de imagen", dur: 90, price: "$180.000" },
     { name: "Peinado novia", dur: 120, price: "desde $220.000" },
   ];
-  const stylists = ["Joxe G.", "Laura M.", "Camila R.", "Sin preferencia"];
+  const stylists = ["Joxe", "Laura M.", "Camila R.", "Sin preferencia"];
   const times = ["9:00", "10:30", "12:00", "14:00", "15:30", "17:00"];
 
   const submit = () => {
