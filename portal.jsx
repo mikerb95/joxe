@@ -1139,7 +1139,7 @@ const CuentaPortal = () => {
   };
 
   // ── LOGIN SCREEN ──────────────────────────────────────────
-  if (!phone || !data) {
+  if (!cedula || !data) {
     return (
       <PortalShell tone="noir" header={
         <PortalHeader subtitle="Portal · Cliente" title="Mi Cuenta"
@@ -1161,27 +1161,28 @@ const CuentaPortal = () => {
               fontFamily: "'Marcellus', serif", fontSize: "clamp(36px, 7vw, 52px)",
               fontWeight: 400, margin: "16px 0 12px",
               letterSpacing: "-0.01em", lineHeight: 1.1,
-            }}>Bienvenido de vuelta.</h1>
+            }}>Consulta tus visitas.</h1>
             <p style={{ fontSize: 15, opacity: 0.6, lineHeight: 1.6, marginBottom: 40 }}>
-              Ingresa tu número de WhatsApp para ver tus citas y puntos de lealtad.
+              Ingresa tu cédula de ciudadanía para ver tus citas, historial de visitas y puntos de lealtad.
             </p>
 
             <div style={{
               background: "#141212", border: "1px solid rgba(245,241,234,0.1)", padding: 32,
             }}>
               <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 10 }}>
-                Número de WhatsApp
+                Cédula de ciudadanía
               </PMono>
               <input
                 value={input}
-                onChange={e => { setInput(e.target.value); setError(""); }}
+                onChange={e => { setInput(e.target.value.replace(/\D/g, "")); setError(""); }}
                 onKeyDown={e => e.key === "Enter" && login()}
-                placeholder="300 123 4567"
-                type="tel"
+                placeholder="1234567890"
+                inputMode="numeric"
                 style={{
                   width: "100%", padding: "18px 20px",
                   background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
-                  color: "#F5F1EA", fontFamily: "'Outfit', sans-serif", fontSize: 16,
+                  color: "#F5F1EA", fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 16, letterSpacing: "0.1em",
                 }}
               />
               {error && (
@@ -1189,16 +1190,16 @@ const CuentaPortal = () => {
               )}
               <button
                 onClick={login}
-                disabled={loading || !input.trim()}
+                disabled={loading || input.length < 6}
                 style={{
                   width: "100%", marginTop: 16, padding: "18px",
-                  background: loading || !input.trim() ? "rgba(194,158,102,0.2)" : "#C29E66",
+                  background: loading || input.length < 6 ? "rgba(194,158,102,0.2)" : "#C29E66",
                   color: "#0C0C0C", border: "none",
                   fontFamily: "'Outfit', sans-serif", fontSize: 12,
                   letterSpacing: "0.2em", textTransform: "uppercase",
-                  cursor: loading || !input.trim() ? "not-allowed" : "pointer",
+                  cursor: loading || input.length < 6 ? "not-allowed" : "pointer",
                 }}>
-                {loading ? "Buscando…" : "Ver mis citas →"}
+                {loading ? "Buscando…" : "Ver mis visitas →"}
               </button>
             </div>
 
