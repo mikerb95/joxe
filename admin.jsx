@@ -200,6 +200,7 @@ const todayStr = () => new Date().toISOString().split("T")[0];
 const genId    = () => Math.random().toString(36).slice(2, 10);
 const TIMES    = ["9:00","10:30","12:00","14:00","15:30","17:00"];
 const METHODS  = ["Efectivo","Transferencia","Datáfono","Nequi"];
+const ROLES    = ["Estilista","Colorista","Manicurista","Pedicurista","Barbero","Maquillador/a","Masajista","Recepcionista","Otro"];
 const PAY_COLORS = { Efectivo:"#C29E66", Transferencia:"#8ab0ff", Datáfono:"#C46666", Nequi:"#66C499" };
 
 const fmtCOP = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("es-CO");
