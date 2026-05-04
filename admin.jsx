@@ -1803,7 +1803,7 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
               {filtered.map(r=>(
                 <div key={r.id} style={{
                   display:"grid",
-                  gridTemplateColumns:"80px 100px 1fr 140px 100px 40px",
+                  gridTemplateColumns:"80px 100px 1fr 120px 140px 80px 40px",
                   gap:12,padding:"12px 16px",background:C.s1,
                   border:`1px solid ${C.bdr}`,alignItems:"center",
                 }}>
@@ -1817,6 +1817,9 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
                     {r.client&&<div style={{fontSize:11,color:C.muted}}>{r.client}</div>}
                     {r.note&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic"}}>{r.note}</div>}
                   </div>
+                  <Mono style={{fontSize:10,color:r.stylist?C.blue:C.muted}}>
+                    {r.stylist||"—"}
+                  </Mono>
                   <span style={{
                     padding:"3px 10px",fontSize:10,
                     fontFamily:"'JetBrains Mono',monospace",
