@@ -2030,7 +2030,7 @@ const EmployeesView = () => {
 
   const startEdit = (e) => {
     setEditId(e.id);
-    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])]});
+    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||""});
   };
 
   const saveEdit = (id) => {
