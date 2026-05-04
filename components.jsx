@@ -1087,8 +1087,12 @@ const Footer = () => (
       <div>
         <Mono style={{ color: "var(--bronze)", display: "block", marginBottom: 18 }}>Social</Mono>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {["Instagram", "TikTok", "WhatsApp"].map(s => (
-            <a key={s} href="#" style={{
+          {[
+            ["Instagram", "#"],
+            ["TikTok", "#"],
+            ["WhatsApp", "https://wa.me/573124499862"],
+          ].map(([s, href]) => (
+            <a key={s} href={href} target="_blank" rel="noopener noreferrer" style={{
               color: "var(--ivory)", textDecoration: "none",
               fontFamily: "var(--sans)", fontSize: 14, opacity: 0.75,
             }}>{s} ↗</a>
