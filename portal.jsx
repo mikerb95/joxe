@@ -1621,6 +1621,6 @@ const HomePortal = () => {
 };
 
 Object.assign(window, {
-  BookingPortal, ScanPortal, LobbyPortal, HomePortal,
+  BookingPortal, ScanPortal, LobbyPortal, HomePortal, CuentaPortal,
   QRCode, PortalShell, PortalHeader, PMono, useStore,
 });
