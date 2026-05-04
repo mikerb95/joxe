@@ -336,6 +336,7 @@ const VIEWS = [
   {id:"clients",    label:"CRM · Clientes",    icon:"◯"},
   {id:"blockslots", label:"Bloquear horas",   icon:"⊘"},
   {id:"revenue",    label:"Caja",             icon:"◎"},
+  {id:"employees",  label:"Empleados",        icon:"◉"},
   {id:"services",   label:"Servicios",        icon:"✦"},
   {id:"settings",   label:"Configuración",    icon:"⊛"},
 ];
