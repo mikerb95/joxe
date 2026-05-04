@@ -209,7 +209,7 @@ const BookingPortal = () => {
 
   const canNext = (step === 1 && form.service)
     || (step === 2 && form.date && form.time && form.stylist)
-    || (step === 3 && form.name && form.phone);
+    || (step === 3 && form.name && form.phone && form.cedula);
 
   return (
     <PortalShell tone="ivory" header={
