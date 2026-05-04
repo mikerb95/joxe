@@ -2580,7 +2580,13 @@ const SettingsView = () => {
           <Mono style={{color:C.gold,display:"block",marginBottom:16}}>WhatsApp</Mono>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
             <FieldInput
-              label="Número de contacto"
+              label="Número del admin (recibe confirmaciones de reservas)"
+              value={admin.whatsappAdminNumber||"573124499862"}
+              onChange={e=>setAdmin(a=>({...a,whatsappAdminNumber:e.target.value.replace(/\D/g,"")}))}
+              placeholder="573124499862"
+            />
+            <FieldInput
+              label="Número de contacto (botón flotante para clientes)"
               value={admin.whatsappNumber||"573124499862"}
               onChange={e=>setAdmin(a=>({...a,whatsappNumber:e.target.value.replace(/\D/g,"")}))}
               placeholder="573124499862"
@@ -2598,7 +2604,10 @@ const SettingsView = () => {
               placeholder="Hola, me gustaría reservar una cita..."
             />
             <div style={{padding:"12px 14px",background:C.s2,border:`1px solid ${C.bdr}`,fontSize:13,color:C.muted}}>
-              El botón flotante apuntará a{" "}
+              Las reservas del portal llegarán a{" "}
+              <strong style={{color:C.text}}>
+                wa.me/{admin.whatsappAdminNumber||"573124499862"}
+              </strong>. El botón flotante apuntará a{" "}
               <strong style={{color:C.text}}>
                 wa.me/{admin.whatsappNumber||"573124499862"}
               </strong>

@@ -673,7 +673,9 @@ const BookingPortal = () => {
                     `🔗 Confirmar abono:`,
                     adminLink,
                   ].join("\n");
-                  return `https://wa.me/573124499862?text=${encodeURIComponent(msg)}`;
+                  const adminCfg = (() => { try { return JSON.parse(localStorage.getItem("joxe_admin_v1") || "{}"); } catch { return {}; } })();
+                  const adminNum = adminCfg.whatsappAdminNumber || "573124499862";
+                  return `https://wa.me/${adminNum}?text=${encodeURIComponent(msg)}`;
                 })()}
                 target="_blank"
                 rel="noopener noreferrer"
