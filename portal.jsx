@@ -173,26 +173,75 @@ const QRCode = ({ value, size = 220, fg = "#0C0C0C", bg = "#F5F1EA" }) => {
 // ============================================================
 // PAGE 1 — AGENDAR CITA
 // ============================================================
+
+// Helpers
+const todayStr = () => new Date().toISOString().split("T")[0];
+
+const addDays = (d, n) => {
+  const dt = new Date(d + "T12:00");
+  dt.setDate(dt.getDate() + n);
+  return dt.toISOString().split("T")[0];
+};
+
+const fmtDateLabel = (d) => {
+  const t = todayStr();
+  if (d === t) return "Hoy";
+  if (d === addDays(t, 1)) return "Mañana";
+  if (d === addDays(t, 2)) return "Pasado mañana";
+  return d;
+};
+
+const fmtDateSub = (d) => {
+  try {
+    return new Date(d + "T12:00").toLocaleDateString("es-CO", { weekday:"short", day:"numeric", month:"short" });
+  } catch { return d; }
+};
+
+const fmtCOP = (n) => n == null ? "" : "$" + Number(n).toLocaleString("es-CO");
+
+const TIMES = ["9:00", "10:30", "12:00", "14:00", "15:30", "17:00"];
+
+const DEFAULT_SERVICES = [
+  { id:"s1", name:"Corte mujer",        price:85000,  dur:60  },
+  { id:"s2", name:"Corte hombre",       price:45000,  dur:40  },
+  { id:"s3", name:"Balayage",           price:280000, dur:180, note:"desde" },
+  { id:"s4", name:"Color correction",   price:320000, dur:240, note:"desde" },
+  { id:"s5", name:"Color raíz",         price:120000, dur:90  },
+  { id:"s6", name:"Keratina",           price:260000, dur:180, note:"desde" },
+  { id:"s7", name:"Asesoría de imagen", price:180000, dur:90  },
+  { id:"s8", name:"Peinado novia",      price:220000, dur:120, note:"desde" },
+];
+
+const DEFAULT_EMPLOYEES = [
+  { id:"e1", name:"Joxe",      role:"Estilista",  services:["s1","s2","s3","s4","s5","s6","s7","s8"] },
+  { id:"e2", name:"Laura M.",  role:"Estilista",  services:["s1","s2","s3","s5","s6","s8"] },
+  { id:"e3", name:"Camila R.", role:"Colorista",  services:["s3","s4","s5","s6"] },
+];
+
+const useCatalog = () => {
+  const [catalog, setCatalog] = React.useState({ services: DEFAULT_SERVICES, employees: DEFAULT_EMPLOYEES });
+  React.useEffect(() => {
+    fetch("/api/catalog")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setCatalog(d); })
+      .catch(() => {});
+  }, []);
+  return catalog;
+};
+
 const BookingPortal = () => {
   const [store, setStore] = useStore();
+  const catalog = useCatalog();
   const [step, setStep] = React.useState(1);
   const [form, setForm] = React.useState({
-    service: "", stylist: "", date: "", time: "", name: "", phone: "", cedula: "",
+    service: "", serviceId: "", stylist: "", stylistId: "", date: "", time: "",
+    name: "", phone: "", cedula: "",
   });
   const [ticket, setTicket] = React.useState(null);
 
-  const services = [
-    { name: "Corte mujer", dur: 60, price: "$85.000" },
-    { name: "Corte hombre", dur: 40, price: "$45.000" },
-    { name: "Balayage", dur: 180, price: "desde $280.000" },
-    { name: "Color correction", dur: 240, price: "desde $320.000" },
-    { name: "Color raíz", dur: 90, price: "$120.000" },
-    { name: "Keratina", dur: 180, price: "desde $260.000" },
-    { name: "Asesoría de imagen", dur: 90, price: "$180.000" },
-    { name: "Peinado novia", dur: 120, price: "desde $220.000" },
-  ];
-  const stylists = ["Joxe", "Laura M.", "Camila R.", "Sin preferencia"];
-  const times = ["9:00", "10:30", "12:00", "14:00", "15:30", "17:00"];
+  const services = catalog.services;
+  const employees = catalog.employees;
+  const times = TIMES;
 
   const submit = () => {
     const id = crypto.randomUUID ? crypto.randomUUID() : String(Math.random());

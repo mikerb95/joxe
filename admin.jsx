@@ -2575,6 +2575,36 @@ const SettingsView = () => {
           </div>
         </Card>
 
+        {/* WhatsApp blob */}
+        <Card>
+          <Mono style={{color:C.gold,display:"block",marginBottom:16}}>WhatsApp</Mono>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <FieldInput
+              label="Número de contacto"
+              value={admin.whatsappNumber||"573124499862"}
+              onChange={e=>setAdmin(a=>({...a,whatsappNumber:e.target.value.replace(/\D/g,"")}))}
+              placeholder="573124499862"
+            />
+            <FieldInput
+              label="Mensaje del botón (texto al pasar el cursor)"
+              value={admin.whatsappMsg||"Escríbenos"}
+              onChange={e=>setAdmin(a=>({...a,whatsappMsg:e.target.value}))}
+              placeholder="Escríbenos"
+            />
+            <div style={{padding:"12px 14px",background:C.s2,border:`1px solid ${C.bdr}`,fontSize:13,color:C.muted}}>
+              El botón flotante apuntará a{" "}
+              <strong style={{color:C.text}}>
+                wa.me/{admin.whatsappNumber||"573124499862"}
+              </strong>{" "}
+              y mostrará el texto{" "}
+              <strong style={{color:C.gold}}>
+                "{admin.whatsappMsg||"Escríbenos"}"
+              </strong>{" "}
+              al pasar el cursor.
+            </div>
+          </div>
+        </Card>
+
         {/* Change password */}
         <Card>
           <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Cambiar contraseña</Mono>
