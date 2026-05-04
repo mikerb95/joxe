@@ -37,7 +37,7 @@ export default async function handler(req, res) {
       .map(({ id, name, price, dur, note }) => ({ id, name, price, dur, note }));
 
     const employees = (admin?.employees || DEFAULT_EMPLOYEES)
-      .filter(e => e.active)
+      .filter(e => e.active !== false)
       // Strip PIN and any internal fields before sending publicly
       .map(({ id, name, role, services: svcs }) => ({ id, name, role, services: svcs || [] }));
 
