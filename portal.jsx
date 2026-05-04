@@ -303,7 +303,17 @@ const BookingPortal = () => {
                 <PMono style={{ display: "block", marginBottom: 12, fontSize: 10 }}>Hora</PMono>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                   {times.map(t => {
-                    const isBlocked = form.date && (store.blockedSlots || []).some(b => b.date === form.date && b.time === t);
+                    const namedStylists = ["Joxe G.", "Laura M.", "Camila R."];
+                    const aptsAtSlot = form.date
+                      ? (store.appointments || []).filter(a => a.date === form.date && a.time === t && a.status === "scheduled")
+                      : [];
+                    const allBusy = namedStylists.every(s => aptsAtSlot.some(a => a.stylist === s));
+                    const selectedBusy = form.stylist && form.stylist !== "Sin preferencia" && aptsAtSlot.some(a => a.stylist === form.stylist);
+                    const isBlocked = form.date && (
+                      (store.blockedSlots || []).some(b => b.date === form.date && b.time === t) ||
+                      allBusy ||
+                      selectedBusy
+                    );
                     return (
                       <button key={t} disabled={isBlocked}
                         onClick={() => !isBlocked && setForm({ ...form, time: t })}
