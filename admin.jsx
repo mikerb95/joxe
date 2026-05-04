@@ -1847,6 +1847,254 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
   );
 };
 
+// ==================== EMPLOYEES ====================
+const EmployeesView = () => {
+  const [admin,setAdmin] = useAdmin();
+  const [showAdd,setShowAdd] = React.useState(false);
+  const [editId,setEditId] = React.useState(null);
+  const [editForm,setEditForm] = React.useState({});
+  const [newEmp,setNewEmp] = React.useState({name:"",role:"Estilista",services:[]});
+
+  const employees = admin.employees || [];
+  const services  = (admin.services||[]).filter(s=>s.active);
+  const revenue   = admin.revenue||[];
+
+  // Revenue per employee (all time)
+  const revByEmp = {};
+  revenue.forEach(r=>{
+    if (r.stylist) revByEmp[r.stylist]=(revByEmp[r.stylist]||0)+Number(r.amount||0);
+  });
+
+  const toggleNewSvc = (svcId) => {
+    setNewEmp(e=>({...e, services: e.services.includes(svcId)
+      ? e.services.filter(s=>s!==svcId)
+      : [...e.services, svcId]
+    }));
+  };
+
+  const toggleEditSvc = (svcId) => {
+    setEditForm(f=>({...f, services: (f.services||[]).includes(svcId)
+      ? f.services.filter(s=>s!==svcId)
+      : [...(f.services||[]), svcId]
+    }));
+  };
+
+  const addEmployee = () => {
+    if (!newEmp.name.trim()) return;
+    const emp = { id:genId(), name:newEmp.name.trim(), role:newEmp.role, services:newEmp.services, active:true };
+    // Also sync to stylists list for booking portal
+    const stylists = [...(admin.stylists||[])];
+    if (!stylists.includes(emp.name)) stylists.push(emp.name);
+    setAdmin(a=>({...a, employees:[...(a.employees||[]),emp], stylists}));
+    setNewEmp({name:"",role:"Estilista",services:[]});
+    setShowAdd(false);
+  };
+
+  const startEdit = (e) => {
+    setEditId(e.id);
+    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])]});
+  };
+
+  const saveEdit = (id) => {
+    const prev = employees.find(e=>e.id===id);
+    const nameChanged = prev && prev.name !== editForm.name;
+    let stylists = [...(admin.stylists||[])];
+    if (nameChanged) {
+      stylists = stylists.map(s=>s===prev.name?editForm.name:s);
+    }
+    setAdmin(a=>({...a,
+      employees: a.employees.map(e=>e.id===id?{...e,...editForm}:e),
+      stylists,
+    }));
+    setEditId(null);
+  };
+
+  const toggleActive = (id) => {
+    setAdmin(a=>({...a, employees:a.employees.map(e=>e.id===id?{...e,active:!e.active}:e)}));
+  };
+
+  const deleteEmployee = (emp) => {
+    if (!confirm(`¿Eliminar a ${emp.name}? También se quitará de la lista de estilistas del portal.`)) return;
+    const stylists = (admin.stylists||[]).filter(s=>s!==emp.name);
+    setAdmin(a=>({...a,
+      employees: a.employees.filter(e=>e.id!==emp.id),
+      stylists,
+    }));
+  };
+
+  return (
+    <div>
+      <PageHeader title="Empleados" subtitle="Equipo · Roles · Servicios"
+        action={<Btn onClick={()=>setShowAdd(!showAdd)}>
+          {showAdd?"Cancelar":"+ Agregar empleado"}
+        </Btn>}
+      />
+
+      {showAdd && (
+        <div style={{padding:"20px 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,maxWidth:600,marginBottom:16}}>
+            <FieldInput label="Nombre" value={newEmp.name}
+              onChange={e=>setNewEmp({...newEmp,name:e.target.value})} placeholder="Laura M." />
+            <FieldSelect label="Rol" value={newEmp.role}
+              onChange={e=>setNewEmp({...newEmp,role:e.target.value})}
+              options={ROLES} />
+          </div>
+          <div style={{marginBottom:14}}>
+            <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios que ofrece</Mono>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {services.map(s=>{
+                const on = newEmp.services.includes(s.id);
+                return (
+                  <button key={s.id} onClick={()=>toggleNewSvc(s.id)} style={{
+                    padding:"6px 14px",fontSize:11,cursor:"pointer",
+                    fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.08em",
+                    background: on?"rgba(194,158,102,0.15)":C.s3,
+                    color: on?C.gold:C.muted,
+                    border:`1px solid ${on?C.gold+"50":C.bdr}`,
+                  }}>{s.name}</button>
+                );
+              })}
+            </div>
+          </div>
+          <div style={{display:"flex",gap:10}}>
+            <Btn onClick={addEmployee} disabled={!newEmp.name.trim()}>Agregar empleado</Btn>
+            <Btn variant="ghost" onClick={()=>setShowAdd(false)}>Cancelar</Btn>
+          </div>
+        </div>
+      )}
+
+      <div style={{padding:"24px 32px"}}>
+        {employees.length===0 && (
+          <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
+            <div style={{fontSize:32,marginBottom:8}}>◉</div>
+            <Mono style={{fontSize:10}}>Sin empleados registrados</Mono>
+          </div>
+        )}
+
+        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+          {employees.map(emp=>{
+            const isEdit = editId===emp.id;
+            const earned = revByEmp[emp.name]||0;
+            const empServices = services.filter(s=>(emp.services||[]).includes(s.id));
+            return (
+              <div key={emp.id} style={{
+                border:`1px solid ${C.bdr}`,
+                background:emp.active?C.s1:C.s2,
+                opacity:emp.active?1:0.6,
+              }}>
+                {!isEdit ? (
+                  <div style={{padding:"18px 20px"}}>
+                    <div style={{
+                      display:"grid",
+                      gridTemplateColumns:"1fr auto auto auto auto",
+                      gap:16,alignItems:"center",marginBottom:empServices.length?12:0,
+                    }}>
+                      <div>
+                        <div style={{fontFamily:"'Marcellus',serif",fontSize:17}}>{emp.name}</div>
+                        <Mono style={{
+                          fontSize:9,
+                          color:C.gold,
+                          background:"rgba(194,158,102,0.1)",
+                          border:`1px solid ${C.gold}30`,
+                          padding:"2px 8px",
+                          display:"inline-block",marginTop:4,
+                        }}>{emp.role}</Mono>
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div style={{fontSize:13,color:earned>0?C.green:C.muted}}>{earned>0?fmtCOP(earned):"—"}</div>
+                        <Mono style={{fontSize:8,color:C.muted}}>facturado</Mono>
+                      </div>
+                      <button onClick={()=>toggleActive(emp.id)} style={{
+                        padding:"5px 12px",
+                        background:emp.active?"rgba(102,196,153,0.1)":"rgba(196,102,102,0.1)",
+                        border:`1px solid ${emp.active?C.green+"40":C.red+"40"}`,
+                        color:emp.active?C.green:C.red,cursor:"pointer",
+                        fontFamily:"'JetBrains Mono',monospace",fontSize:9,
+                        letterSpacing:"0.1em",textTransform:"uppercase",
+                      }}>{emp.active?"Activo":"Inactivo"}</button>
+                      <button onClick={()=>startEdit(emp)} style={{
+                        background:C.s3,border:`1px solid ${C.bdr}`,
+                        color:C.muted,cursor:"pointer",padding:"6px 10px",fontSize:12,
+                      }}>✎</button>
+                      <button onClick={()=>deleteEmployee(emp)} style={{
+                        background:"transparent",border:`1px solid ${C.red}30`,
+                        color:C.red,cursor:"pointer",padding:"6px 10px",fontSize:12,
+                      }}>✕</button>
+                    </div>
+                    {empServices.length>0 && (
+                      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                        {empServices.map(s=>(
+                          <span key={s.id} style={{
+                            padding:"3px 10px",fontSize:10,
+                            fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.08em",
+                            background:C.s3,color:C.muted,border:`1px solid ${C.bdr}`,
+                          }}>{s.name}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{padding:"18px 20px",background:C.s2}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,maxWidth:500,marginBottom:14}}>
+                      <FieldInput label="Nombre" value={editForm.name}
+                        onChange={e=>setEditForm({...editForm,name:e.target.value})} />
+                      <FieldSelect label="Rol" value={editForm.role}
+                        onChange={e=>setEditForm({...editForm,role:e.target.value})}
+                        options={ROLES} />
+                    </div>
+                    <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios</Mono>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
+                      {services.map(s=>{
+                        const on = (editForm.services||[]).includes(s.id);
+                        return (
+                          <button key={s.id} onClick={()=>toggleEditSvc(s.id)} style={{
+                            padding:"6px 14px",fontSize:11,cursor:"pointer",
+                            fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.08em",
+                            background: on?"rgba(194,158,102,0.15)":C.s3,
+                            color: on?C.gold:C.muted,
+                            border:`1px solid ${on?C.gold+"50":C.bdr}`,
+                          }}>{s.name}</button>
+                        );
+                      })}
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <Btn small onClick={()=>saveEdit(emp.id)}>Guardar</Btn>
+                      <Btn small variant="ghost" onClick={()=>setEditId(null)}>Cancelar</Btn>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Summary */}
+        {employees.length>0 && (
+          <div style={{
+            marginTop:24,padding:"20px 24px",background:C.s1,
+            border:`1px solid ${C.bdr}`,display:"flex",gap:40,flexWrap:"wrap",
+          }}>
+            <div>
+              <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:6}}>Empleados activos</Mono>
+              <div style={{fontFamily:"'Marcellus',serif",fontSize:32,color:C.gold}}>
+                {employees.filter(e=>e.active).length}
+              </div>
+            </div>
+            {ROLES.filter(r=>employees.some(e=>e.role===r&&e.active)).map(role=>(
+              <div key={role}>
+                <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:6}}>{role}</Mono>
+                <div style={{fontFamily:"'Marcellus',serif",fontSize:32,color:C.gold}}>
+                  {employees.filter(e=>e.role===role&&e.active).length}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ==================== SERVICES ====================
 const ServicesView = () => {
   const [admin,setAdmin] = useAdmin();
