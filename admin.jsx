@@ -2504,6 +2504,7 @@ const AdminPortal = () => {
     clients:      CrmView,
     blockslots:   BlockSlotsView,
     revenue:      RevenueView,
+    employees:    EmployeesView,
     services:     ServicesView,
     settings:     SettingsView,
   }[view] || DashboardView;
