@@ -2070,12 +2070,19 @@ const EmployeesView = () => {
 
       {showAdd && (
         <div style={{padding:"20px 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,maxWidth:600,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,maxWidth:720,marginBottom:16}}>
             <FieldInput label="Nombre" value={newEmp.name}
               onChange={e=>setNewEmp({...newEmp,name:e.target.value})} placeholder="Laura M." />
             <FieldSelect label="Rol" value={newEmp.role}
               onChange={e=>setNewEmp({...newEmp,role:e.target.value})}
               options={ROLES} />
+            <div>
+              <FieldInput label="PIN (4–6 dígitos)" type="password"
+                value={newEmp.pin}
+                placeholder="••••"
+                onChange={e=>setNewEmp({...newEmp,pin:e.target.value.replace(/\D/g,"").slice(0,6)})} />
+              <div style={{fontSize:10,color:C.muted,marginTop:4}}>Permite al empleado iniciar sesión</div>
+            </div>
           </div>
           <div style={{marginBottom:14}}>
             <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios que ofrece</Mono>
