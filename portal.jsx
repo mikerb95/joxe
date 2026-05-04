@@ -94,6 +94,7 @@ const PortalShell = ({ children, tone = "noir", header }) => (
   }}>
     {header}
     {children}
+    <WABlob />
   </div>
 );
 
