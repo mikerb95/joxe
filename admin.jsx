@@ -1480,6 +1480,7 @@ const RevenueView = () => {
   const [admin,setAdmin] = useAdmin();
   const [showForm,setShowForm] = React.useState(false);
   const [period,setPeriod] = React.useState("today");
+  const [showDaySummary,setShowDaySummary] = React.useState(false);
   const [form,setForm] = React.useState({date:todayStr(),amount:"",service:"",client:"",method:"Efectivo",note:"",stylist:""});
 
   const revenue = admin.revenue||[];
