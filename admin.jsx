@@ -2136,14 +2136,20 @@ const EmployeesView = () => {
                     }}>
                       <div>
                         <div style={{fontFamily:"'Marcellus',serif",fontSize:17}}>{emp.name}</div>
-                        <Mono style={{
-                          fontSize:9,
-                          color:C.gold,
-                          background:"rgba(194,158,102,0.1)",
-                          border:`1px solid ${C.gold}30`,
-                          padding:"2px 8px",
-                          display:"inline-block",marginTop:4,
-                        }}>{emp.role}</Mono>
+                        <div style={{display:"flex",gap:6,marginTop:4,flexWrap:"wrap"}}>
+                          <Mono style={{
+                            fontSize:9,color:C.gold,
+                            background:"rgba(194,158,102,0.1)",border:`1px solid ${C.gold}30`,
+                            padding:"2px 8px",display:"inline-block",
+                          }}>{emp.role}</Mono>
+                          <Mono style={{
+                            fontSize:9,
+                            color:emp.pin?C.green:C.muted,
+                            background:emp.pin?"rgba(102,196,153,0.08)":"transparent",
+                            border:`1px solid ${emp.pin?C.green+"30":C.bdr}`,
+                            padding:"2px 8px",display:"inline-block",
+                          }}>{emp.pin?"✓ PIN":"Sin PIN"}</Mono>
+                        </div>
                       </div>
                       <div style={{textAlign:"right"}}>
                         <div style={{fontSize:13,color:earned>0?C.green:C.muted}}>{earned>0?fmtCOP(earned):"—"}</div>
