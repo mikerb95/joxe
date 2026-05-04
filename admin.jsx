@@ -279,10 +279,10 @@ const Btn = ({children,onClick,variant="primary",small,disabled,style}) => {
   );
 };
 
-const FieldInput = ({label,value,onChange,type="text",placeholder,style,min,max}) => (
+const FieldInput = ({label,value,onChange,type="text",placeholder,style,min,max,onKeyDown}) => (
   <div style={{display:"flex",flexDirection:"column",gap:6,...style}}>
     {label && <Mono style={{color:C.muted,fontSize:9}}>{label}</Mono>}
-    <input type={type} value={value} onChange={onChange} placeholder={placeholder} min={min} max={max}
+    <input type={type} value={value} onChange={onChange} placeholder={placeholder} min={min} max={max} onKeyDown={onKeyDown}
       style={{background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,padding:"11px 14px",
         fontFamily:"'Outfit',sans-serif",fontSize:14,width:"100%"}} />
   </div>
