@@ -286,9 +286,11 @@ const FieldSelect = ({label,value,onChange,options,style}) => (
     <select value={value} onChange={onChange}
       style={{background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,padding:"11px 14px",
         fontFamily:"'Outfit',sans-serif",fontSize:14,width:"100%"}}>
-      {options.map(o=>(
-        <option key={o.value||o} value={o.value||o}>{o.label||o}</option>
-      ))}
+      {options.map((o,i)=>{
+        const val = typeof o==="object" ? o.value : o;
+        const lbl = typeof o==="object" ? (o.label||o.value) : o;
+        return <option key={val+i} value={val}>{lbl}</option>;
+      })}
     </select>
   </div>
 );
