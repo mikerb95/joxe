@@ -72,6 +72,7 @@ function App() {
       <LocationMap />
       <Footer />
       <BookingModal open={reserveOpen} onClose={() => setReserveOpen(false)} />
+      <WhatsAppBlob />
 
       {editMode && <TweaksPanel tweaks={tweaks} update={updateTweak} />}
     </div>

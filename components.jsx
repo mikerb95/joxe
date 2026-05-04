@@ -742,13 +742,13 @@ const BookingSection = ({ onReserveClick }) => (
         }}>
           Reservar en línea →
         </button>
-        <a href="https://wa.me/573001234567" target="_blank" rel="noopener" style={{
+        <a href="https://wa.me/573124499862" target="_blank" rel="noopener" style={{
           display: "inline-flex", gap: 10, alignItems: "center",
           color: "var(--noir)", textDecoration: "none",
           fontFamily: "var(--sans)", fontSize: 14, letterSpacing: "0.05em",
           padding: "12px 0", borderBottom: "1px solid var(--noir)",
         }}>
-          WhatsApp · +57 300 123 4567
+          WhatsApp · +57 312 449 9862
         </a>
       </div>
 
