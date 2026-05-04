@@ -1868,6 +1868,11 @@ const HomePortal = () => {
               desc: "Muestra la cola en vivo — proyecta en pantalla grande.",
               href: "JOXE Lobby.html", cta: "Ver sala",
             },
+            {
+              n: "05", title: "Check-In", subtitle: "Cliente · Silla",
+              desc: "Escanea el QR de tu silla para confirmar asistencia o cerrar el servicio.",
+              href: "JOXE CheckIn.html", cta: "Ir a Check-In",
+            },
           ].map(c => (
             <a key={c.n} href={c.href} style={{
               padding: "32px 28px", textDecoration: "none",
@@ -2333,6 +2338,6 @@ const WABlob = () => {
 };
 
 Object.assign(window, {
-  BookingPortal, ScanPortal, LobbyPortal, HomePortal, CuentaPortal,
+  BookingPortal, ScanPortal, LobbyPortal, HomePortal, CuentaPortal, CheckInPortal,
   QRCode, PortalShell, PortalHeader, PMono, useStore, WABlob,
 });
