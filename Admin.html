@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { background: #0C0C0C; -webkit-font-smoothing: antialiased; }
+  html, body { background: #0C0C0C; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
   body { font-family: 'Outfit', sans-serif; color: #F5F1EA; }
   ::selection { background: #C29E66; color: #0C0C0C; }
   input, select, button, textarea { font-family: inherit; box-sizing: border-box; }
@@ -18,12 +18,19 @@
   }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   @media (max-width: 768px) {
-    .admin-content { margin-left: 0 !important; padding-top: 56px; }
-  }
-  @media (max-width: 600px) {
-    .admin-page-inner > div > div[style*="grid-template-columns: repeat(6"] {
-      grid-template-columns: repeat(3, 1fr) !important;
-    }
+    .admin-content { margin-left: 0 !important; padding-top: 56px !important; overflow-x: hidden; }
+    .adm-page-header { padding: 16px 20px !important; }
+    .adm-page-header h1 { font-size: 22px !important; }
+    .adm-filters { flex-direction: column !important; }
+    .adm-filters > * { min-width: 0 !important; width: 100% !important; }
+    .adm-stat-grid { grid-template-columns: repeat(2,1fr) !important; }
+    .adm-dash-grid { grid-template-columns: 1fr !important; }
+    .adm-appt-row { grid-template-columns: 52px 1fr auto !important; }
+    .adm-appt-row .adm-hide-mobile { display: none !important; }
+    .adm-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .adm-section-pad { padding: 16px 20px !important; }
+    .adm-two-col { grid-template-columns: 1fr !important; }
+    .adm-agenda-grid { grid-template-columns: 1fr !important; }
   }
 </style>
 </head>

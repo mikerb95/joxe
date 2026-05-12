@@ -450,7 +450,7 @@ const Sidebar = ({active,onNav,onLogout,open,onClose}) => {
 };
 
 const PageHeader = ({title,subtitle,action}) => (
-  <div style={{
+  <div className="adm-page-header" style={{
     padding:"28px 32px 20px",borderBottom:`1px solid ${C.bdr}`,
     display:"flex",justifyContent:"space-between",alignItems:"flex-end",
     flexWrap:"wrap",gap:12,
@@ -491,7 +491,7 @@ const AdminShell = ({children,activeView,onNav,onLogout}) => {
         }}>☰</button>
       </div>
       <div className="admin-content" style={{flex:1,marginLeft:220,minHeight:"100vh"}}>
-        <div style={{paddingTop:0}} className="admin-page-inner">
+        <div className="admin-page-inner">
           {children}
         </div>
       </div>
@@ -714,7 +714,7 @@ const DashboardView = ({onNav}) => {
   return (
     <div>
       <PageHeader title="Dashboard" subtitle="Panel · Resumen" />
-      <div style={{padding:"24px 32px"}}>
+      <div className="adm-section-pad" style={{padding:"24px 32px"}}>
         {pendingRequests.length>0 && (
           <div style={{
             marginBottom:24,padding:"14px 20px",
@@ -736,7 +736,7 @@ const DashboardView = ({onNav}) => {
             }}>Revisar →</button>
           </div>
         )}
-        <div style={{
+        <div className="adm-stat-grid" style={{
           display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",
           gap:16,marginBottom:32,
         }}>
@@ -752,7 +752,7 @@ const DashboardView = ({onNav}) => {
             color={revenueToday>0?C.green:C.muted} small />
         </div>
 
-        <div style={{display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:20}}>
+        <div className="adm-dash-grid" style={{display:"grid",gridTemplateColumns:"1.2fr 1fr",gap:20}}>
           {/* Today's schedule */}
           <Card>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
@@ -1044,7 +1044,7 @@ const AppointmentsView = () => {
       />
 
       {/* Filters */}
-      <div style={{
+      <div className="adm-filters adm-section-pad" style={{
         padding:"16px 32px",borderBottom:`1px solid ${C.bdr}`,
         display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end",
       }}>
@@ -1068,7 +1068,7 @@ const AppointmentsView = () => {
         </Btn>
       </div>
 
-      <div style={{padding:"16px 32px"}}>
+      <div className="adm-section-pad" style={{padding:"16px 32px"}}>
         <div style={{fontSize:12,color:C.muted,marginBottom:12}}>
           {filtered.length} cita{filtered.length!==1?"s":""} encontrada{filtered.length!==1?"s":""}
         </div>
@@ -1087,27 +1087,28 @@ const AppointmentsView = () => {
                 <div key={a.id} style={{border:`1px solid ${C.bdr}`,background:C.s1}}>
                   <div
                     onClick={()=>setExpandedId(isExp?null:a.id)}
+                    className="adm-appt-row"
                     style={{
                       display:"grid",gridTemplateColumns:"56px 60px 1fr 140px 120px 120px",
                       gap:12,padding:"14px 18px",cursor:"pointer",alignItems:"center",
                     }}
                   >
                     <Mono style={{color:C.gold,fontSize:10}}>{a.time||"—"}</Mono>
-                    <Mono style={{color:C.muted,fontSize:9}}>{fmtDateShort(a.date)}</Mono>
+                    <Mono className="adm-hide-mobile" style={{color:C.muted,fontSize:9}}>{fmtDateShort(a.date)}</Mono>
                     <div>
                       <div style={{fontSize:14}}>{a.name}</div>
                       <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
                     </div>
-                    <div style={{fontSize:12,color:C.muted}}>{a.stylist}</div>
+                    <div className="adm-hide-mobile" style={{fontSize:12,color:C.muted}}>{a.stylist}</div>
                     <Badge status={a.computedStatus}/>
                     <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
-                      {hasPayment && <span style={{fontSize:10,color:C.green}}>✓ Pagado</span>}
+                      {hasPayment && <span className="adm-hide-mobile" style={{fontSize:10,color:C.green}}>✓ Pagado</span>}
                       <span style={{color:C.muted,fontSize:14}}>{isExp?"▲":"▼"}</span>
                     </div>
                   </div>
 
                   {isExp && (
-                    <div style={{
+                    <div className="adm-two-col" style={{
                       padding:"16px 18px",borderTop:`1px solid ${C.bdr}`,
                       display:"grid",gridTemplateColumns:"1fr 1fr",gap:20,
                       background:C.s2,
