@@ -1,0 +1,1730 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOXE · Showcase del Sistema</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --noir: #0C0C0C;
+    --s1: #111111;
+    --s2: #181818;
+    --s3: #222222;
+    --ivory: #F5F1EA;
+    --bronze: #C29E66;
+    --bdr: rgba(245,241,234,0.1);
+    --bdr2: rgba(245,241,234,0.18);
+    --muted: rgba(245,241,234,0.5);
+    --muted2: rgba(245,241,234,0.25);
+    --green: #66C499;
+    --blue: #8ab0ff;
+    --red: #C46666;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--noir);
+    color: var(--ivory);
+    font-family: 'Outfit', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  ::selection { background: var(--bronze); color: var(--noir); }
+
+  /* ── Typography ── */
+  .serif { font-family: 'Marcellus', serif; }
+  .mono  { font-family: 'JetBrains Mono', monospace; }
+
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--bronze);
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 40px; }
+
+  @media (max-width: 640px) {
+    .container { padding: 0 20px; }
+  }
+
+  /* ── Sidebar nav ── */
+  .sidenav {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 220px;
+    background: var(--s1);
+    border-right: 1px solid var(--bdr);
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    overflow-y: auto;
+  }
+
+  .sidenav-logo {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--bdr);
+  }
+
+  .sidenav-logo h1 {
+    font-family: 'Marcellus', serif;
+    font-size: 22px;
+    letter-spacing: 0.32em;
+    font-weight: 400;
+  }
+
+  .sidenav-logo .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--bronze);
+    margin-top: 4px;
+    display: block;
+  }
+
+  .sidenav-group { padding: 16px 12px 8px; }
+
+  .sidenav-group-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted2);
+    padding: 0 10px;
+    margin-bottom: 6px;
+  }
+
+  .sidenav a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13px;
+    border-left: 2px solid transparent;
+    transition: all 0.18s;
+    border-radius: 0;
+  }
+
+  .sidenav a:hover {
+    color: var(--ivory);
+    background: rgba(194,158,102,0.07);
+    border-left-color: var(--bronze);
+  }
+
+  .sidenav a .icon {
+    font-size: 13px;
+    width: 18px;
+    text-align: center;
+    color: var(--bronze);
+    opacity: 0.7;
+  }
+
+  /* ── Main content ── */
+  .main {
+    margin-left: 220px;
+    min-height: 100vh;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    padding: 80px 60px 64px;
+    border-bottom: 1px solid var(--bdr);
+    background: linear-gradient(135deg, var(--s1) 0%, var(--noir) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(194,158,102,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .hero-eyebrow .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--bronze);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(1.4); }
+  }
+
+  .hero h1 {
+    font-family: 'Marcellus', serif;
+    font-size: clamp(36px, 5vw, 68px);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 span { color: var(--bronze); }
+
+  .hero p {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+  }
+
+  .hero-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 36px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1px solid var(--bdr2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .badge.gold {
+    border-color: rgba(194,158,102,0.4);
+    color: var(--bronze);
+    background: rgba(194,158,102,0.06);
+  }
+
+  /* ── Section ── */
+  .section {
+    padding: 72px 60px;
+    border-bottom: 1px solid var(--bdr);
+    scroll-margin-top: 32px;
+  }
+
+  .section:last-child { border-bottom: none; }
+
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 48px;
+  }
+
+  .section-icon {
+    width: 44px; height: 44px;
+    border: 1px solid rgba(194,158,102,0.3);
+    background: rgba(194,158,102,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .section-title-wrap { flex: 1; }
+
+  .section-title {
+    font-family: 'Marcellus', serif;
+    font-size: 32px;
+    font-weight: 400;
+    margin: 8px 0 10px;
+    line-height: 1.1;
+  }
+
+  .section-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 680px;
+  }
+
+  /* ── Feature grid ── */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--bdr);
+    border: 1px solid var(--bdr);
+    margin-bottom: 40px;
+  }
+
+  .feature-card {
+    background: var(--s1);
+    padding: 28px 28px 32px;
+    transition: background 0.2s;
+  }
+
+  .feature-card:hover { background: var(--s2); }
+
+  .feature-card-icon {
+    font-size: 22px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .feature-card h3 {
+    font-family: 'Marcellus', serif;
+    font-size: 18px;
+    font-weight: 400;
+    margin-bottom: 10px;
+  }
+
+  .feature-card p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+
+  .feature-card .tag {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 3px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    border: 1px solid var(--bdr2);
+    color: var(--muted2);
+  }
+
+  .feature-card .tag.green {
+    border-color: rgba(102,196,153,0.35);
+    color: var(--green);
+    background: rgba(102,196,153,0.06);
+  }
+
+  .feature-card .tag.gold {
+    border-color: rgba(194,158,102,0.35);
+    color: var(--bronze);
+    background: rgba(194,158,102,0.06);
+  }
+
+  .feature-card .tag.blue {
+    border-color: rgba(138,176,255,0.35);
+    color: var(--blue);
+    background: rgba(138,176,255,0.06);
+  }
+
+  /* ── Flow diagram ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    margin: 32px 0;
+  }
+
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 100px;
+  }
+
+  .flow-bubble {
+    width: 52px; height: 52px;
+    border: 1px solid var(--bronze);
+    background: rgba(194,158,102,0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--bronze);
+  }
+
+  .flow-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    font-family: 'Outfit', sans-serif;
+    line-height: 1.4;
+    max-width: 80px;
+  }
+
+  .flow-arrow {
+    font-size: 18px;
+    color: var(--bdr2);
+    flex-shrink: 0;
+    padding: 0 4px;
+    margin-bottom: 20px;
+  }
+
+  /* ── Screen mockup ── */
+  .mockup-wrap {
+    border: 1px solid var(--bdr2);
+    background: var(--s1);
+    overflow: hidden;
+    margin: 16px 0;
+  }
+
+  .mockup-bar {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--bdr);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--s2);
+  }
+
+  .mockup-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+
+  .mockup-url {
+    margin-left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted2);
+    letter-spacing: 0.08em;
+  }
+
+  .mockup-body {
+    padding: 24px;
+  }
+
+  /* ── Admin nav preview ── */
+  .admin-preview {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    border: 1px solid var(--bdr2);
+    height: 340px;
+    overflow: hidden;
+  }
+
+  .admin-preview-sidebar {
+    background: var(--s1);
+    border-right: 1px solid var(--bdr);
+    padding: 20px 0;
+    overflow: hidden;
+  }
+
+  .admin-preview-sidebar .logo-area {
+    padding: 0 20px 16px;
+    border-bottom: 1px solid var(--bdr);
+    margin-bottom: 12px;
+  }
+
+  .admin-preview-sidebar .logo-area .name {
+    font-family: 'Marcellus', serif;
+    font-size: 16px;
+    letter-spacing: 0.3em;
+  }
+
+  .admin-preview-nav-item {
+    padding: 8px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: default;
+  }
+
+  .admin-preview-nav-item.active {
+    color: var(--ivory);
+    background: rgba(194,158,102,0.1);
+    border-left: 2px solid var(--bronze);
+  }
+
+  .admin-preview-nav-item .nav-icon {
+    color: var(--bronze);
+    font-size: 12px;
+  }
+
+  .admin-preview-content {
+    background: var(--noir);
+    padding: 24px;
+    overflow: hidden;
+  }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--bdr);
+    border: 1px solid var(--bdr);
+    margin-bottom: 24px;
+  }
+
+  .stat-box {
+    background: var(--s1);
+    padding: 20px 22px;
+  }
+
+  .stat-box .stat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin-bottom: 8px;
+  }
+
+  .stat-box .stat-val {
+    font-family: 'Marcellus', serif;
+    font-size: 28px;
+    color: var(--bronze);
+    line-height: 1;
+  }
+
+  .stat-box .stat-sub {
+    font-size: 10px;
+    color: var(--muted2);
+    margin-top: 4px;
+  }
+
+  /* ── Booking steps ── */
+  .booking-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--bdr);
+    border: 1px solid var(--bdr);
+    margin: 24px 0;
+  }
+
+  .booking-step {
+    background: var(--s1);
+    padding: 22px 20px;
+    position: relative;
+  }
+
+  .booking-step.active { background: var(--s2); }
+
+  .booking-step .step-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--bronze);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .booking-step .step-title {
+    font-family: 'Marcellus', serif;
+    font-size: 16px;
+    font-weight: 400;
+    margin-bottom: 6px;
+  }
+
+  .booking-step .step-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .booking-step .step-check {
+    position: absolute;
+    top: 16px; right: 16px;
+    color: var(--bronze);
+    font-size: 14px;
+  }
+
+  /* ── Table ── */
+  .table-wrap {
+    border: 1px solid var(--bdr);
+    overflow: hidden;
+  }
+
+  .table-head {
+    display: grid;
+    padding: 10px 16px;
+    background: var(--s2);
+    border-bottom: 1px solid var(--bdr);
+    gap: 12px;
+  }
+
+  .table-row {
+    display: grid;
+    padding: 12px 16px;
+    gap: 12px;
+    border-bottom: 1px solid var(--bdr);
+    font-size: 13px;
+    align-items: center;
+  }
+
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: var(--s2); }
+
+  .status-badge {
+    display: inline-flex;
+    padding: 2px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .status-badge.scheduled { background: rgba(194,158,102,0.12); color: var(--bronze); border: 1px solid rgba(194,158,102,0.3); }
+  .status-badge.waiting   { background: rgba(138,176,255,0.12); color: var(--blue);   border: 1px solid rgba(138,176,255,0.3); }
+  .status-badge.service   { background: rgba(102,196,153,0.12); color: var(--green);  border: 1px solid rgba(102,196,153,0.3); }
+  .status-badge.done      { background: rgba(102,196,153,0.07); color: var(--green);  border: 1px solid rgba(102,196,153,0.2); }
+
+  /* ── Palette demos ── */
+  .palettes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin: 24px 0;
+  }
+
+  .palette-item {
+    border: 1px solid var(--bdr2);
+    overflow: hidden;
+  }
+
+  .palette-swatch {
+    display: flex;
+    height: 48px;
+  }
+
+  .palette-name {
+    padding: 10px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--s2);
+  }
+
+  /* ── URL pill ── */
+  .url-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: var(--s2);
+    border: 1px solid var(--bdr2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-decoration: none;
+    transition: border-color 0.2s, color 0.2s;
+  }
+
+  .url-pill:hover {
+    border-color: var(--bronze);
+    color: var(--ivory);
+  }
+
+  .url-pill .pill-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--bronze);
+    flex-shrink: 0;
+  }
+
+  /* ── Info list ── */
+  .info-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+
+  .info-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+
+  .info-list li::before {
+    content: '—';
+    color: var(--bronze);
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    height: 1px;
+    background: var(--bdr);
+    margin: 32px 0;
+  }
+
+  /* ── CTA link ── */
+  .cta-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    background: var(--bronze);
+    color: var(--noir);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: opacity 0.2s;
+    margin-top: 8px;
+  }
+
+  .cta-link:hover { opacity: 0.88; }
+
+  .cta-link-ghost {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 24px;
+    border: 1px solid var(--bdr2);
+    color: var(--muted);
+    text-decoration: none;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .cta-link-ghost:hover { border-color: var(--bronze); color: var(--ivory); }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .sidenav { display: none; }
+    .main { margin-left: 0; }
+    .hero { padding: 48px 24px 40px; }
+    .section { padding: 48px 24px; }
+    .booking-steps { grid-template-columns: repeat(2, 1fr); }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .palettes { grid-template-columns: repeat(2, 1fr); }
+    .admin-preview { grid-template-columns: 1fr; }
+    .admin-preview-sidebar { display: none; }
+    .admin-preview { height: auto; }
+  }
+
+  @media (max-width: 640px) {
+    .feature-grid { grid-template-columns: 1fr; }
+    .flow { gap: 0; }
+    .flow-step { min-width: 70px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--noir); }
+  ::-webkit-scrollbar-thumb { background: var(--s3); }
+</style>
+</head>
+<body>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- SIDEBAR NAV                                               -->
+<!-- ────────────────────────────────────────────────────────── -->
+<nav class="sidenav">
+  <div class="sidenav-logo">
+    <h1>JOXE</h1>
+    <span class="sub">Showcase del sistema</span>
+  </div>
+
+  <div class="sidenav-group">
+    <div class="sidenav-group-title">Índice</div>
+    <a href="#overview"><span class="icon">◈</span> Visión general</a>
+    <a href="#flujo"><span class="icon">→</span> Flujo completo</a>
+  </div>
+
+  <div class="sidenav-group">
+    <div class="sidenav-group-title">Sitio público</div>
+    <a href="#landing"><span class="icon">◻</span> Landing page</a>
+    <a href="#editmode"><span class="icon">✦</span> Modo edición</a>
+  </div>
+
+  <div class="sidenav-group">
+    <div class="sidenav-group-title">Portal cliente</div>
+    <a href="#portal"><span class="icon">◯</span> Inicio del portal</a>
+    <a href="#booking"><span class="icon">▦</span> Agendar cita</a>
+    <a href="#checkin"><span class="icon">⊙</span> Check-in</a>
+    <a href="#lobby"><span class="icon">≡</span> Sala de espera</a>
+    <a href="#scan"><span class="icon">⊞</span> Escáner QR</a>
+  </div>
+
+  <div class="sidenav-group">
+    <div class="sidenav-group-title">Panel admin</div>
+    <a href="#admin-dashboard"><span class="icon">◈</span> Dashboard</a>
+    <a href="#admin-agenda"><span class="icon">▦</span> Agenda</a>
+    <a href="#admin-citas"><span class="icon">≡</span> Citas</a>
+    <a href="#admin-crm"><span class="icon">◯</span> CRM · Clientes</a>
+    <a href="#admin-caja"><span class="icon">◎</span> Caja</a>
+    <a href="#admin-empleados"><span class="icon">◉</span> Empleados</a>
+    <a href="#admin-servicios"><span class="icon">✦</span> Servicios</a>
+    <a href="#admin-bloqueos"><span class="icon">⊘</span> Bloqueos</a>
+    <a href="#payment"><span class="icon">⊛</span> Abonos</a>
+  </div>
+
+  <div class="sidenav-group">
+    <div class="sidenav-group-title">Técnico</div>
+    <a href="#tech"><span class="icon">⊛</span> Arquitectura</a>
+    <a href="#links"><span class="icon">→</span> Accesos directos</a>
+  </div>
+</nav>
+
+<!-- ────────────────────────────────────────────────────────── -->
+<!-- MAIN                                                       -->
+<!-- ────────────────────────────────────────────────────────── -->
+<main class="main">
+
+  <!-- HERO -->
+  <section class="hero" id="overview">
+    <div class="hero-eyebrow">
+      <div class="dot"></div>
+      <span class="label">Sistema completo · JOXE</span>
+    </div>
+    <h1>Todo lo que el<br>sistema <span>hace</span> por ti</h1>
+    <p>
+      Una plataforma integral para gestionar tu salón de estética: desde que el cliente descubre el servicio hasta que cierra la caja al final del día. Sin apps nativas, sin instalaciones.
+    </p>
+    <div class="hero-badges">
+      <span class="badge gold">Reservas en línea</span>
+      <span class="badge gold">Panel admin completo</span>
+      <span class="badge gold">CRM de clientes</span>
+      <span class="badge">Caja y cobros</span>
+      <span class="badge">Agenda semanal</span>
+      <span class="badge">Cola en tiempo real</span>
+      <span class="badge">Check-in QR</span>
+      <span class="badge">Multi-estilista</span>
+    </div>
+  </section>
+
+  <!-- FLUJO COMPLETO -->
+  <section class="section" id="flujo">
+    <div class="section-header">
+      <div class="section-icon">→</div>
+      <div class="section-title-wrap">
+        <div class="label">Recorrido</div>
+        <h2 class="section-title">Flujo completo de una cita</h2>
+        <p class="section-desc">Así recorre una reserva desde que el cliente la crea hasta que queda registrada en caja. Cada paso ocurre en una pantalla distinta del sistema.</p>
+      </div>
+    </div>
+
+    <div class="flow">
+      <div class="flow-step">
+        <div class="flow-bubble">01</div>
+        <div class="flow-label">Cliente reserva en el portal</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-bubble">02</div>
+        <div class="flow-label">Recibe ticket JX-XXXX + QR</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-bubble">03</div>
+        <div class="flow-label">Check-in al llegar al salón</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-bubble">04</div>
+        <div class="flow-label">Admin mueve a "En silla"</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-bubble">05</div>
+        <div class="flow-label">Lobby muestra cola en vivo</div>
+      </div>
+      <div class="flow-arrow">›</div>
+      <div class="flow-step">
+        <div class="flow-bubble">06</div>
+        <div class="flow-label">Cierre y registro en caja</div>
+      </div>
+    </div>
+
+    <p style="font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 640px;">
+      Todos los módulos se sincronizan automáticamente cada 5 segundos sin necesidad de recargar la página. Un cambio en el panel admin aparece al instante en la sala de espera y en el portal del cliente.
+    </p>
+  </section>
+
+  <!-- ──────────────────────────── SITIO PÚBLICO ──────────────────────────── -->
+
+  <!-- LANDING PAGE -->
+  <section class="section" id="landing">
+    <div class="section-header">
+      <div class="section-icon">◻</div>
+      <div class="section-title-wrap">
+        <div class="label">Sitio público</div>
+        <h2 class="section-title">Landing page</h2>
+        <p class="section-desc">La cara visible del salón. Diseñada para convertir visitas en reservas, con una estética de lujo minimalista y contenido editable por el administrador.</p>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="feature-card-icon">◻</span>
+        <h3>Hero adaptable</h3>
+        <p>Sección principal con variantes de layout (split, centrado). Headline, subtítulo y botón de reserva directamente visibles.</p>
+        <span class="tag gold">Configurable</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">✦</span>
+        <h3>Catálogo de servicios</h3>
+        <p>Muestra todos los servicios activos con precio y duración. Se sincroniza con el catálogo del panel admin en tiempo real.</p>
+        <span class="tag green">Dinámico</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◯</span>
+        <h3>Galería fotográfica</h3>
+        <p>Sección de galería para mostrar trabajos del salón. Visual, impactante, adaptada a todos los tamaños de pantalla.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">≡</span>
+        <h3>Testimonios</h3>
+        <p>Reseñas de clientes que refuerzan la confianza. Rotación automática con diseño editorial.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◎</span>
+        <h3>Mapa y ubicación</h3>
+        <p>Sección con dirección del salón, horarios y mapa integrado para que el cliente llegue fácilmente.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊙</span>
+        <h3>Modal de reserva</h3>
+        <p>Botón "Reservar" abre un modal que redirige directamente al portal de agendamiento con el flujo de 4 pasos.</p>
+        <span class="tag gold">CTA principal</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">💬</span>
+        <h3>WhatsApp flotante</h3>
+        <p>Botón flotante de WhatsApp siempre visible para que el cliente contacte al salón directamente con un clic.</p>
+        <span class="tag green">Conversión</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◈</span>
+        <h3>Filosofía del salón</h3>
+        <p>Sección narrativa para comunicar los valores y la identidad de marca del salón. Texto personalizable.</p>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <a href="index.html" class="cta-link">→ Ver landing page</a>
+    </div>
+  </section>
+
+  <!-- MODO EDICIÓN -->
+  <section class="section" id="editmode">
+    <div class="section-header">
+      <div class="section-icon">✦</div>
+      <div class="section-title-wrap">
+        <div class="label">Personalización</div>
+        <h2 class="section-title">Modo edición visual</h2>
+        <p class="section-desc">El desarrollador puede ajustar la identidad visual del sitio en vivo: paleta de colores y tipografía. Los cambios se aplican al instante sin tocar código.</p>
+      </div>
+    </div>
+
+    <div class="label" style="margin-bottom: 14px;">Paletas disponibles</div>
+    <div class="palettes">
+      <div class="palette-item">
+        <div class="palette-swatch">
+          <div style="flex:1; background:#0C0C0C;"></div>
+          <div style="flex:1; background:#F5F1EA;"></div>
+          <div style="flex:1; background:#C29E66;"></div>
+        </div>
+        <div class="palette-name">Noir · Bronze</div>
+      </div>
+      <div class="palette-item">
+        <div class="palette-swatch">
+          <div style="flex:1; background:#14110F;"></div>
+          <div style="flex:1; background:#F2EADD;"></div>
+          <div style="flex:1; background:#D4B88A;"></div>
+        </div>
+        <div class="palette-name">Ink · Champagne</div>
+      </div>
+      <div class="palette-item">
+        <div class="palette-swatch">
+          <div style="flex:1; background:#1A1816;"></div>
+          <div style="flex:1; background:#EFEAE0;"></div>
+          <div style="flex:1; background:#B8894D;"></div>
+        </div>
+        <div class="palette-name">Charcoal · Gold</div>
+      </div>
+      <div class="palette-item">
+        <div class="palette-swatch">
+          <div style="flex:1; background:#0A0A0A;"></div>
+          <div style="flex:1; background:#F4EFE8;"></div>
+          <div style="flex:1; background:#C89983;"></div>
+        </div>
+        <div class="palette-name">Jet · Rose</div>
+      </div>
+    </div>
+
+    <div class="label" style="margin-bottom: 14px; margin-top: 28px;">Pares tipográficos</div>
+    <div class="feature-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="feature-card">
+        <div style="font-family: 'Marcellus', serif; font-size: 22px; margin-bottom: 6px;">Marcellus</div>
+        <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">+ Outfit</div>
+        <span class="tag gold">Por defecto</span>
+      </div>
+      <div class="feature-card">
+        <div style="font-family: 'Cormorant Garamond', serif; font-size: 22px; margin-bottom: 6px; font-family: serif;">Cormorant</div>
+        <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">+ Manrope</div>
+        <span class="tag">Elegante</span>
+      </div>
+      <div class="feature-card">
+        <div style="font-size: 22px; margin-bottom: 6px; font-style: italic;">Italiana</div>
+        <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">+ Jost</div>
+        <span class="tag">Moderno</span>
+      </div>
+    </div>
+
+    <ul class="info-list" style="margin-top: 24px;">
+      <li>El panel de tweaks aparece activado mediante un mensaje postMessage desde el iframe padre — ideal para un preview builder.</li>
+      <li>Los cambios se transmiten al componente padre para guardar los valores seleccionados.</li>
+      <li>La paleta y la tipografía se aplican vía CSS custom properties, afectando toda la landing al instante.</li>
+    </ul>
+  </section>
+
+  <!-- ──────────────────────────── PORTAL CLIENTE ──────────────────────────── -->
+
+  <!-- PORTAL INICIO -->
+  <section class="section" id="portal">
+    <div class="section-header">
+      <div class="section-icon">◯</div>
+      <div class="section-title-wrap">
+        <div class="label">Portal · Clientes</div>
+        <h2 class="section-title">Inicio del portal</h2>
+        <p class="section-desc">Dashboard de bienvenida para el cliente. Muestra las citas de hoy, accesos directos a las funciones clave y estadísticas del salón en tiempo real.</p>
+      </div>
+    </div>
+
+    <div class="stats-row" style="max-width: 640px;">
+      <div class="stat-box">
+        <div class="stat-label">Citas hoy</div>
+        <div class="stat-val">6</div>
+        <div class="stat-sub">Agendadas</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">En servicio</div>
+        <div class="stat-val" style="color: var(--green);">2</div>
+        <div class="stat-sub">En silla ahora</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Completadas</div>
+        <div class="stat-val" style="color: var(--muted);">3</div>
+        <div class="stat-sub">Este día</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">En cola</div>
+        <div class="stat-val" style="color: var(--blue);">1</div>
+        <div class="stat-sub">Esperando</div>
+      </div>
+    </div>
+
+    <div class="feature-grid" style="margin-top: 0;">
+      <div class="feature-card">
+        <span class="feature-card-icon">▦</span>
+        <h3>Agendar cita</h3>
+        <p>Acceso directo al flujo de reserva de 4 pasos. El cliente puede pedir su turno sin crear cuenta ni descargar nada.</p>
+        <span class="tag gold">Acción principal</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊙</span>
+        <h3>Check-in rápido</h3>
+        <p>Atajo al módulo de check-in para clientes que ya tienen cita y quieren registrar su llegada al salón.</p>
+        <span class="tag blue">Al llegar</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">≡</span>
+        <h3>Ver cola en vivo</h3>
+        <p>El cliente puede ver en qué posición está la cola y cuánto tiempo estimado falta para ser atendido.</p>
+        <span class="tag green">Tiempo real</span>
+      </div>
+    </div>
+
+    <a href="Portal.html" class="cta-link">→ Abrir portal de clientes</a>
+  </section>
+
+  <!-- BOOKING -->
+  <section class="section" id="booking">
+    <div class="section-header">
+      <div class="section-icon">▦</div>
+      <div class="section-title-wrap">
+        <div class="label">Portal · Reservas</div>
+        <h2 class="section-title">Agendamiento en 4 pasos</h2>
+        <p class="section-desc">El flujo de reserva guía al cliente paso a paso. Cada paso valida la selección antes de avanzar. Al completarlo genera un ticket único con código QR.</p>
+      </div>
+    </div>
+
+    <div class="booking-steps">
+      <div class="booking-step active">
+        <div class="step-num">Paso 01</div>
+        <div class="step-title">Servicio</div>
+        <div class="step-desc">Elige entre el catálogo completo: corte, balayage, color, keratina, asesoría de imagen y más.</div>
+      </div>
+      <div class="booking-step">
+        <div class="step-num">Paso 02</div>
+        <div class="step-title">Estilista</div>
+        <div class="step-desc">Selecciona a un profesional específico o elige "Sin preferencia" para asignación automática por disponibilidad.</div>
+      </div>
+      <div class="booking-step">
+        <div class="step-num">Paso 03</div>
+        <div class="step-title">Fecha y hora</div>
+        <div class="step-desc">Calendario de hasta 3 días. Los horarios ocupados o bloqueados por admin aparecen deshabilitados automáticamente.</div>
+      </div>
+      <div class="booking-step">
+        <div class="step-num">Paso 04</div>
+        <div class="step-title">Datos personales</div>
+        <div class="step-desc">Nombre, teléfono y cédula. La cédula permite identificar al cliente en check-in y en el CRM.</div>
+      </div>
+    </div>
+
+    <ul class="info-list">
+      <li>Al confirmar se genera un ticket tipo <strong>JX-XXXX</strong> con código QR visual imprimible.</li>
+      <li>Si se elige "Sin preferencia", el sistema asigna automáticamente al estilista con menor carga ese día.</li>
+      <li>Los horarios bloqueados por el administrador no aparecen como disponibles.</li>
+      <li>La reserva queda sincronizada al instante en el panel admin sin intervención humana.</li>
+      <li>El catálogo de servicios y estilistas se carga dinámicamente desde la configuración del admin.</li>
+    </ul>
+
+    <a href="Booking.html" class="cta-link" style="margin-top: 24px;">→ Probar reserva</a>
+  </section>
+
+  <!-- CHECK-IN -->
+  <section class="section" id="checkin">
+    <div class="section-header">
+      <div class="section-icon">⊙</div>
+      <div class="section-title-wrap">
+        <div class="label">Portal · Llegada</div>
+        <h2 class="section-title">Check-in de clientes</h2>
+        <p class="section-desc">Cuando el cliente llega al salón puede hacer check-in con su código de ticket o con su número de cédula. Esto mueve la cita al estado "En cola".</p>
+      </div>
+    </div>
+
+    <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="feature-card">
+        <span class="feature-card-icon">⊞</span>
+        <h3>Check-in por código</h3>
+        <p>El cliente ingresa su código JX-XXXX o escanea el QR del ticket para confirmar su llegada en segundos.</p>
+        <span class="tag gold">Más rápido</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◯</span>
+        <h3>Check-in por cédula</h3>
+        <p>Si el cliente olvidó su ticket, puede identificarse con su número de cédula y el sistema lo localiza automáticamente.</p>
+        <span class="tag">Alternativo</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">≡</span>
+        <h3>Confirmación visual</h3>
+        <p>Al hacer check-in exitoso se muestra una pantalla de confirmación con los datos de la cita: servicio, estilista y hora.</p>
+        <span class="tag green">Feedback claro</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">→</span>
+        <h3>Mueve a la cola</h3>
+        <p>El check-in cambia el estado de la cita a "En cola" y la hace visible en el panel admin y en la sala de espera.</p>
+        <span class="tag blue">Tiempo real</span>
+      </div>
+    </div>
+
+    <a href="CheckIn.html" class="cta-link">→ Ver módulo de check-in</a>
+  </section>
+
+  <!-- LOBBY -->
+  <section class="section" id="lobby">
+    <div class="section-header">
+      <div class="section-icon">≡</div>
+      <div class="section-title-wrap">
+        <div class="label">Portal · Sala</div>
+        <h2 class="section-title">Sala de espera digital</h2>
+        <p class="section-desc">Pantalla pensada para proyectarse en una TV del salón o consultada desde el teléfono del cliente. Muestra la cola en tiempo real sin necesidad de recargar.</p>
+      </div>
+    </div>
+
+    <div class="feature-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="feature-card">
+        <span class="feature-card-icon">≡</span>
+        <h3>Cola en tiempo real</h3>
+        <p>Lista actualizada automáticamente cada 5 segundos. El cliente puede ver en qué posición está sin preguntar al recepcionista.</p>
+        <span class="tag green">Live</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◉</span>
+        <h3>Estado por estilista</h3>
+        <p>Muestra qué estilistas están activos y qué cliente atienden en este momento. Vista separada por profesional.</p>
+        <span class="tag blue">Por columna</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊙</span>
+        <h3>Tiempo estimado</h3>
+        <p>Indicación visual del tiempo estimado de espera según el servicio en curso y la posición en cola.</p>
+      </div>
+    </div>
+
+    <a href="Lobby.html" class="cta-link">→ Ver sala de espera</a>
+  </section>
+
+  <!-- SCAN -->
+  <section class="section" id="scan">
+    <div class="section-header">
+      <div class="section-icon">⊞</div>
+      <div class="section-title-wrap">
+        <div class="label">Portal · Operación</div>
+        <h2 class="section-title">Escáner QR para el barbero</h2>
+        <p class="section-desc">Herramienta para el personal del salón. Permite escanear el QR del cliente para ver su cita, confirmar check-in o moverla al siguiente estado desde el teléfono.</p>
+      </div>
+    </div>
+
+    <ul class="info-list">
+      <li>Accede a la cámara del dispositivo para leer códigos QR directamente desde el móvil o tablet del estilista.</li>
+      <li>Al detectar un código válido muestra los datos completos de la cita: cliente, servicio, hora y estado actual.</li>
+      <li>Permite mover la cita a "En silla" o marcarla como completada con un toque, sin ir al panel admin.</li>
+      <li>También acepta ingreso manual del código JX-XXXX si la cámara no está disponible.</li>
+    </ul>
+
+    <a href="Scan.html" class="cta-link">→ Abrir escáner</a>
+  </section>
+
+  <!-- ──────────────────────────── PANEL ADMIN ──────────────────────────── -->
+
+  <section class="section" id="admin-dashboard">
+    <div class="section-header">
+      <div class="section-icon">◈</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Panel</div>
+        <h2 class="section-title">Panel de administración</h2>
+        <p class="section-desc">El centro de control del salón. Acceso con contraseña, con 9 módulos organizados en una barra lateral. Soporta sesiones de administrador completo y sesiones por empleado.</p>
+      </div>
+    </div>
+
+    <!-- Admin preview -->
+    <div class="admin-preview">
+      <div class="admin-preview-sidebar">
+        <div class="logo-area">
+          <div class="name">JOXE</div>
+          <div class="label" style="font-size:8px; margin-top: 3px;">Panel · Admin</div>
+        </div>
+        <div class="admin-preview-nav-item active"><span class="nav-icon">◈</span> Dashboard</div>
+        <div class="admin-preview-nav-item"><span class="nav-icon">▦</span> Agenda</div>
+        <div class="admin-preview-nav-item"><span class="nav-icon">≡</span> Citas</div>
+        <div class="admin-preview-nav-item"><span class="nav-icon">◯</span> CRM · Clientes</div>
+        <div class="admin-preview-nav-item"><span class="nav-icon">⊘</span> Bloquear horas</div>
+        <div class="admin-preview-nav-item"><span class="nav-icon">◎</span> Caja</div>
+        <div class="admin-preview-nav-item"><span class="nav-icon">◉</span> Empleados</div>
+        <div class="admin-preview-nav-item"><span class="nav-icon">✦</span> Servicios</div>
+        <div class="admin-preview-nav-item"><span class="nav-icon">⊛</span> Configuración</div>
+      </div>
+      <div class="admin-preview-content">
+        <div class="stats-row" style="grid-template-columns: repeat(4,1fr);">
+          <div class="stat-box"><div class="stat-label">Citas hoy</div><div class="stat-val">8</div></div>
+          <div class="stat-box"><div class="stat-label">En silla</div><div class="stat-val" style="color:var(--green);">2</div></div>
+          <div class="stat-box"><div class="stat-label">Ingresos hoy</div><div class="stat-val" style="font-size:22px;">$385K</div></div>
+          <div class="stat-box"><div class="stat-label">Completadas</div><div class="stat-val" style="color:var(--muted);">5</div></div>
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--bdr); border: 1px solid var(--bdr);">
+          <div style="background:var(--s1); padding:16px;">
+            <div class="label" style="font-size:8px; margin-bottom:10px;">Próximas citas</div>
+            <div class="table-row" style="grid-template-columns: 1fr 1fr 1fr; font-size:11px; padding: 8px 0;">
+              <span>Valentina R.</span><span style="color:var(--muted);">Balayage</span><span style="color:var(--muted);">10:30</span>
+            </div>
+            <div class="table-row" style="grid-template-columns: 1fr 1fr 1fr; font-size:11px; padding: 8px 0; background:var(--s2);">
+              <span>Carlos M.</span><span style="color:var(--muted);">Corte hombre</span><span style="color:var(--muted);">12:00</span>
+            </div>
+          </div>
+          <div style="background:var(--s1); padding:16px; border-left: 1px solid var(--bdr);">
+            <div class="label" style="font-size:8px; margin-bottom:10px;">Estilistas activos</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; align-items:center; gap:10px; font-size:11px;">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+                <span>Joxe</span><span style="margin-left:auto; color:var(--muted);">En silla</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; font-size:11px;">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0;"></div>
+                <span>Laura M.</span><span style="margin-left:auto; color:var(--muted);">En silla</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px; font-size:11px;">
+                <div style="width:6px;height:6px;border-radius:50%;background:var(--bdr2);flex-shrink:0;"></div>
+                <span>Camila R.</span><span style="margin-left:auto; color:var(--muted2);">Libre</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top: 32px;">
+      <ul class="info-list">
+        <li>Login con contraseña para administrador. Sesiones adicionales por PIN para cada empleado.</li>
+        <li>Dashboard muestra resumen en tiempo real: citas, ingresos del día, estilistas activos y próximas reservas.</li>
+        <li>Sidebar con 9 módulos. En mobile se convierte en drawer lateral con overlay.</li>
+        <li>Sincronización automática cada 8 segundos con el servidor. Cambios optimistas para respuesta inmediata.</li>
+      </ul>
+    </div>
+
+    <a href="Admin.html" class="cta-link" style="margin-top: 24px;">→ Abrir panel admin</a>
+  </section>
+
+  <!-- AGENDA -->
+  <section class="section" id="admin-agenda">
+    <div class="section-header">
+      <div class="section-icon">▦</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Módulo</div>
+        <h2 class="section-title">Agenda semanal</h2>
+        <p class="section-desc">Vista de calendario semanal organizada por estilista. El administrador puede navegar entre semanas y ver de un vistazo quién tiene qué cita y cuándo.</p>
+      </div>
+    </div>
+
+    <ul class="info-list">
+      <li>Grilla semanal (lunes a sábado) con columnas por día y filas por estilista.</li>
+      <li>Cada cita aparece como un bloque con nombre del cliente, servicio y hora.</li>
+      <li>Navegación entre semanas con flechas. La semana actual resaltada por defecto.</li>
+      <li>Los horarios bloqueados se muestran con un marcador visual diferenciado.</li>
+      <li>Un clic sobre una cita abre el detalle completo con acciones: mover de estado, cancelar, ver cliente.</li>
+    </ul>
+  </section>
+
+  <!-- CITAS -->
+  <section class="section" id="admin-citas">
+    <div class="section-header">
+      <div class="section-icon">≡</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Módulo</div>
+        <h2 class="section-title">Gestión de citas</h2>
+        <p class="section-desc">Listado completo de todas las citas con filtros y acciones masivas. El administrador gestiona el estado de cada reserva en este módulo.</p>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="max-width: 800px; margin-bottom: 28px;">
+      <div class="table-head" style="grid-template-columns: 1.4fr 1.2fr 1fr 0.8fr 0.9fr;">
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Cliente</span>
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Servicio</span>
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Estilista</span>
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Hora</span>
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Estado</span>
+      </div>
+      <div class="table-row" style="grid-template-columns: 1.4fr 1.2fr 1fr 0.8fr 0.9fr;">
+        <span>Valentina R.</span>
+        <span style="color:var(--muted); font-size:12px;">Balayage</span>
+        <span style="color:var(--muted); font-size:12px;">Joxe</span>
+        <span style="color:var(--muted); font-size:12px;">10:30</span>
+        <span class="status-badge service">En silla</span>
+      </div>
+      <div class="table-row" style="grid-template-columns: 1.4fr 1.2fr 1fr 0.8fr 0.9fr;">
+        <span>Carlos M.</span>
+        <span style="color:var(--muted); font-size:12px;">Corte hombre</span>
+        <span style="color:var(--muted); font-size:12px;">Laura M.</span>
+        <span style="color:var(--muted); font-size:12px;">12:00</span>
+        <span class="status-badge waiting">En cola</span>
+      </div>
+      <div class="table-row" style="grid-template-columns: 1.4fr 1.2fr 1fr 0.8fr 0.9fr;">
+        <span>Sofía T.</span>
+        <span style="color:var(--muted); font-size:12px;">Color raíz</span>
+        <span style="color:var(--muted); font-size:12px;">Camila R.</span>
+        <span style="color:var(--muted); font-size:12px;">14:00</span>
+        <span class="status-badge scheduled">Agendada</span>
+      </div>
+      <div class="table-row" style="grid-template-columns: 1.4fr 1.2fr 1fr 0.8fr 0.9fr;">
+        <span style="color:var(--muted);">Andrés P.</span>
+        <span style="color:var(--muted2); font-size:12px;">Keratina</span>
+        <span style="color:var(--muted2); font-size:12px;">Joxe</span>
+        <span style="color:var(--muted2); font-size:12px;">9:00</span>
+        <span class="status-badge done">Completada</span>
+      </div>
+    </div>
+
+    <ul class="info-list">
+      <li>Estados de cita: Agendada → En cola → En silla → Completada (o Cancelada en cualquier punto).</li>
+      <li>El admin puede mover citas entre estados con un clic. También puede cancelar con nota opcional.</li>
+      <li>Filtro por fecha, estilista y estado. Búsqueda por nombre o código de ticket.</li>
+      <li>Cada fila muestra código JX, cliente, servicio, estilista, fecha/hora y estado actual.</li>
+      <li>Al completar una cita, el sistema sugiere registrar el pago en la Caja.</li>
+    </ul>
+  </section>
+
+  <!-- CRM -->
+  <section class="section" id="admin-crm">
+    <div class="section-header">
+      <div class="section-icon">◯</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Módulo</div>
+        <h2 class="section-title">CRM · Gestión de clientes</h2>
+        <p class="section-desc">Base de datos de todos los clientes con historial de visitas, gasto acumulado y notas internas. Permite dar seguimiento personalizado a cada cliente.</p>
+      </div>
+    </div>
+
+    <div class="feature-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="feature-card">
+        <span class="feature-card-icon">◯</span>
+        <h3>Perfil por cliente</h3>
+        <p>Nombre, cédula, teléfono, historial completo de servicios y gasto total acumulado en el salón.</p>
+        <span class="tag gold">Identificación</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">≡</span>
+        <h3>Historial de citas</h3>
+        <p>Todas las visitas anteriores con fecha, servicio, estilista y monto pagado. Ordenadas cronológicamente.</p>
+        <span class="tag">Trazabilidad</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">✦</span>
+        <h3>Sistema de fidelización</h3>
+        <p>Identifica clientes frecuentes y VIP según número de visitas y gasto. Permite añadir notas internas del equipo.</p>
+        <span class="tag gold">Retención</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊙</span>
+        <h3>Alta automática</h3>
+        <p>El perfil del cliente se crea automáticamente al hacer su primera reserva con nombre, cédula y teléfono.</p>
+        <span class="tag green">Sin fricción</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◈</span>
+        <h3>Búsqueda rápida</h3>
+        <p>Encuentra cualquier cliente por nombre o cédula en milisegundos. Ideal para el check-in manual en recepción.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◎</span>
+        <h3>Gasto total</h3>
+        <p>Muestra el gasto acumulado de cada cliente, útil para identificar a los mejores clientes del salón.</p>
+        <span class="tag blue">Métricas</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAJA -->
+  <section class="section" id="admin-caja">
+    <div class="section-header">
+      <div class="section-icon">◎</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Módulo</div>
+        <h2 class="section-title">Caja e ingresos</h2>
+        <p class="section-desc">Registro de todos los cobros del salón. El administrador cierra cada cita con el método de pago utilizado. El sistema calcula los totales automáticamente.</p>
+      </div>
+    </div>
+
+    <div class="feature-grid" style="grid-template-columns: repeat(2, 1fr);">
+      <div class="feature-card">
+        <span class="feature-card-icon">◎</span>
+        <h3>Métodos de pago</h3>
+        <p>Soporta Efectivo, Transferencia, Datáfono y Nequi. Cada método tiene un color identificador en el registro.</p>
+        <span class="tag gold">Multi-método</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◈</span>
+        <h3>Resumen diario</h3>
+        <p>Total del día desglosado por método de pago. Permite ver de un vistazo cuánto entró en efectivo vs transferencia.</p>
+        <span class="tag blue">Cierre de caja</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">≡</span>
+        <h3>Historial de cobros</h3>
+        <p>Todos los pagos registrados con fecha, cliente, servicio, estilista y monto. Filtrable por período.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">✦</span>
+        <h3>Notas por cobro</h3>
+        <p>Campo de notas libre por cada registro de pago. Útil para descuentos, cortesías o pagos parciales.</p>
+      </div>
+    </div>
+
+    <div style="margin-top: 8px;">
+      <ul class="info-list">
+        <li>Al marcar una cita como completada, el sistema sugiere abrir el registro de pago con el monto del servicio precargado.</li>
+        <li>Los ingresos aparecen en el dashboard del día en tiempo real.</li>
+        <li>El módulo de abonos (Payment.html) permite confirmar depósitos previos desde un enlace externo.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- EMPLEADOS -->
+  <section class="section" id="admin-empleados">
+    <div class="section-header">
+      <div class="section-icon">◉</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Módulo</div>
+        <h2 class="section-title">Gestión de empleados</h2>
+        <p class="section-desc">El administrador gestiona el equipo del salón: roles, servicios que puede realizar cada uno y PINs de acceso para sesiones individuales en el panel.</p>
+      </div>
+    </div>
+
+    <div class="feature-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="feature-card">
+        <span class="feature-card-icon">◉</span>
+        <h3>Perfiles del equipo</h3>
+        <p>Nombre, rol (Estilista, Colorista, Barbero, etc.) y estado activo/inactivo. Solo los activos aparecen en el portal de reservas.</p>
+        <span class="tag gold">Roles disponibles</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">✦</span>
+        <h3>Servicios por empleado</h3>
+        <p>Cada empleado tiene asignados los servicios que domina. El portal de reservas solo ofrece estilistas habilitados para el servicio elegido.</p>
+        <span class="tag green">Inteligente</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊛</span>
+        <h3>PINs de acceso</h3>
+        <p>Cada empleado tiene un PIN numérico. Con él puede iniciar sesión en el panel y ver solo sus citas del día sin acceso al resto del sistema.</p>
+        <span class="tag blue">Sesión propia</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊙</span>
+        <h3>Vista del empleado</h3>
+        <p>Al entrar con PIN, el empleado ve su agenda personal: citas asignadas, clientes y puede cambiar estados sin permisos de admin.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊘</span>
+        <h3>Activar / desactivar</h3>
+        <p>Un toggle desactiva un empleado sin borrarlo. Sus citas históricas se conservan; solo deja de aparecer en nuevas reservas.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◈</span>
+        <h3>Roles del sistema</h3>
+        <p>Estilista, Colorista, Manicurista, Pedicurista, Barbero, Maquillador, Masajista, Recepcionista, Otro.</p>
+        <span class="tag">9 roles</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICIOS -->
+  <section class="section" id="admin-servicios">
+    <div class="section-header">
+      <div class="section-icon">✦</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Módulo</div>
+        <h2 class="section-title">Catálogo de servicios</h2>
+        <p class="section-desc">El administrador mantiene el menú de servicios actualizado. Los cambios se reflejan automáticamente en el portal de reservas de los clientes.</p>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="max-width: 680px; margin-bottom: 28px;">
+      <div class="table-head" style="grid-template-columns: 1.5fr 0.8fr 0.8fr 0.6fr;">
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Servicio</span>
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Precio</span>
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Duración</span>
+        <span class="label" style="font-size: 8px; color: var(--muted2);">Estado</span>
+      </div>
+      <div class="table-row" style="grid-template-columns: 1.5fr 0.8fr 0.8fr 0.6fr;">
+        <span>Corte mujer</span>
+        <span style="color:var(--bronze); font-size:12px;">$85.000</span>
+        <span style="color:var(--muted); font-size:12px;">60 min</span>
+        <span style="color:var(--green); font-size:11px;">● Activo</span>
+      </div>
+      <div class="table-row" style="grid-template-columns: 1.5fr 0.8fr 0.8fr 0.6fr;">
+        <span>Balayage</span>
+        <span style="color:var(--bronze); font-size:12px;">desde $280.000</span>
+        <span style="color:var(--muted); font-size:12px;">180 min</span>
+        <span style="color:var(--green); font-size:11px;">● Activo</span>
+      </div>
+      <div class="table-row" style="grid-template-columns: 1.5fr 0.8fr 0.8fr 0.6fr;">
+        <span>Peinado novia</span>
+        <span style="color:var(--bronze); font-size:12px;">desde $220.000</span>
+        <span style="color:var(--muted); font-size:12px;">120 min</span>
+        <span style="color:var(--green); font-size:11px;">● Activo</span>
+      </div>
+    </div>
+
+    <ul class="info-list">
+      <li>Crear, editar y eliminar servicios desde el panel. Nombre, precio, duración y nota opcional ("desde").</li>
+      <li>Activar/desactivar servicios sin borrarlos. Los desactivados no aparecen en el portal.</li>
+      <li>Los servicios activos se cargan dinámicamente en el flujo de reserva del cliente.</li>
+      <li>El catálogo también controla qué estilistas pueden realizar qué servicios.</li>
+    </ul>
+  </section>
+
+  <!-- BLOQUEOS -->
+  <section class="section" id="admin-bloqueos">
+    <div class="section-header">
+      <div class="section-icon">⊘</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Módulo</div>
+        <h2 class="section-title">Bloqueo de horarios</h2>
+        <p class="section-desc">El administrador puede bloquear franjas horarias específicas para evitar que los clientes reserven en horas no disponibles: vacaciones, formaciones, eventos.</p>
+      </div>
+    </div>
+
+    <ul class="info-list">
+      <li>Selecciona fecha, hora y opcionalmente el estilista afectado. O bloquea el horario completo para todos.</li>
+      <li>Los slots bloqueados aparecen deshabilitados automáticamente en el portal de agendamiento del cliente.</li>
+      <li>Lista de bloqueos activos con botón para eliminarlos cuando ya no aplican.</li>
+      <li>Compatible con la vista de agenda semanal: los bloqueos aparecen marcados visualmente.</li>
+    </ul>
+  </section>
+
+  <!-- PAYMENT -->
+  <section class="section" id="payment">
+    <div class="section-header">
+      <div class="section-icon">⊛</div>
+      <div class="section-title-wrap">
+        <div class="label">Admin · Externo</div>
+        <h2 class="section-title">Confirmación de abonos</h2>
+        <p class="section-desc">Módulo independiente para confirmar depósitos o abonos de clientes. Accedido con contraseña de admin, permite verificar y registrar pagos parciales vinculados a una cita.</p>
+      </div>
+    </div>
+
+    <ul class="info-list">
+      <li>URL independiente accesible por link único con parámetro de ID de pago.</li>
+      <li>Autenticación propia con contraseña de administrador.</li>
+      <li>Muestra los datos del pago pendiente y permite confirmar o rechazar el abono.</li>
+      <li>Útil para pagos anticipados o depósitos de garantía en servicios de larga duración.</li>
+    </ul>
+
+    <a href="Payment.html" class="cta-link-ghost">→ Ver módulo de abonos</a>
+  </section>
+
+  <!-- ──────────────────────────── TÉCNICO ──────────────────────────── -->
+
+  <section class="section" id="tech">
+    <div class="section-header">
+      <div class="section-icon">⊛</div>
+      <div class="section-title-wrap">
+        <div class="label">Técnico</div>
+        <h2 class="section-title">Arquitectura del sistema</h2>
+        <p class="section-desc">El sistema está construido para funcionar sin frameworks pesados ni build steps. Solo HTML, React via CDN y API routes en Vercel. Fácil de mantener y de desplegar.</p>
+      </div>
+    </div>
+
+    <div class="feature-grid" style="grid-template-columns: repeat(3, 1fr);">
+      <div class="feature-card">
+        <span class="feature-card-icon">◈</span>
+        <h3>Sin build step</h3>
+        <p>React cargado via CDN con Babel standalone. No hay bundler, no hay npm build. Deploy instantáneo.</p>
+        <span class="tag green">Simple</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">≡</span>
+        <h3>Turso como base de datos</h3>
+        <p>SQLite distribuida via Turso. Los datos persisten entre sesiones y se sincronizan entre todas las pantallas abiertas.</p>
+        <span class="tag blue">Persistencia</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">→</span>
+        <h3>BroadcastChannel</h3>
+        <p>Sincronización instantánea entre pestañas del mismo navegador sin recargar. Ideal para tener admin + lobby + escáner abiertos simultáneamente.</p>
+        <span class="tag gold">Tiempo real</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊙</span>
+        <h3>Cache offline</h3>
+        <p>localStorage como caché. Si el servidor no responde, el sistema sigue funcionando con los últimos datos. Sincroniza en cuanto vuelve la conexión.</p>
+        <span class="tag">Resiliente</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◉</span>
+        <h3>API Routes en Vercel</h3>
+        <p>Endpoints en /api: store, admin, crm, catalog, auth, client, payment. Cada uno con autenticación Bearer token.</p>
+        <span class="tag blue">Serverless</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">✦</span>
+        <h3>QR generado en cliente</h3>
+        <p>Los códigos QR se generan en el navegador con SVG puro, sin librerías externas. Cada ticket tiene su QR único basado en el ID de la cita.</p>
+        <span class="tag">Zero-dep</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="label" style="margin-bottom: 16px;">API endpoints</div>
+    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 560px;">
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
+        <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">GET /api/store</span>
+        <span style="color: var(--muted);">Citas, cola activa y horarios bloqueados</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
+        <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">GET /api/admin</span>
+        <span style="color: var(--muted);">Configuración, servicios, empleados, ingresos</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
+        <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">GET /api/crm</span>
+        <span style="color: var(--muted);">Perfiles y historial de clientes</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
+        <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">GET /api/catalog</span>
+        <span style="color: var(--muted);">Servicios y empleados públicos (sin auth)</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
+        <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">POST /api/auth</span>
+        <span style="color: var(--muted);">Autenticación admin y empleados por PIN</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACCESOS DIRECTOS -->
+  <section class="section" id="links">
+    <div class="section-header">
+      <div class="section-icon">→</div>
+      <div class="section-title-wrap">
+        <div class="label">Accesos</div>
+        <h2 class="section-title">Todas las pantallas del sistema</h2>
+        <p class="section-desc">Acceso directo a cada módulo para explorar el sistema durante la presentación.</p>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px;">
+
+      <div style="border: 1px solid var(--bdr); background: var(--s1); padding: 20px 22px;">
+        <div class="label" style="margin-bottom: 12px; color: var(--muted2);">Público</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <a href="index.html" class="url-pill"><span class="pill-dot"></span>Landing page</a>
+        </div>
+      </div>
+
+      <div style="border: 1px solid var(--bdr); background: var(--s1); padding: 20px 22px;">
+        <div class="label" style="margin-bottom: 12px; color: var(--muted2);">Cliente</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <a href="Portal.html" class="url-pill"><span class="pill-dot"></span>Portal de inicio</a>
+          <a href="Booking.html" class="url-pill"><span class="pill-dot"></span>Agendar cita</a>
+          <a href="CheckIn.html" class="url-pill"><span class="pill-dot"></span>Check-in</a>
+          <a href="Lobby.html" class="url-pill"><span class="pill-dot"></span>Sala de espera</a>
+        </div>
+      </div>
+
+      <div style="border: 1px solid var(--bdr); background: var(--s1); padding: 20px 22px;">
+        <div class="label" style="margin-bottom: 12px; color: var(--muted2);">Operación</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <a href="Scan.html" class="url-pill"><span class="pill-dot"></span>Escáner QR</a>
+          <a href="Payment.html" class="url-pill"><span class="pill-dot"></span>Confirmar abono</a>
+          <a href="Cuenta.html" class="url-pill"><span class="pill-dot"></span>Cuenta cliente</a>
+        </div>
+      </div>
+
+      <div style="border: 1px solid var(--bdr); background: var(--s1); padding: 20px 22px;">
+        <div class="label" style="margin-bottom: 12px; color: var(--muted2);">Administración</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <a href="Admin.html" class="url-pill"><span class="pill-dot"></span>Panel admin</a>
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top: 48px; padding: 28px 32px; border: 1px solid rgba(194,158,102,0.25); background: rgba(194,158,102,0.04);">
+      <div class="label" style="margin-bottom: 12px;">Nota para la presentación</div>
+      <p style="font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 640px;">
+        Para demostrar el sistema en vivo, lo ideal es abrir <strong style="color:var(--ivory);">tres pestañas simultáneas</strong>: el portal de reservas, el panel admin y la sala de espera. Crea una cita en el portal, haz check-in y observa cómo aparece en tiempo real en el admin y en el lobby sin recargar ninguna pantalla.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>
