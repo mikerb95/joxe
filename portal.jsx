@@ -199,8 +199,10 @@ const fmtDateLabel = (d) => {
   if (d === t) return "Hoy";
   if (d === addDays(t, 1)) return "Mañana";
   if (d === addDays(t, 2)) return "Pasado mañana";
-  return d;
+  return fmtDateSub(d);
 };
+
+const timeToMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
 
 const fmtDateSub = (d) => {
   try {
@@ -260,24 +262,43 @@ const BookingPortal = () => {
     return employees.filter(e => (e.services || []).includes(form.serviceId));
   }, [form.serviceId, employees]);
 
-  // Max bookable date = today + 2
-  const maxDate = addDays(todayStr(), 2);
-  const availableDates = [todayStr(), addDays(todayStr(), 1), addDays(todayStr(), 2)];
+  const availableDates = Array.from({ length: 5 }, (_, i) => addDays(todayStr(), i));
+
+  // Duration of the currently selected service in minutes
+  const selectedDur = React.useMemo(() => {
+    if (!form.serviceId) return 60;
+    return services.find(s => s.id === form.serviceId)?.dur || 60;
+  }, [form.serviceId, services]);
 
   // Check if a time slot is available for a given date + stylist
-  const isSlotTaken = (date, time, stylistName) => {
+  // Takes into account service duration — a long service blocks subsequent slots
+  const isSlotTaken = (date, time, stylistName, newDur) => {
     if (!date) return false;
     if (isTimePast(date, time)) return true;
     const adminBlocked = (store.blockedSlots || []).some(b => b.date === date && b.time === time);
     if (adminBlocked) return true;
-    const aptsAtSlot = (store.appointments || []).filter(
-      a => a.date === date && a.time === time && !["cancelled"].includes(a.status)
+
+    const dur = newDur ?? selectedDur;
+    const newStart = timeToMin(time);
+    const newEnd   = newStart + dur;
+
+    const aptsOnDay = (store.appointments || []).filter(
+      a => a.date === date && !["cancelled"].includes(a.status)
     );
+
+    const conflictsFor = (stylist) => aptsOnDay
+      .filter(a => a.stylist === stylist)
+      .some(a => {
+        const aStart = timeToMin(a.time);
+        const aEnd   = aStart + (a.serviceDur || 60);
+        // Overlap: existing ends after new starts AND new ends after existing starts
+        return aStart < newEnd && newStart < aEnd;
+      });
+
     if (stylistName === "Sin preferencia") {
-      // Blocked only if every eligible stylist is taken
-      return eligibleEmployees.every(e => aptsAtSlot.some(a => a.stylist === e.name));
+      return eligibleEmployees.every(e => conflictsFor(e.name));
     }
-    return aptsAtSlot.some(a => a.stylist === stylistName);
+    return conflictsFor(stylistName);
   };
 
   const submit = () => {
@@ -300,6 +321,7 @@ const BookingPortal = () => {
     const appt = {
       id, code,
       service: form.service,
+      serviceDur: selectedDur,
       stylist: assignedStylist,
       date: form.date,
       time: form.time,
@@ -433,7 +455,7 @@ const BookingPortal = () => {
                   a => a.date === todayStr() && a.stylist === e.name && !["cancelled"].includes(a.status)
                 ).length;
                 const availSlots = availableDates.reduce((acc, d) =>
-                  acc + times.filter(t => !isSlotTaken(d, t, e.name)).length, 0
+                  acc + times.filter(t => !isSlotTaken(d, t, e.name, selectedDur)).length, 0
                 );
                 return (
                   <button key={e.id}
@@ -491,7 +513,7 @@ const BookingPortal = () => {
               {form.stylist !== "Sin preferencia" ? form.stylist : "Cualquier profesional"} · {form.service}
             </p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(160px,1fr))", gap: 12, overflowX: "auto" }}>
               {availableDates.map(date => {
                 const isSelectedDate = form.date === date;
                 return (
