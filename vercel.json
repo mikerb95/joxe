@@ -1,13 +1,14 @@
 {
   "rewrites": [
     { "source": "/admin/payment", "destination": "/JOXE Payment.html" },
-    { "source": "/admin",   "destination": "/JOXE Admin.html" },
-    { "source": "/portal",  "destination": "/JOXE Portal.html" },
-    { "source": "/booking", "destination": "/JOXE Booking.html" },
-    { "source": "/scan",    "destination": "/JOXE Scan.html" },
-    { "source": "/lobby",   "destination": "/JOXE Lobby.html" },
-    { "source": "/cuenta",  "destination": "/JOXE Cuenta.html" },
-    { "source": "/",        "destination": "/JOXE Asesores de Imagen.html" }
+    { "source": "/admin",     "destination": "/JOXE Admin.html" },
+    { "source": "/portal",    "destination": "/JOXE Portal.html" },
+    { "source": "/booking",   "destination": "/JOXE Booking.html" },
+    { "source": "/scan",      "destination": "/JOXE Scan.html" },
+    { "source": "/lobby",     "destination": "/JOXE Lobby.html" },
+    { "source": "/cuenta",    "destination": "/JOXE Cuenta.html" },
+    { "source": "/showcase",  "destination": "/Showcase.html" },
+    { "source": "/",          "destination": "/JOXE Asesores de Imagen.html" }
   ],
   "functions": {
     "api/crm.js":    { "memory": 128, "maxDuration": 10 },
