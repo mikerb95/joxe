@@ -22,7 +22,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 function App() {
   const [tweaks, setTweaks] = useState(TWEAK_DEFAULTS);
   const [editMode, setEditMode] = useState(false);
-  const [reserveOpen, setReserveOpen] = useState(false);
+  const goToBooking = () => { window.location.href = "/booking"; };
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -61,17 +61,16 @@ function App() {
 
   return (
     <div style={{ background: "var(--ivory)", minHeight: "100vh" }}>
-      <Nav onReserveClick={() => setReserveOpen(true)} scrolled={scrolled} />
-      <Hero onReserveClick={() => setReserveOpen(true)} />
+      <Nav onReserveClick={goToBooking} scrolled={scrolled} />
+      <Hero onReserveClick={goToBooking} />
       <Marquee />
       <Services />
       <Gallery />
       <Testimonials />
       <Philosophy />
-      <BookingSection onReserveClick={() => setReserveOpen(true)} />
+      <BookingSection onReserveClick={goToBooking} />
       <LocationMap />
       <Footer />
-      <BookingModal open={reserveOpen} onClose={() => setReserveOpen(false)} />
       <WhatsAppBlob />
 
       {editMode && <TweaksPanel tweaks={tweaks} update={updateTweak} />}
