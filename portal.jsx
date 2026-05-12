@@ -637,88 +637,73 @@ const BookingPortal = () => {
         )}
 
         {step === 5 && ticket && (
-          <div style={{ textAlign: "center", padding: "20px 0" }}>
-            <PMono style={{ color: "#C29E66" }}>Solicitud enviada</PMono>
+          <div style={{ maxWidth: 480, margin: "0 auto", padding: "8px 0 40px" }}>
+            <PMono style={{ color: "#C29E66" }}>Solicitud recibida</PMono>
             <h1 style={{
-              fontFamily: "'Marcellus', serif", fontSize: 56, fontWeight: 400,
-              margin: "20px 0 16px", letterSpacing: "-0.015em", lineHeight: 1.05,
-            }}>Listo, <em style={{ color: "#C29E66" }}>{ticket.name.split(" ")[0]}</em>.</h1>
-            <div style={{
-              maxWidth: 520, margin: "0 auto 36px",
-              padding: "20px 24px",
-              background: "rgba(194,158,102,0.08)",
-              border: "2px solid rgba(194,158,102,0.35)",
-            }}>
-              <div style={{
-                fontFamily: "'Outfit', sans-serif", fontSize: 15, lineHeight: 1.7, color: "#0C0C0C",
-              }}>
-                Tu solicitud fue recibida. El estilista te contactará por WhatsApp al número <strong>{ticket.phone}</strong> para pedirte la captura del abono y confirmar la cita.
-              </div>
-            </div>
-            <p style={{
-              fontFamily: "'Outfit', sans-serif", fontSize: 14, lineHeight: 1.6,
-              opacity: 0.55, maxWidth: 440, margin: "0 auto 32px",
-            }}>
-              Guarda el código de tu solicitud. Una vez el estilista la confirme,
-              usa el QR para activar tu turno al llegar al salón.
+              fontFamily: "'Marcellus', serif", fontSize: 44, fontWeight: 400,
+              margin: "16px 0 8px", letterSpacing: "-0.01em", lineHeight: 1.1,
+            }}>Casi listo, <em style={{ color: "#C29E66" }}>{ticket.name.split(" ")[0]}</em>.</h1>
+            <p style={{ fontSize: 14, color: "rgba(12,12,12,0.55)", margin: "0 0 32px", lineHeight: 1.6 }}>
+              Tu cita está guardada pero <strong>pendiente de confirmar</strong>.
             </p>
+
+            {/* Resumen */}
             <div style={{
-              display: "inline-block", padding: 32, background: "#FFF",
-              border: "1px solid rgba(12,12,12,0.1)",
+              padding: "20px", background: "#0C0C0C", color: "#F5F1EA", marginBottom: 24,
             }}>
-              <QRCode value={ticket.id} size={260} />
-              <div style={{
-                fontFamily: "'JetBrains Mono', monospace", fontSize: 14,
-                letterSpacing: "0.3em", marginTop: 16, color: "#C29E66",
-              }}>{ticket.code}</div>
+              <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 12 }}>Resumen</PMono>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                {[
+                  ["Servicio", ticket.service],
+                  ["Estilista", ticket.stylist],
+                  ["Fecha", ticket.date],
+                  ["Hora", ticket.time],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <PMono style={{ color: "rgba(245,241,234,0.4)", fontSize: 9, display: "block", marginBottom: 4 }}>{k}</PMono>
+                    <div style={{ fontSize: 13 }}>{v}</div>
+                  </div>
+                ))}
+              </div>
             </div>
+
+            {/* Abono */}
             <div style={{
-              maxWidth: 440, margin: "40px auto 0", padding: "24px 0",
-              borderTop: "1px solid rgba(12,12,12,0.15)",
-              borderBottom: "1px solid rgba(12,12,12,0.15)",
-              display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, textAlign: "left",
+              padding: "20px 24px", marginBottom: 28,
+              background: "rgba(194,158,102,0.07)",
+              border: "1px solid rgba(194,158,102,0.4)",
             }}>
-              <div>
-                <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 6 }}>Servicio</PMono>
-                <div style={{ fontSize: 14 }}>{ticket.service}</div>
-              </div>
-              <div>
-                <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 6 }}>Fecha</PMono>
-                <div style={{ fontSize: 14, fontFamily: "'JetBrains Mono', monospace" }}>
-                  {ticket.date} · {ticket.time}
-                </div>
-              </div>
-              <div>
-                <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 6 }}>Estilista</PMono>
-                <div style={{ fontSize: 14 }}>{ticket.stylist}</div>
-              </div>
-              <div>
-                <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 6 }}>Ticket</PMono>
-                <div style={{ fontSize: 14, fontFamily: "'JetBrains Mono', monospace" }}>{ticket.code}</div>
-              </div>
+              <PMono style={{ color: "#C29E66", fontSize: 10, display: "block", marginBottom: 10 }}>
+                Para confirmar tu cita
+              </PMono>
+              <p style={{ margin: 0, fontSize: 15, lineHeight: 1.6, color: "#0C0C0C" }}>
+                Realiza un abono de <strong>$10.000</strong> y envía el comprobante por WhatsApp.
+                El estilista confirmará tu cita al recibirlo.
+              </p>
             </div>
-            <div style={{ marginTop: 32, display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-              <a href="Cuenta.html" style={{
-                background: "#0C0C0C", color: "#F5F1EA",
-                padding: "16px 28px", fontSize: 12, letterSpacing: "0.2em",
-                textTransform: "uppercase", textDecoration: "none",
-              }}>Ver mi cuenta →</a>
-              <a href={`Scan.html#${ticket.id}`} style={{
-                background: "transparent", color: "#0C0C0C",
-                padding: "16px 28px", fontSize: 12, letterSpacing: "0.2em",
-                textTransform: "uppercase", textDecoration: "none",
-                border: "1px solid #0C0C0C",
-              }}>Simular escaneo →</a>
-            </div>
-            <p style={{
-              marginTop: 20, fontSize: 12, color: "rgba(12,12,12,0.45)",
-              textAlign: "center", lineHeight: 1.6,
-            }}>
-              Accede a{" "}
-              <a href="Cuenta.html" style={{ color: "#0C0C0C", opacity: 0.7 }}>
-                Mi Cuenta
-              </a>{" "}
-              para ver el estado en vivo y tus puntos de lealtad.
+
+            {/* Botón WhatsApp */}
+            <a
+              href={`https://wa.me/573124499862?text=${encodeURIComponent(
+                `Hola, quiero confirmar mi cita 🗓️\n\nNombre: ${ticket.name}\nServicio: ${ticket.service}\nFecha: ${ticket.date} a las ${ticket.time}\nEstilista: ${ticket.stylist}\nCódigo: ${ticket.code}\n\nAdjunto comprobante de abono de $10.000.`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 12,
+                background: "#25D366", color: "#FFF", textDecoration: "none",
+                padding: "18px 24px", width: "100%", boxSizing: "border-box",
+                fontFamily: "'Outfit', sans-serif", fontSize: 15, fontWeight: 500,
+                letterSpacing: "0.05em",
+              }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Enviar comprobante
+            </a>
+            <p style={{ margin: "12px 0 0", fontSize: 12, color: "rgba(12,12,12,0.4)", textAlign: "center" }}>
+              Se abrirá WhatsApp con el mensaje listo — solo adjunta el comprobante y envía.
             </p>
           </div>
         )}
@@ -2306,7 +2291,261 @@ const WABlob = () => {
   );
 };
 
+// ============================================================
+// AGENDA — Confirmación de citas por empleado
+// ============================================================
+const AGENDA_SES = "joxe_agenda_session"; // { id, name, role }
+
+const AgendaPortal = () => {
+  const [store, setStore] = useStore();
+  const [session, setSession] = React.useState(() => {
+    try { return JSON.parse(sessionStorage.getItem(AGENDA_SES)); } catch { return null; }
+  });
+  const [empList, setEmpList] = React.useState([]);
+  const [selId, setSelId] = React.useState("");
+  const [pin, setPin] = React.useState("");
+  const [err, setErr] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [confirming, setConfirming] = React.useState(null);
+  const [confirmed, setConfirmed] = React.useState(null);
+
+  React.useEffect(() => {
+    fetch("/api/catalog")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.employees) setEmpList(d.employees); })
+      .catch(() => {});
+  }, []);
+
+  const login = async () => {
+    if (!selId || !pin) return;
+    setLoading(true); setErr("");
+    try {
+      const res = await fetch("/api/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", empId: selId, pin }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error || "PIN incorrecto"); setPin(""); setLoading(false); return; }
+      sessionStorage.setItem(AGENDA_SES, JSON.stringify(data.employee));
+      setSession(data.employee);
+      // pin stays in state for confirm calls during this session
+    } catch { setErr("Error de conexión"); }
+    setLoading(false);
+  };
+
+  const confirmAppt = async (appt) => {
+    setConfirming(appt.id);
+    try {
+      const res = await fetch("/api/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "confirm", empId: session.id, pin, apptId: appt.id }),
+      });
+      if (res.ok) {
+        setStore(s => ({
+          ...s,
+          appointments: s.appointments.map(a =>
+            a.id === appt.id
+              ? { ...a, status: "scheduled", confirmedAt: Date.now(), confirmedBy: session.name }
+              : a
+          ),
+        }));
+        setConfirmed(appt.id);
+        setTimeout(() => setConfirmed(null), 3000);
+      }
+    } catch {}
+    setConfirming(null);
+  };
+
+  const logout = () => {
+    sessionStorage.removeItem(AGENDA_SES);
+    setSession(null); setPin(""); setSelId(""); setErr("");
+  };
+
+  const fmtDate = (d) => {
+    if (!d) return "—";
+    try { return new Date(d + "T12:00").toLocaleDateString("es-CO", { weekday: "short", day: "numeric", month: "short" }); }
+    catch { return d; }
+  };
+
+  // Citas pendientes del empleado logueado
+  const myPending = React.useMemo(() => {
+    if (!session) return [];
+    return (store.appointments || []).filter(
+      a => a.stylist === session.name && a.status === "pending"
+    ).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  }, [store.appointments, session]);
+
+  // ── LOGIN ──
+  if (!session) {
+    return (
+      <PortalShell tone="noir" header={
+        <PortalHeader tone="noir" subtitle="Equipo · Acceso" title="Mi agenda" />
+      }>
+        <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
+          <div style={{ width: "100%", maxWidth: 380 }}>
+            <div style={{ marginBottom: 32 }}>
+              <PMono style={{ color: "#C29E66", display: "block", marginBottom: 8 }}>Selecciona tu nombre</PMono>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {empList.length === 0 && (
+                  <div style={{ color: "rgba(245,241,234,0.4)", fontSize: 13, padding: "16px 0" }}>
+                    Cargando empleados…
+                  </div>
+                )}
+                {empList.map(e => (
+                  <button key={e.id} onClick={() => { setSelId(e.id); setPin(""); setErr(""); }}
+                    style={{
+                      padding: "16px 20px", textAlign: "left", cursor: "pointer",
+                      background: selId === e.id ? "rgba(194,158,102,0.15)" : "rgba(245,241,234,0.04)",
+                      border: `1px solid ${selId === e.id ? "#C29E66" : "rgba(245,241,234,0.1)"}`,
+                      color: "#F5F1EA", fontFamily: "'Outfit', sans-serif", fontSize: 15,
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                    }}>
+                    <span>{e.name}</span>
+                    <PMono style={{ color: "rgba(245,241,234,0.35)", fontSize: 9 }}>{e.role}</PMono>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {selId && (
+              <div style={{ marginBottom: 24 }}>
+                <PMono style={{ color: "#C29E66", display: "block", marginBottom: 8 }}>PIN</PMono>
+                <input
+                  type="password" inputMode="numeric" maxLength={6}
+                  value={pin}
+                  onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setErr(""); }}
+                  onKeyDown={e => e.key === "Enter" && pin && login()}
+                  placeholder="· · · ·"
+                  style={{
+                    width: "100%", padding: "18px", textAlign: "center",
+                    fontFamily: "'JetBrains Mono', monospace", fontSize: 28,
+                    letterSpacing: "0.5em", background: "rgba(245,241,234,0.05)",
+                    border: "1px solid rgba(245,241,234,0.15)", color: "#F5F1EA",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            )}
+
+            {err && (
+              <div style={{
+                padding: "12px 16px", marginBottom: 16,
+                background: "rgba(196,102,102,0.1)", border: "1px solid rgba(196,102,102,0.3)",
+                color: "#C46666", fontSize: 13,
+              }}>{err}</div>
+            )}
+
+            <button onClick={login} disabled={!selId || !pin || loading}
+              style={{
+                width: "100%", padding: "18px",
+                background: selId && pin ? "#C29E66" : "rgba(194,158,102,0.2)",
+                color: selId && pin ? "#0C0C0C" : "rgba(194,158,102,0.4)",
+                border: "none", cursor: selId && pin ? "pointer" : "not-allowed",
+                fontFamily: "'Outfit', sans-serif", fontSize: 13,
+                letterSpacing: "0.2em", textTransform: "uppercase",
+              }}>
+              {loading ? "Verificando…" : "Entrar →"}
+            </button>
+          </div>
+        </main>
+      </PortalShell>
+    );
+  }
+
+  // ── AGENDA ──
+  return (
+    <PortalShell tone="noir" header={
+      <PortalHeader
+        tone="noir"
+        subtitle={session.role + " · Mi agenda"}
+        title={session.name}
+        right={
+          <button onClick={logout} style={{
+            background: "transparent", border: "none", color: "rgba(245,241,234,0.5)",
+            cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: 12,
+            letterSpacing: "0.15em", textTransform: "uppercase",
+          }}>Salir</button>
+        }
+      />
+    }>
+      <main style={{ flex: 1, padding: "32px 24px", maxWidth: 520, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        <PMono style={{ color: "#C29E66", display: "block", marginBottom: 20 }}>
+          Solicitudes pendientes · {myPending.length}
+        </PMono>
+
+        {myPending.length === 0 ? (
+          <div style={{
+            textAlign: "center", padding: "56px 24px",
+            border: "1px solid rgba(245,241,234,0.08)",
+          }}>
+            <div style={{ fontFamily: "'Marcellus', serif", fontSize: 32, marginBottom: 12, opacity: 0.3 }}>—</div>
+            <PMono style={{ color: "rgba(245,241,234,0.3)", fontSize: 10 }}>Sin solicitudes pendientes</PMono>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {myPending.map(a => {
+              const isDone = confirmed === a.id;
+              const isLoading = confirming === a.id;
+              return (
+                <div key={a.id} style={{
+                  background: isDone ? "rgba(102,196,153,0.08)" : "rgba(245,241,234,0.04)",
+                  border: `1px solid ${isDone ? "rgba(102,196,153,0.35)" : "rgba(245,241,234,0.1)"}`,
+                  padding: "20px",
+                  transition: "all 0.3s",
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+                    <div>
+                      <div style={{ fontFamily: "'Marcellus', serif", fontSize: 18, marginBottom: 4 }}>{a.name}</div>
+                      <PMono style={{ color: "#C29E66", fontSize: 10 }}>{a.service}</PMono>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <PMono style={{ color: "rgba(245,241,234,0.5)", fontSize: 10, display: "block" }}>
+                        {fmtDate(a.date)}
+                      </PMono>
+                      <PMono style={{ color: "#F5F1EA", fontSize: 13 }}>{a.time}</PMono>
+                    </div>
+                  </div>
+
+                  {a.phone && (
+                    <div style={{ marginBottom: 14 }}>
+                      <PMono style={{ color: "rgba(245,241,234,0.3)", fontSize: 9, display: "block", marginBottom: 4 }}>WhatsApp</PMono>
+                      <div style={{ fontSize: 13, color: "rgba(245,241,234,0.7)" }}>{a.phone}</div>
+                    </div>
+                  )}
+
+                  {isDone ? (
+                    <div style={{
+                      padding: "12px 16px", background: "rgba(102,196,153,0.1)",
+                      border: "1px solid rgba(102,196,153,0.3)",
+                      color: "#66C499", fontSize: 13, textAlign: "center",
+                    }}>✓ Cita confirmada</div>
+                  ) : (
+                    <button onClick={() => confirmAppt(a)} disabled={isLoading}
+                      style={{
+                        width: "100%", padding: "14px",
+                        background: "#C29E66", color: "#0C0C0C",
+                        border: "none", cursor: isLoading ? "not-allowed" : "pointer",
+                        fontFamily: "'Outfit', sans-serif", fontSize: 13,
+                        letterSpacing: "0.15em", textTransform: "uppercase",
+                        opacity: isLoading ? 0.6 : 1,
+                      }}>
+                      {isLoading ? "Confirmando…" : "✓ Confirmar cita"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </PortalShell>
+  );
+};
+
 Object.assign(window, {
   BookingPortal, ScanPortal, LobbyPortal, HomePortal, CuentaPortal, CheckInPortal,
+  AgendaPortal,
   QRCode, PortalShell, PortalHeader, PMono, useStore, WABlob,
 });

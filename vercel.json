@@ -2,6 +2,7 @@
   "rewrites": [
     { "source": "/admin/payment", "destination": "/Payment.html" },
     { "source": "/admin",     "destination": "/Admin.html" },
+    { "source": "/agenda",    "destination": "/Agenda.html" },
     { "source": "/portal",    "destination": "/Portal.html" },
     { "source": "/booking",   "destination": "/Booking.html" },
     { "source": "/checkin",   "destination": "/CheckIn.html" },
