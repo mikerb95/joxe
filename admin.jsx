@@ -222,7 +222,7 @@ const getAllAppts = (store, cancelledIds=[]) => {
   const result = [];
   store.appointments.forEach(a => {
     if (activeIds.has(a.id) || completedIds.has(a.id)) return;
-    result.push({...a, computedStatus: cancelledIds.includes(a.id) ? "cancelled" : "scheduled"});
+    result.push({...a, computedStatus: cancelledIds.includes(a.id) ? "cancelled" : (a.status || "scheduled")});
   });
   store.active.forEach(a => {
     result.push({...a, computedStatus: cancelledIds.includes(a.id) ? "cancelled" : a.status});
@@ -336,6 +336,7 @@ const FieldSelect = ({label,value,onChange,options,style}) => (
 
 const Badge = ({status}) => {
   const map = {
+    pending:     {label:"Solicitud",  bg:"rgba(138,176,255,0.12)",color:"#8ab0ff"},
     scheduled:   {label:"Agendada",   bg:"rgba(194,158,102,0.12)",color:C.gold},
     waiting:     {label:"En cola",    bg:"rgba(138,176,255,0.12)",color:C.blue},
     "in-service":{label:"En silla",   bg:"rgba(102,196,153,0.15)",color:C.green},
@@ -708,16 +709,41 @@ const DashboardView = ({onNav}) => {
     .filter(a=>a.date>todayD && a.computedStatus==="scheduled")
     .slice(0,5);
 
+  const pendingRequests = allAppts.filter(a=>a.computedStatus==="pending");
+
   return (
     <div>
       <PageHeader title="Dashboard" subtitle="Panel · Resumen" />
       <div style={{padding:"24px 32px"}}>
+        {pendingRequests.length>0 && (
+          <div style={{
+            marginBottom:24,padding:"14px 20px",
+            background:"rgba(138,176,255,0.07)",
+            border:"1px solid rgba(138,176,255,0.35)",
+            display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,
+          }}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <Mono style={{color:"#8ab0ff",fontSize:10}}>⚑ SOLICITUDES SIN CONFIRMAR</Mono>
+              <span style={{
+                background:"#8ab0ff",color:"#0C0C0C",borderRadius:0,
+                fontFamily:"'JetBrains Mono',monospace",fontSize:11,padding:"2px 8px",fontWeight:600,
+              }}>{pendingRequests.length}</span>
+            </div>
+            <button onClick={()=>onNav("appointments")} style={{
+              background:"transparent",border:"1px solid rgba(138,176,255,0.4)",
+              color:"#8ab0ff",padding:"6px 14px",cursor:"pointer",
+              fontFamily:"'Outfit',sans-serif",fontSize:11,letterSpacing:"0.1em",textTransform:"uppercase",
+            }}>Revisar →</button>
+          </div>
+        )}
         <div style={{
           display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",
           gap:16,marginBottom:32,
         }}>
           <StatCard label="Citas hoy" value={String(todayAct.length).padStart(2,"0")}
             sub={`${completedToday} completada${completedToday!==1?"s":""}`} />
+          <StatCard label="Solicitudes" value={String(pendingRequests.length).padStart(2,"0")}
+            color={pendingRequests.length>0?"#8ab0ff":C.muted} />
           <StatCard label="En cola" value={String(inQueue).padStart(2,"0")}
             color={inQueue>0?C.blue:C.muted} />
           <StatCard label="En silla" value={String(inChair).padStart(2,"0")}
@@ -955,6 +981,28 @@ const AppointmentsView = () => {
   const cancelAppt = (id) => {
     if (!confirm("¿Cancelar esta cita?")) return;
     setAdmin(a=>({...a, cancelledIds:[...(a.cancelledIds||[]),id]}));
+  };
+
+  const confirmAppt = (id) => {
+    setAppts(s=>({...s, appointments: s.appointments.map(a=>
+      a.id===id ? {...a, status:"scheduled", confirmedAt:Date.now()} : a
+    )}));
+  };
+
+  const buildWaToClient = (appt) => {
+    const adminCfg = (() => { try { return JSON.parse(localStorage.getItem(ADMIN_KEY)||"{}"); } catch { return {}; } })();
+    const salonName = adminCfg.salonName || "JOXE";
+    const msg = [
+      `Hola ${(appt.name||"").split(" ")[0]} 👋 Soy de ${salonName}.`,
+      `Recibimos tu solicitud de cita:`,
+      `📅 ${appt.date} a las ${appt.time}`,
+      `✂️ ${appt.service} con ${appt.stylist}`,
+      ``,
+      `Para confirmar tu reserva, envíanos la captura del abono. ¡Gracias!`,
+    ].join("\n");
+    const phone = (appt.phone||"").replace(/\D/g,"");
+    const num = phone.startsWith("57") ? phone : `57${phone}`;
+    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
   };
 
   const registerPay = (appt) => {
