@@ -1054,6 +1054,7 @@ const AppointmentsView = () => {
         <FieldSelect value={filter.status} onChange={e=>setFilter({...filter,status:e.target.value})}
           options={[
             {value:"",label:"Todos los estados"},
+            {value:"pending",label:"Solicitudes"},
             {value:"scheduled",label:"Agendadas"},
             {value:"waiting",label:"En cola"},
             {value:"in-service",label:"En silla"},
@@ -1128,12 +1129,35 @@ const AppointmentsView = () => {
                         ))}
                       </div>
                       <div style={{display:"flex",flexDirection:"column",gap:8,justifyContent:"flex-end"}}>
-                        {a.computedStatus!=="cancelled" && a.computedStatus!=="completed" && (
+                        {a.computedStatus==="pending" && (
+                          <>
+                            {a.phone && (
+                              <a href={buildWaToClient(a)} target="_blank" rel="noopener"
+                                style={{
+                                  display:"block",padding:"9px 14px",textAlign:"center",
+                                  background:"rgba(37,211,102,0.12)",
+                                  border:"1px solid rgba(37,211,102,0.4)",color:"#25D366",
+                                  textDecoration:"none",fontFamily:"'Outfit',sans-serif",
+                                  fontSize:10,letterSpacing:"0.12em",textTransform:"uppercase",
+                                }}>
+                                💬 Enviar WA al cliente
+                              </a>
+                            )}
+                            <Btn small onClick={()=>confirmAppt(a.id)}
+                              style={{background:C.gold,color:"#0C0C0C",border:"none"}}>
+                              ✓ Confirmar cita
+                            </Btn>
+                            <Btn variant="danger" small onClick={()=>cancelAppt(a.id)}>
+                              ✕ Rechazar
+                            </Btn>
+                          </>
+                        )}
+                        {a.computedStatus!=="pending" && a.computedStatus!=="cancelled" && a.computedStatus!=="completed" && (
                           <Btn variant="danger" small onClick={()=>cancelAppt(a.id)}>
                             ✕ Cancelar cita
                           </Btn>
                         )}
-                        {a.computedStatus!=="cancelled" && !hasPayment && (
+                        {a.computedStatus!=="pending" && a.computedStatus!=="cancelled" && !hasPayment && (
                           <Btn variant="subtle" small onClick={()=>registerPay(a)}>
                             $ Registrar pago
                           </Btn>
@@ -1144,7 +1168,7 @@ const AppointmentsView = () => {
                             Pago registrado
                           </div>
                         )}
-                        {a.phone && (
+                        {a.computedStatus!=="pending" && a.phone && (
                           <a href={`https://wa.me/57${a.phone.replace(/\D/g,"")}`}
                             target="_blank" rel="noopener"
                             style={{
@@ -2821,7 +2845,7 @@ const EmpDashboardView = ({emp, onNav}) => {
   const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
   const todayAll = myAppts.filter(a=>a.date===todayD);
-  const pending  = myAppts.filter(a=>a.computedStatus==="scheduled"&&!a.confirmedBy);
+  const pending  = myAppts.filter(a=>a.computedStatus==="pending");
   const upcoming = myAppts.filter(a=>a.date>todayD&&a.computedStatus==="scheduled").slice(0,5);
   const todayRevenue = (admin.revenue||[])
     .filter(r=>r.date===todayD&&r.stylist===emp.name)
