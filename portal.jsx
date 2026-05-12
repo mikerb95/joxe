@@ -174,8 +174,19 @@ const QRCode = ({ value, size = 220, fg = "#0C0C0C", bg = "#F5F1EA" }) => {
 // PAGE 1 — AGENDAR CITA
 // ============================================================
 
-// Helpers
-const todayStr = () => new Date().toISOString().split("T")[0];
+// Helpers — hora Colombia (COT = UTC-5)
+const nowCOT = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+const todayStr = () => {
+  const d = nowCOT();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
+// Retorna true si el slot "HH:MM" ya pasó para el día de hoy en COT
+const isTimePast = (date, time) => {
+  if (date !== todayStr()) return false;
+  const [h, m] = time.split(":").map(Number);
+  const now = nowCOT();
+  return now.getHours() > h || (now.getHours() === h && now.getMinutes() >= m);
+};
 
 const addDays = (d, n) => {
   const dt = new Date(d + "T12:00");
@@ -256,6 +267,7 @@ const BookingPortal = () => {
   // Check if a time slot is available for a given date + stylist
   const isSlotTaken = (date, time, stylistName) => {
     if (!date) return false;
+    if (isTimePast(date, time)) return true;
     const adminBlocked = (store.blockedSlots || []).some(b => b.date === date && b.time === time);
     if (adminBlocked) return true;
     const aptsAtSlot = (store.appointments || []).filter(
