@@ -848,91 +848,125 @@ const DashboardView = ({onNav}) => {
 
 // ==================== AGENDA ====================
 const AgendaView = () => {
-  const [weekOffset,setWeekOffset] = React.useState(0);
   const [appts] = useAppts();
   const [admin] = useAdmin();
-  const dates = getWeekDates(weekOffset);
   const todayD = todayStr();
+  const tomorrowD = (() => { const d=new Date(todayD+"T12:00"); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })();
+  const dates = [todayD, tomorrowD];
   const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
 
-  const DAYS_ES = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const DAY_LABEL = (d) => d===todayD ? "Hoy" : "Mañana";
+  const DAY_SUB   = (d) => new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
+
+  const statusColor = (s) =>
+    s==="cancelled"?"#C46666":s==="completed"?"#66C499":
+    s==="in-service"?"#66C499":s==="waiting"?"#8ab0ff":"#C29E66";
+
+  const statusBg = (s) =>
+    s==="cancelled"?"rgba(196,102,102,0.07)":s==="completed"?"rgba(102,196,153,0.07)":
+    s==="in-service"?"rgba(102,196,153,0.12)":s==="waiting"?"rgba(138,176,255,0.09)":
+    "rgba(194,158,102,0.09)";
+
+  const statusLabel = (s) =>
+    s==="in-service"?"En silla":s==="waiting"?"En cola":
+    s==="completed"?"Completada":s==="cancelled"?"Cancelada":"Agendada";
 
   return (
     <div>
-      <PageHeader
-        title="Agenda"
-        subtitle="Calendario · Semana"
-        action={
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            <Btn variant="ghost" small onClick={()=>setWeekOffset(o=>o-1)}>← Ant</Btn>
-            <Btn variant="ghost" small onClick={()=>setWeekOffset(0)}>Hoy</Btn>
-            <Btn variant="ghost" small onClick={()=>setWeekOffset(o=>o+1)}>Sig →</Btn>
-          </div>
-        }
-      />
+      <PageHeader title="Agenda" subtitle="Hoy · Mañana" />
       <div style={{padding:"24px 32px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(6,1fr)",gap:12}}>
-          {dates.map((date,i)=>{
-            const isToday = date===todayD;
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+          {dates.map(date=>{
+            const isToday  = date===todayD;
             const dayAppts = allAppts.filter(a=>a.date===date);
             const blocked  = (appts.blockedSlots||[]).filter(b=>b.date===date);
+
+            // Group appointments by time slot
+            const byTime = {};
+            TIMES.forEach(t=>{ byTime[t]=[]; });
+            dayAppts.forEach(a=>{ if(byTime[a.time]) byTime[a.time].push(a); else byTime[a.time]=[a]; });
+            const slots = Object.keys(byTime).sort();
+
             return (
-              <div key={date} style={{
-                background: isToday?"rgba(194,158,102,0.05)":C.s1,
-                border:`1px solid ${isToday?C.gold:C.bdr}`,
-                minHeight:180,
-              }}>
+              <div key={date} style={{border:`1px solid ${isToday?C.gold:C.bdr}`,background:C.s1}}>
+                {/* Day header */}
                 <div style={{
-                  padding:"10px 14px",borderBottom:`1px solid ${C.bdr}`,
-                  background:isToday?"rgba(194,158,102,0.1)":C.s2,
+                  padding:"16px 20px",borderBottom:`1px solid ${C.bdr}`,
+                  background:isToday?"rgba(194,158,102,0.08)":C.s2,
+                  display:"flex",alignItems:"center",gap:12,
                 }}>
-                  <Mono style={{color:isToday?C.gold:C.muted,fontSize:9}}>{DAYS_ES[i]}</Mono>
-                  <div style={{
-                    fontFamily:"'Marcellus',serif",fontSize:22,
-                    color:isToday?C.gold:C.text,marginTop:2,
-                  }}>{new Date(date+"T12:00").getDate()}</div>
-                  <div style={{fontSize:10,color:C.muted}}>
-                    {new Date(date+"T12:00").toLocaleDateString("es-CO",{month:"short"})}
+                  <div style={{fontFamily:"'Marcellus',serif",fontSize:26,color:isToday?C.gold:C.text}}>
+                    {DAY_LABEL(date)}
                   </div>
+                  <Mono style={{color:C.muted,fontSize:9,flex:1}}>{DAY_SUB(date)}</Mono>
+                  <span style={{
+                    fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.gold,
+                    background:"rgba(194,158,102,0.1)",padding:"3px 10px",border:`1px solid ${C.gold}30`,
+                  }}>{dayAppts.length} cita{dayAppts.length!==1?"s":""}</span>
                 </div>
-                <div style={{padding:8,display:"flex",flexDirection:"column",gap:4}}>
-                  {blocked.map(b=>(
-                    <div key={b.id} style={{
-                      padding:"5px 8px",background:"rgba(196,102,102,0.1)",
-                      border:`1px solid ${C.red}30`,fontSize:10,color:C.red,
+
+                {/* Time rows */}
+                {slots.map(time=>{
+                  const slotAppts  = byTime[time]||[];
+                  const isBlocked  = blocked.some(b=>b.time===time);
+                  const [h,m]      = time.split(":").map(Number);
+                  const slotMin    = h*60+(m||0);
+                  const nowMin     = new Date().getHours()*60+new Date().getMinutes();
+                  const isPast     = isToday && slotMin < nowMin-30;
+
+                  return (
+                    <div key={time} style={{
+                      display:"grid",gridTemplateColumns:"64px 1fr",
+                      borderBottom:`1px solid ${C.bdr}`,
+                      opacity:isPast?0.4:1,
                     }}>
-                      <Mono style={{fontSize:9,color:C.red}}>{b.time}</Mono>
-                      <div style={{marginTop:2,opacity:0.8}}>Bloqueado</div>
-                    </div>
-                  ))}
-                  {dayAppts.map(a=>(
-                    <div key={a.id} style={{
-                      padding:"5px 8px",
-                      background:a.computedStatus==="cancelled"?"rgba(196,102,102,0.06)":
-                                 a.computedStatus==="completed"?"rgba(102,196,153,0.06)":"rgba(194,158,102,0.08)",
-                      border:`1px solid ${
-                        a.computedStatus==="cancelled"?C.red+"30":
-                        a.computedStatus==="completed"?C.green+"30":C.gold+"30"
-                      }`,
-                    }}>
-                      <Mono style={{fontSize:9,color:
-                        a.computedStatus==="cancelled"?C.red:
-                        a.computedStatus==="completed"?C.green:C.gold}}>
-                        {a.time}
-                      </Mono>
-                      <div style={{fontSize:11,color:C.text,marginTop:2,
-                        opacity:a.computedStatus==="cancelled"?0.4:1}}>
-                        {a.name?.split(" ")[0]}
+                      {/* Hour label */}
+                      <div style={{
+                        padding:"14px 0 14px 16px",borderRight:`1px solid ${C.bdr}`,
+                        display:"flex",alignItems:"flex-start",
+                      }}>
+                        <Mono style={{color:isPast?C.muted2:C.gold,fontSize:11}}>{time}</Mono>
                       </div>
-                      <div style={{fontSize:10,color:C.muted}}>{a.service?.slice(0,14)}</div>
+
+                      {/* Slot content */}
+                      <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:5}}>
+                        {isBlocked && (
+                          <div style={{padding:"5px 10px",background:"rgba(196,102,102,0.08)",border:`1px solid ${C.red}25`}}>
+                            <Mono style={{fontSize:9,color:C.red}}>Bloqueado</Mono>
+                          </div>
+                        )}
+                        {slotAppts.map(a=>(
+                          <div key={a.id} style={{
+                            padding:"8px 10px",
+                            background:statusBg(a.computedStatus),
+                            border:`1px solid ${statusColor(a.computedStatus)}25`,
+                          }}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                              <div>
+                                <div style={{
+                                  fontSize:13,color:a.computedStatus==="cancelled"?C.muted:C.text,
+                                  textDecoration:a.computedStatus==="cancelled"?"line-through":"none",
+                                }}>{a.name}</div>
+                                <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.service}</div>
+                              </div>
+                              <div style={{textAlign:"right",flexShrink:0}}>
+                                <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
+                                  {statusLabel(a.computedStatus)}
+                                </Mono>
+                                {a.stylist && (
+                                  <div style={{fontSize:10,color:C.muted2,marginTop:2}}>{a.stylist}</div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {slotAppts.length===0 && !isBlocked && (
+                          <div style={{fontSize:10,color:C.muted2,padding:"4px 0"}}>Libre</div>
+                        )}
+                      </div>
                     </div>
-                  ))}
-                  {dayAppts.length===0 && blocked.length===0 && (
-                    <div style={{fontSize:10,color:C.muted2,padding:"6px 4px",textAlign:"center"}}>
-                      Libre
-                    </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
             );
           })}
@@ -941,9 +975,10 @@ const AgendaView = () => {
         {/* Legend */}
         <div style={{display:"flex",gap:24,marginTop:20,flexWrap:"wrap"}}>
           {[
-            {color:C.gold,label:"Agendada"},
-            {color:C.green,label:"Completada"},
-            {color:C.red,label:"Cancelada / Bloqueada"},
+            {color:C.gold, label:"Agendada"},
+            {color:C.blue, label:"En cola"},
+            {color:C.green,label:"En silla / Completada"},
+            {color:C.red,  label:"Cancelada / Bloqueada"},
           ].map(l=>(
             <div key={l.label} style={{display:"flex",alignItems:"center",gap:8}}>
               <div style={{width:8,height:8,background:l.color,opacity:0.7}}/>
