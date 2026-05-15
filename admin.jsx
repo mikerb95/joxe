@@ -45,6 +45,7 @@ const DEFAULT_ADMIN = () => ({
     { id:"e3", name:"Camila R.",role:"Colorista",   services:["s3","s4","s5","s6"], active:true },
   ],
   revenue: [],
+  noShowFine: { enabled: false, defaultAmount: 0, byDay: {} },
 });
 
 const loadAdminCache = () => {
@@ -2750,6 +2751,109 @@ const SettingsView = () => {
                 </div>
               </>
             )}
+          </div>
+        </Card>
+
+        {/* No-show fines */}
+        <Card>
+          <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Multas por incumplimiento</Mono>
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+              <div>
+                <div style={{fontSize:14}}>Cobrar multa al cliente que no se presenta</div>
+                <div style={{fontSize:12,color:C.muted,marginTop:4}}>
+                  El valor de la multa se puede ajustar por día de la semana.
+                </div>
+              </div>
+              <button
+                onClick={()=>setAdmin(a=>({...a,noShowFine:{...(a.noShowFine||{}),enabled:!(a.noShowFine?.enabled)}}))}
+                style={{
+                  padding:"8px 18px",flexShrink:0,
+                  background:admin.noShowFine?.enabled?"rgba(196,102,102,0.1)":C.s3,
+                  border:`1px solid ${admin.noShowFine?.enabled?C.red+"50":C.bdr}`,
+                  color:admin.noShowFine?.enabled?C.red:C.muted,
+                  cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                  fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",
+                }}>
+                {admin.noShowFine?.enabled?"Activo":"Inactivo"}
+              </button>
+            </div>
+
+            {admin.noShowFine?.enabled && (() => {
+              const DAYS = [
+                {key:"lun",label:"Lunes"},
+                {key:"mar",label:"Martes"},
+                {key:"mie",label:"Miércoles"},
+                {key:"jue",label:"Jueves"},
+                {key:"vie",label:"Viernes"},
+                {key:"sab",label:"Sábado"},
+              ];
+              const fines = admin.noShowFine?.byDay || {};
+              const defaultVal = admin.noShowFine?.defaultAmount ?? 0;
+              return (
+                <>
+                  <FieldInput
+                    label="Valor por defecto (todos los días)"
+                    type="number"
+                    value={defaultVal}
+                    min="0"
+                    onChange={e=>setAdmin(a=>({...a,noShowFine:{
+                      ...(a.noShowFine||{}),
+                      defaultAmount:Number(e.target.value)||0,
+                    }}))}
+                    placeholder="0"
+                  />
+                  <div>
+                    <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>
+                      Valor por día (deja en 0 para usar el valor por defecto)
+                    </Mono>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {DAYS.map(({key,label})=>{
+                        const val = fines[key] ?? "";
+                        return (
+                          <div key={key} style={{
+                            display:"grid",gridTemplateColumns:"120px 1fr",
+                            alignItems:"center",gap:12,
+                            padding:"10px 14px",background:C.s2,border:`1px solid ${C.bdr}`,
+                          }}>
+                            <div style={{fontSize:13,color:C.text}}>{label}</div>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{color:C.muted,fontSize:13}}>$</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={val}
+                                placeholder={String(defaultVal||0)}
+                                onChange={e=>setAdmin(a=>({...a,noShowFine:{
+                                  ...(a.noShowFine||{}),
+                                  byDay:{...(a.noShowFine?.byDay||{}),[key]:Number(e.target.value)||0},
+                                }}))}
+                                style={{
+                                  background:"transparent",border:`1px solid ${C.bdr}`,
+                                  color:C.text,padding:"6px 10px",
+                                  fontFamily:"'Outfit',sans-serif",fontSize:14,
+                                  width:"100%",
+                                }}
+                              />
+                              {val > 0 && val !== defaultVal && (
+                                <Mono style={{fontSize:9,color:C.gold,whiteSpace:"nowrap"}}>
+                                  {fmtCOP(val)}
+                                </Mono>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div style={{padding:"12px 14px",background:C.s2,border:`1px solid ${C.bdr}`,fontSize:13,color:C.muted,lineHeight:1.6}}>
+                    La multa se registra manualmente desde el detalle de la cita marcada como incumplida.
+                    Puedes ver y gestionar las multas pendientes en el módulo de <strong style={{color:C.text}}>Caja</strong>.
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </Card>
 
