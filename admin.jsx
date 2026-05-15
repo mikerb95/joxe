@@ -2997,97 +2997,115 @@ const EmpDashboardView = ({emp, onNav}) => {
 };
 
 const EmpAgendaView = ({emp}) => {
-  const [appts]       = useAppts();
-  const [admin]       = useAdmin();
-  const [weekOffset,setWeekOffset] = React.useState(0);
-  const weekDates     = getWeekDates(weekOffset);
-  const todayD        = todayStr();
+  const [appts] = useAppts();
+  const [admin] = useAdmin();
+  const todayD  = todayStr();
+  const tomorrowD = (() => { const d=new Date(todayD+"T12:00"); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })();
+  const dates   = [todayD, tomorrowD];
 
   const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
 
-  const getSlotAppts = (date, time) =>
-    myAppts.filter(a=>a.date===date&&a.time===time&&a.computedStatus!=="cancelled");
+  const DAY_LABEL = (d) => d===todayD ? "Hoy" : "Mañana";
+  const DAY_SUB   = (d) => new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
 
-  const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const statusColor = (s) =>
+    s==="cancelled"?"#C46666":s==="completed"?"#66C499":
+    s==="in-service"?"#66C499":s==="waiting"?"#8ab0ff":"#C29E66";
+
+  const statusLabel = (s) =>
+    s==="in-service"?"En silla":s==="waiting"?"En cola":
+    s==="completed"?"Completada":s==="cancelled"?"Cancelada":"Agendada";
 
   return (
     <div>
-      <PageHeader title="Mi Agenda" subtitle="Semana · Vista"/>
+      <PageHeader title="Mi Agenda" subtitle="Hoy · Mañana" />
       <div style={{padding:"24px 32px"}}>
-        <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:20}}>
-          <button onClick={()=>setWeekOffset(w=>w-1)} style={{
-            padding:"7px 14px",background:C.s2,border:`1px solid ${C.bdr}`,
-            color:C.text,cursor:"pointer",
-          }}>←</button>
-          <Mono style={{color:C.gold,fontSize:11,flex:1,textAlign:"center"}}>
-            {fmtDateShort(weekDates[0])} — {fmtDateShort(weekDates[5])}
-            {weekOffset===0&&<span style={{color:C.muted}}> · semana actual</span>}
-          </Mono>
-          <button onClick={()=>setWeekOffset(w=>w+1)} style={{
-            padding:"7px 14px",background:C.s2,border:`1px solid ${C.bdr}`,
-            color:C.text,cursor:"pointer",
-          }}>→</button>
-          <button onClick={()=>setWeekOffset(0)} style={{
-            padding:"7px 14px",background:"transparent",border:`1px solid ${C.bdr}`,
-            color:C.muted,cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:9,
-          }}>Hoy</button>
-        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
+          {dates.map(date=>{
+            const isToday  = date===todayD;
+            const dayAppts = myAppts.filter(a=>a.date===date);
 
-        <div style={{overflowX:"auto"}}>
-          <div style={{display:"grid",gridTemplateColumns:"70px repeat(6,1fr)",minWidth:640}}>
-            {/* Header */}
-            <div/>
-            {weekDates.map((d,i)=>(
-              <div key={d} style={{
-                padding:"10px 8px",textAlign:"center",
-                borderBottom:`2px solid ${d===todayD?C.gold:C.bdr}`,
-              }}>
-                <Mono style={{color:d===todayD?C.gold:C.muted,fontSize:9}}>{DAY_LABELS[i]}</Mono>
-                <div style={{fontSize:15,fontFamily:"'Marcellus',serif",color:d===todayD?C.gold:C.text,marginTop:2}}>
-                  {new Date(d+"T12:00").getDate()}
-                </div>
-              </div>
-            ))}
+            const byTime = {};
+            TIMES.forEach(t=>{ byTime[t]=[]; });
+            dayAppts.forEach(a=>{ if(byTime[a.time]) byTime[a.time].push(a); else byTime[a.time]=[a]; });
+            const slots = Object.keys(byTime).sort();
 
-            {/* Time rows */}
-            {TIMES.map(t=>(
-              <React.Fragment key={t}>
+            return (
+              <div key={date} style={{border:`1px solid ${isToday?C.gold:C.bdr}`,background:C.s1}}>
+                {/* Day header */}
                 <div style={{
-                  padding:"12px 8px",textAlign:"right",
-                  borderRight:`1px solid ${C.bdr}`,
+                  padding:"16px 20px",borderBottom:`1px solid ${C.bdr}`,
+                  background:isToday?"rgba(194,158,102,0.08)":C.s2,
+                  display:"flex",alignItems:"center",gap:12,
                 }}>
-                  <Mono style={{color:C.muted,fontSize:9}}>{t}</Mono>
+                  <div style={{fontFamily:"'Marcellus',serif",fontSize:26,color:isToday?C.gold:C.text}}>
+                    {DAY_LABEL(date)}
+                  </div>
+                  <Mono style={{color:C.muted,fontSize:9,flex:1}}>{DAY_SUB(date)}</Mono>
+                  <span style={{
+                    fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.gold,
+                    background:"rgba(194,158,102,0.1)",padding:"3px 10px",border:`1px solid ${C.gold}30`,
+                  }}>{dayAppts.filter(a=>a.computedStatus!=="cancelled").length} cita{dayAppts.filter(a=>a.computedStatus!=="cancelled").length!==1?"s":""}</span>
                 </div>
-                {weekDates.map(d=>{
-                  const cell = getSlotAppts(d,t);
+
+                {/* Time rows */}
+                {slots.map(time=>{
+                  const slotAppts = byTime[time]||[];
+                  const [h,m]     = time.split(":").map(Number);
+                  const slotMin   = h*60+(m||0);
+                  const nowMin    = new Date().getHours()*60+new Date().getMinutes();
+                  const isPast    = isToday && slotMin < nowMin-30;
+
                   return (
-                    <div key={d} style={{
-                      minHeight:60,padding:4,
+                    <div key={time} style={{
+                      display:"grid",gridTemplateColumns:"64px 1fr",
                       borderBottom:`1px solid ${C.bdr}`,
-                      borderRight:`1px solid ${C.bdr}`,
-                      background:d===todayD?"rgba(194,158,102,0.03)":"transparent",
+                      opacity:isPast?0.4:1,
                     }}>
-                      {cell.map(a=>(
-                        <div key={a.id} style={{
-                          padding:"5px 8px",marginBottom:3,fontSize:11,
-                          background: a.confirmedBy
-                            ? "rgba(102,196,153,0.15)"
-                            : "rgba(194,158,102,0.12)",
-                          borderLeft:`3px solid ${a.confirmedBy?C.green:C.gold}`,
-                          color:C.text,lineHeight:1.4,
-                        }}>
-                          <div style={{fontWeight:500}}>{a.name}</div>
-                          <div style={{color:C.muted,fontSize:10}}>{a.service}</div>
-                          {a.confirmedBy && <Mono style={{fontSize:8,color:C.green}}>✓ conf</Mono>}
-                        </div>
-                      ))}
+                      <div style={{
+                        padding:"14px 0 14px 16px",borderRight:`1px solid ${C.bdr}`,
+                        display:"flex",alignItems:"flex-start",
+                      }}>
+                        <Mono style={{color:isPast?C.muted2:C.gold,fontSize:11}}>{time}</Mono>
+                      </div>
+
+                      <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:5}}>
+                        {slotAppts.map(a=>(
+                          <div key={a.id} style={{
+                            padding:"8px 10px",
+                            background:a.confirmedBy?"rgba(102,196,153,0.1)":"rgba(194,158,102,0.08)",
+                            borderLeft:`3px solid ${a.confirmedBy?C.green:statusColor(a.computedStatus)}`,
+                          }}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                              <div>
+                                <div style={{
+                                  fontSize:13,color:a.computedStatus==="cancelled"?C.muted:C.text,
+                                  textDecoration:a.computedStatus==="cancelled"?"line-through":"none",
+                                }}>{a.name}</div>
+                                <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.service}</div>
+                              </div>
+                              <div style={{textAlign:"right",flexShrink:0}}>
+                                <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
+                                  {statusLabel(a.computedStatus)}
+                                </Mono>
+                                {a.confirmedBy && (
+                                  <Mono style={{fontSize:8,color:C.green,display:"block",marginTop:2}}>✓ confirmada</Mono>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {slotAppts.length===0 && (
+                          <div style={{fontSize:10,color:C.muted2,padding:"4px 0"}}>Libre</div>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
-              </React.Fragment>
-            ))}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
