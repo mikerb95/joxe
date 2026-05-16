@@ -3363,7 +3363,7 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
       const d = s ? {...DEFAULT_APPTS(),...s} : DEFAULT_APPTS();
       const a = JSON.parse(localStorage.getItem(ADMIN_KEY));
       const cancelled = a?.cancelledIds||[];
-      return getAllAppts(d,cancelled).filter(x=>x.stylist===emp.name&&x.computedStatus==="scheduled"&&!x.confirmedBy).length;
+      return getAllAppts(d,cancelled,[]).filter(x=>x.stylist===emp.name&&x.computedStatus==="scheduled"&&!x.confirmedBy).length;
     } catch { return 0; }
   })();
 
