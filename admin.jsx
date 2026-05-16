@@ -349,6 +349,7 @@ const Badge = ({status}) => {
     "in-service":{label:"En silla",   bg:"rgba(102,196,153,0.15)",color:C.green},
     completed:   {label:"Completada", bg:"rgba(102,196,153,0.08)",color:C.green},
     cancelled:   {label:"Cancelada",  bg:"rgba(196,102,102,0.12)",color:C.red},
+    "no-show":   {label:"Incumplida", bg:"rgba(196,102,102,0.18)",color:"#e07070"},
   };
   const m = map[status]||map.scheduled;
   return (
