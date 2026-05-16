@@ -1026,6 +1026,35 @@ const AppointmentsView = () => {
     setAdmin(a=>({...a, cancelledIds:[...(a.cancelledIds||[]),id]}));
   };
 
+  const DAY_KEYS = ["dom","lun","mar","mie","jue","vie","sab"];
+  const markNoShow = (appt) => {
+    if (!confirm(`¿Marcar a ${appt.name} como incumplida?`)) return;
+    setAdmin(a=>{
+      const noShowIds = [...(a.noShowIds||[]), appt.id];
+      const fine = a.noShowFine;
+      if (!fine?.enabled) return {...a, noShowIds};
+      // Calculate fine amount: byDay override or defaultAmount
+      const dayKey = appt.date ? DAY_KEYS[new Date(appt.date+"T12:00").getDay()] : null;
+      const amount = (dayKey && fine.byDay?.[dayKey] > 0)
+        ? fine.byDay[dayKey]
+        : (fine.defaultAmount || 0);
+      if (!amount) return {...a, noShowIds};
+      const entry = {
+        id: genId(),
+        apptId: appt.id,
+        date: appt.date || todayStr(),
+        amount,
+        service: appt.service || "",
+        client: appt.name || "",
+        phone: appt.phone || "",
+        method: "Multa",
+        note: `Incumplimiento · ${appt.code||appt.id}`,
+        createdAt: Date.now(),
+      };
+      return {...a, noShowIds, revenue:[...(a.revenue||[]), entry]};
+    });
+  };
+
   const confirmAppt = (id) => {
     setAppts(s=>({...s, appointments: s.appointments.map(a=>
       a.id===id ? {...a, status:"scheduled", confirmedAt:Date.now()} : a
