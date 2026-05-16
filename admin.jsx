@@ -218,18 +218,23 @@ const fmtDateShort = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString
 const fmtDateMed = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"});
 const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
 
-const getAllAppts = (store, cancelledIds=[]) => {
+const getAllAppts = (store, cancelledIds=[], noShowIds=[]) => {
   const activeIds = new Set(store.active.map(a=>a.id));
   const completedIds = new Set(store.completed.map(a=>a.id));
+  const resolveStatus = (a, fallback) => {
+    if (noShowIds.includes(a.id)) return "no-show";
+    if (cancelledIds.includes(a.id)) return "cancelled";
+    return fallback;
+  };
   const result = [];
   store.appointments.forEach(a => {
     if (activeIds.has(a.id) || completedIds.has(a.id)) return;
-    result.push({...a, computedStatus: cancelledIds.includes(a.id) ? "cancelled" : (a.status || "scheduled")});
+    result.push({...a, computedStatus: resolveStatus(a, a.status || "scheduled")});
   });
   store.active.forEach(a => {
-    result.push({...a, computedStatus: cancelledIds.includes(a.id) ? "cancelled" : a.status});
+    result.push({...a, computedStatus: resolveStatus(a, a.status)});
   });
-  store.completed.forEach(a => result.push({...a, computedStatus:"completed"}));
+  store.completed.forEach(a => result.push({...a, computedStatus: resolveStatus(a, "completed")}));
   return result.sort((a,b)=>{
     if ((b.date||"") !== (a.date||"")) return (b.date||"").localeCompare(a.date||"");
     return (a.time||"").localeCompare(b.time||"");
