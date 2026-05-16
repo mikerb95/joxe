@@ -701,7 +701,7 @@ const DashboardView = ({onNav}) => {
   const [admin] = useAdmin();
   const todayD = todayStr();
 
-  const allAppts  = getAllAppts(appts, admin.cancelledIds||[]);
+  const allAppts  = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const todayAll  = allAppts.filter(a=>a.date===todayD);
   const todayAct  = todayAll.filter(a=>!["cancelled","completed"].includes(a.computedStatus));
   const inQueue   = appts.active.filter(a=>a.status==="waiting").length;
@@ -860,7 +860,7 @@ const AgendaView = () => {
   const todayD = todayStr();
   const tomorrowD = (() => { const d=new Date(todayD+"T12:00"); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })();
   const dates = [todayD, tomorrowD];
-  const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
 
   const DAY_LABEL = (d) => d===todayD ? "Hoy" : "Mañana";
   const DAY_SUB   = (d) => new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
@@ -1007,7 +1007,7 @@ const AppointmentsView = () => {
   const [expandedId,setExpandedId] = React.useState(null);
   const [payForm,setPayForm] = React.useState(null);
 
-  const all = getAllAppts(appts, admin.cancelledIds||[]);
+  const all = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const filtered = all.filter(a=>{
     if (filter.status && a.computedStatus!==filter.status) return false;
     if (filter.date && a.date!==filter.date) return false;
@@ -2988,7 +2988,7 @@ const EmpDashboardView = ({emp, onNav}) => {
   const [admin]  = useAdmin();
   const todayD   = todayStr();
 
-  const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
   const todayAll = myAppts.filter(a=>a.date===todayD);
   const pending  = myAppts.filter(a=>a.computedStatus==="pending");
@@ -3113,7 +3113,7 @@ const EmpAgendaView = ({emp}) => {
   const tomorrowD = (() => { const d=new Date(todayD+"T12:00"); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })();
   const dates   = [todayD, tomorrowD];
 
-  const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
 
   const DAY_LABEL = (d) => d===todayD ? "Hoy" : "Mañana";
@@ -3228,7 +3228,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   const [tab,setTab]     = React.useState(initTab);
   const [search,setSearch] = React.useState("");
 
-  const allAppts = getAllAppts(appts, admin.cancelledIds||[]);
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
 
   const filtered = myAppts.filter(a=>{
