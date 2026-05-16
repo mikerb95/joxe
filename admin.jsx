@@ -45,6 +45,7 @@ const DEFAULT_ADMIN = () => ({
     { id:"e3", name:"Camila R.",role:"Colorista",   services:["s3","s4","s5","s6"], active:true },
   ],
   revenue: [],
+  noShowIds: [],
   noShowFine: { enabled: false, defaultAmount: 0, byDay: {} },
 });
 
