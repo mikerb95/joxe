@@ -211,7 +211,7 @@ const genId    = () => Math.random().toString(36).slice(2, 10);
 const TIMES    = ["9:00","10:30","12:00","14:00","15:30","17:00"];
 const METHODS  = ["Efectivo","Transferencia","Datáfono","Nequi"];
 const ROLES    = ["Estilista","Colorista","Manicurista","Pedicurista","Barbero","Maquillador/a","Masajista","Recepcionista","Otro"];
-const PAY_COLORS = { Efectivo:"#C29E66", Transferencia:"#8ab0ff", Datáfono:"#C46666", Nequi:"#66C499" };
+const PAY_COLORS = { Efectivo:"#C29E66", Transferencia:"#8ab0ff", Datáfono:"#C46666", Nequi:"#66C499", Multa:"#e07070" };
 
 const fmtCOP = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("es-CO");
 const fmtDateShort = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{day:"numeric",month:"short"});
@@ -1132,6 +1132,7 @@ const AppointmentsView = () => {
             {value:"in-service",label:"En silla"},
             {value:"completed",label:"Completadas"},
             {value:"cancelled",label:"Canceladas"},
+            {value:"no-show",label:"Incumplidas"},
           ]} style={{minWidth:180}} />
         <FieldInput type="date" value={filter.date}
           onChange={e=>setFilter({...filter,date:e.target.value})} style={{minWidth:160}} />
@@ -1225,9 +1226,16 @@ const AppointmentsView = () => {
                             </Btn>
                           </>
                         )}
-                        {a.computedStatus!=="pending" && a.computedStatus!=="cancelled" && a.computedStatus!=="completed" && (
+                        {a.computedStatus!=="pending" && a.computedStatus!=="cancelled" && a.computedStatus!=="completed" && a.computedStatus!=="no-show" && (
                           <Btn variant="danger" small onClick={()=>cancelAppt(a.id)}>
                             ✕ Cancelar cita
+                          </Btn>
+                        )}
+                        {(a.computedStatus==="scheduled"||a.computedStatus==="waiting") && (
+                          <Btn variant="danger" small onClick={()=>markNoShow(a)} style={{
+                            borderColor:"#e07070",color:"#e07070",
+                          }}>
+                            ⊘ Marcar incumplida
                           </Btn>
                         )}
                         {a.computedStatus!=="pending" && a.computedStatus!=="cancelled" && !hasPayment && (
