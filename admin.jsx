@@ -47,6 +47,7 @@ const DEFAULT_ADMIN = () => ({
   revenue: [],
   noShowIds: [],
   noShowFine: { enabled: false, defaultAmount: 0, byDay: {} },
+  archivedEmployees: [],
 });
 
 const loadAdminCache = () => {
@@ -2289,11 +2290,13 @@ const EmployeesView = () => {
   };
 
   const deleteEmployee = (emp) => {
-    if (!confirm(`¿Eliminar a ${emp.name}? También se quitará de la lista de estilistas del portal.`)) return;
+    if (!confirm(`¿Archivar a ${emp.name}? Se quitará del equipo activo pero su historial de citas y finanzas quedará preservado.`)) return;
     const stylists = (admin.stylists||[]).filter(s=>s!==emp.name);
+    const archive  = { ...emp, archivedAt: Date.now() };
     setAdmin(a=>({...a,
       employees: a.employees.filter(e=>e.id!==emp.id),
       stylists,
+      archivedEmployees: [...(a.archivedEmployees||[]), archive],
     }));
   };
 
@@ -2516,6 +2519,9 @@ const EmployeesView = () => {
             ))}
           </div>
         )}
+
+        {/* Archived employees */}
+        <ArchivedEmployeesSection archived={admin.archivedEmployees||[]} revenue={admin.revenue||[]} />
       </div>
     </div>
   );
