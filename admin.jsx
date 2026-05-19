@@ -2414,31 +2414,22 @@ const EmployeesView = () => {
                     )}
                     {chairQROpen===emp.id && (
                       <div style={{
-                        marginTop:16,padding:"20px 24px",
+                        marginTop:16,padding:"24px",
                         background:C.s2,border:`1px solid ${C.bdr}`,
                         display:"flex",gap:32,alignItems:"flex-start",flexWrap:"wrap",
                       }}>
-                        <div>
-                          <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>
-                            QR de silla · {emp.name}
-                          </Mono>
-                          <QRCode value={`chair-${emp.id}`} size={120} fg={C.text} bg={C.s2} />
-                        </div>
-                        <div style={{flex:1,minWidth:200}}>
-                          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>
-                            URL del QR (imprime o comparte)
-                          </Mono>
+                        <ChairQRCode empId={emp.id} empName={emp.name} size={180} />
+                        <div style={{flex:1,minWidth:180,paddingTop:8}}>
+                          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>URL codificada</Mono>
                           <div style={{
-                            fontFamily:"'JetBrains Mono',monospace",fontSize:11,
-                            color:C.gold,background:C.s1,
-                            border:`1px solid ${C.bdr}`,
-                            padding:"10px 14px",wordBreak:"break-all",lineHeight:1.5,
-                            marginBottom:12,
+                            fontFamily:"'JetBrains Mono',monospace",fontSize:10,
+                            color:C.gold,background:C.s1,border:`1px solid ${C.bdr}`,
+                            padding:"10px 14px",wordBreak:"break-all",lineHeight:1.6,
                           }}>
                             {window.location.origin}/CheckIn.html#chair-{emp.id}
                           </div>
-                          <Mono style={{color:C.muted,fontSize:9,display:"block",lineHeight:1.6}}>
-                            Pega esta URL en un generador de QR real (ej. qr-code-generator.com) e imprime el código para colocarlo en el espejo de la silla.
+                          <Mono style={{color:C.muted,fontSize:9,display:"block",lineHeight:1.6,marginTop:12}}>
+                            Este QR nunca cambia. Imprímelo y colócalo en el espejo de la silla.
                           </Mono>
                         </div>
                       </div>
