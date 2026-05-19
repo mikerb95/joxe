@@ -1924,85 +1924,36 @@ const HomePortal = () => {
 };
 
 // ============================================================
-// PAGE 5 — CHECK-IN / CHECK-OUT (silla de estilista)
+// PAGE 5 — CHECK-IN (silla de estilista)
+// Admin: ve la agenda del día con acciones.
+// Todos los demás: confirman asistencia con cédula.
 // ============================================================
+
+// Helpers locales para leer/escribir el estado de admin sin importar admin.jsx
+const ADMIN_KEY_CI = "joxe_admin_v1";
+const loadAdminCI = () => {
+  try { return JSON.parse(localStorage.getItem(ADMIN_KEY_CI)) || {}; } catch { return {}; }
+};
+const saveAdminCI = (next) => localStorage.setItem(ADMIN_KEY_CI, JSON.stringify(next));
+
+// Calcula el status visible de una cita igual que getAllAppts en admin.jsx
+const resolveApptStatus = (appt, activeIds, completedIds, noShowIds, cancelledIds) => {
+  if (noShowIds.includes(appt.id))    return "no-show";
+  if (cancelledIds.includes(appt.id)) return "cancelled";
+  if (completedIds.has(appt.id))      return "completed";
+  if (activeIds.has(appt.id))         return "waiting";
+  return appt.status || "scheduled";
+};
+
 const CheckInPortal = () => {
   const [store, setStore] = useStore();
   const catalog = useCatalog();
 
-  const hash = window.location.hash.replace('#', '');
-  const empId = hash.startsWith('chair-') ? hash.replace('chair-', '') : null;
-  const employee = empId
-    ? (catalog.employees.find(e => e.id === empId) || null)
-    : null;
+  const hash   = window.location.hash.replace('#', '');
+  const empId  = hash.startsWith('chair-') ? hash.replace('chair-', '') : null;
+  const employee = empId ? (catalog.employees.find(e => e.id === empId) || null) : null;
 
   const isAdmin = !!sessionStorage.getItem("joxe_admin_session");
-  const empSession = (() => {
-    try { return JSON.parse(sessionStorage.getItem("joxe_emp_session")); }
-    catch { return null; }
-  })();
-  const isStaff = isAdmin || !!empSession;
-
-  const [cedula, setCedula] = React.useState('');
-  const [confirmed, setConfirmed] = React.useState(null);
-  const [notFound, setNotFound] = React.useState(false);
-  const [price, setPrice] = React.useState('');
-  const [note, setNote] = React.useState('');
-  const [done, setDone] = React.useState(false);
-
-  const stylistName = employee?.name;
-
-  const activeForStylist = React.useMemo(() =>
-    store.active.filter(a => !stylistName || a.stylist === stylistName),
-    [store.active, stylistName]
-  );
-  const inServiceAppt = activeForStylist.find(a => a.status === 'in-service')
-    || activeForStylist[0] || null;
-
-  React.useEffect(() => {
-    if (isStaff && inServiceAppt && !price) {
-      const svc = catalog.services.find(s => s.name === inServiceAppt.service);
-      if (svc) setPrice(String(svc.price));
-    }
-  }, [inServiceAppt?.id]);
-
-  const confirmVisit = () => {
-    const clean = cedula.replace(/\D/g, '');
-    if (clean.length < 5) return;
-    const today = todayStr();
-    const appt = store.appointments.find(a =>
-      a.cedula === clean &&
-      a.date === today &&
-      (!empId || a.stylist === stylistName)
-    );
-    if (!appt) { setNotFound(true); return; }
-    setStore(s => ({
-      ...s,
-      appointments: s.appointments.map(a =>
-        a.id === appt.id
-          ? { ...a, checkedIn: true, checkedInAt: Date.now() }
-          : a
-      ),
-    }));
-    setConfirmed(appt);
-    setNotFound(false);
-  };
-
-  const checkout = () => {
-    if (!inServiceAppt) return;
-    const finalPrice = price ? Number(price.replace(/\D/g, '')) : undefined;
-    setStore(s => ({
-      ...s,
-      active: s.active.filter(a => a.id !== inServiceAppt.id),
-      completed: [...s.completed, {
-        ...inServiceAppt,
-        completedAt: Date.now(),
-        ...(finalPrice ? { finalPrice } : {}),
-        ...(note.trim() ? { note: note.trim() } : {}),
-      }],
-    }));
-    setDone(true);
-  };
 
   const headerRight = (
     <a href="Portal.html" style={{
@@ -2011,15 +1962,126 @@ const CheckInPortal = () => {
     }}>← Inicio</a>
   );
 
-  // ── MODO STAFF / ADMIN ──────────────────────────────────────
-  if (isStaff) {
+  // ── MODO ADMIN: agenda del estilista ───────────────────────
+  if (isAdmin) {
+    return <CheckInAdminView store={store} setStore={setStore} catalog={catalog}
+      employee={employee} headerRight={headerRight} />;
+  }
+
+  // ── MODO CLIENTE / ESTILISTA / ANÓNIMO: check-in por cédula ─
+  return <CheckInClientView store={store} setStore={setStore}
+    employee={employee} headerRight={headerRight} />;
+};
+
+// ── Vista admin ─────────────────────────────────────────────
+const CheckInAdminView = ({ store, setStore, catalog, employee, headerRight }) => {
+  const [adminState, setAdminState] = React.useState(loadAdminCI);
+  const [checkoutId, setCheckoutId] = React.useState(null);
+  const [price, setPrice] = React.useState('');
+  const [note, setNote]   = React.useState('');
+  const [done, setDone]   = React.useState(false);
+  const [confirm, setConfirm] = React.useState(null); // { appt, action: 'noshow'|'checkin' }
+
+  const noShowIds    = adminState.noShowIds    || [];
+  const cancelledIds = adminState.cancelledIds || [];
+  const activeIds    = new Set(store.active.map(a => a.id));
+  const completedIds = new Set(store.completed.map(a => a.id));
+
+  const today = todayStr();
+
+  // Todas las citas de hoy para este estilista (o todas si no hay silla)
+  const todayAppts = React.useMemo(() => {
+    const all = [
+      ...store.appointments.map(a => ({ ...a, _src: 'scheduled' })),
+      ...store.active.map(a => ({ ...a, _src: 'active' })),
+      ...store.completed.map(a => ({ ...a, _src: 'completed' })),
+    ];
+    // Dedup por id (active/completed override scheduled)
+    const seen = new Map();
+    all.forEach(a => { if (!seen.has(a.id)) seen.set(a.id, a); });
+    return [...seen.values()]
+      .filter(a => a.date === today && (!employee || a.stylist === employee.name))
+      .map(a => ({
+        ...a,
+        computedStatus: resolveApptStatus(a, activeIds, completedIds, noShowIds, cancelledIds),
+      }))
+      .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  }, [store, employee, today, noShowIds, cancelledIds]);
+
+  // Cliente activo en silla (para checkout)
+  const inService = checkoutId
+    ? store.active.find(a => a.id === checkoutId) || null
+    : null;
+
+  const manualCheckIn = (appt) => {
+    setStore(s => ({
+      ...s,
+      appointments: s.appointments.map(a =>
+        a.id === appt.id ? { ...a, checkedIn: true, checkedInAt: Date.now() } : a
+      ),
+    }));
+    setConfirm(null);
+  };
+
+  const markNoShow = (appt) => {
+    const admin = loadAdminCI();
+    const ids   = [...(admin.noShowIds || []), appt.id];
+    const fine  = admin.noShowFine;
+    let next    = { ...admin, noShowIds: ids };
+    if (fine?.enabled) {
+      const day    = new Date(appt.date).toLocaleDateString('es-CO', { weekday: 'long' }).toLowerCase();
+      const amount = (fine.byDay?.[day] > 0 ? fine.byDay[day] : fine.defaultAmount) || 0;
+      if (amount > 0) {
+        next = {
+          ...next,
+          revenue: [...(admin.revenue || []), {
+            id: `ns-${appt.id}`, date: appt.date, type: 'no-show-fine',
+            client: appt.name, service: appt.service,
+            stylist: appt.stylist, amount,
+          }],
+        };
+      }
+    }
+    saveAdminCI(next);
+    setAdminState(next);
+    setConfirm(null);
+  };
+
+  const checkout = () => {
+    if (!inService) return;
+    const finalPrice = price ? Number(price.replace(/\D/g, '')) : undefined;
+    setStore(s => ({
+      ...s,
+      active: s.active.filter(a => a.id !== inService.id),
+      completed: [...s.completed, {
+        ...inService,
+        completedAt: Date.now(),
+        ...(finalPrice ? { finalPrice } : {}),
+        ...(note.trim() ? { note: note.trim() } : {}),
+      }],
+    }));
+    setDone(true);
+  };
+
+  const STATUS_CHIP = {
+    scheduled:  { label: "Pendiente",   bg: "rgba(138,176,255,0.1)",  color: "#8ab0ff",  border: "rgba(138,176,255,0.3)" },
+    waiting:    { label: "En sala",     bg: "rgba(194,158,102,0.12)", color: "#C29E66",  border: "rgba(194,158,102,0.4)" },
+    "in-service":{ label: "En silla",  bg: "rgba(102,196,153,0.12)", color: "#66C499",  border: "rgba(102,196,153,0.4)" },
+    completed:  { label: "Completada",  bg: "rgba(102,196,153,0.06)", color: "#66C499",  border: "rgba(102,196,153,0.2)" },
+    "no-show":  { label: "Incumplida", bg: "rgba(196,102,102,0.12)", color: "#e07070",  border: "rgba(196,102,102,0.3)" },
+    cancelled:  { label: "Cancelada",  bg: "rgba(245,241,234,0.04)", color: "rgba(245,241,234,0.35)", border: "rgba(245,241,234,0.1)" },
+  };
+
+  // ── Checkout overlay ──────────────────────────────────────
+  if (checkoutId) {
     return (
       <PortalShell tone="noir" header={
-        <PortalHeader
-          subtitle={employee ? `Silla · ${employee.name}` : "Check-Out · Servicio"}
-          title="Check-Out"
-          right={headerRight}
-        />
+        <PortalHeader subtitle={employee ? `Silla · ${employee.name}` : "Admin"} title="Completar servicio" right={
+          <button onClick={() => { setCheckoutId(null); setDone(false); setPrice(''); setNote(''); }}
+            style={{ background: "none", border: "none", color: "#F5F1EA", cursor: "pointer",
+              fontFamily: "'Outfit', sans-serif", fontSize: 12, letterSpacing: "0.15em",
+              textTransform: "uppercase", opacity: 0.6 }}>← Volver</button>
+        } />
       }>
         <main style={{ flex: 1, padding: "48px 40px", maxWidth: 700, margin: "0 auto", width: "100%" }}>
           {done ? (
@@ -2031,128 +2093,76 @@ const CheckInPortal = () => {
                 fontSize: 20, color: "#66C499", marginBottom: 24,
               }}>✓</div>
               <PMono style={{ color: "#66C499" }}>Servicio completado</PMono>
-              <h2 style={{
-                fontFamily: "'Marcellus', serif", fontSize: 48, fontWeight: 400,
-                margin: "16px 0 16px",
-              }}>Cerrado.</h2>
+              <h2 style={{ fontFamily: "'Marcellus', serif", fontSize: 48, fontWeight: 400, margin: "16px 0 16px" }}>Cerrado.</h2>
               <p style={{ opacity: 0.5, fontSize: 15, marginBottom: 40 }}>
-                El cliente fue movido al historial. La caja registra la visita.
+                El cliente fue movido al historial.
               </p>
-              <button onClick={() => { setDone(false); setPrice(''); setNote(''); }}
-                style={{
-                  background: "transparent", border: "1px solid rgba(245,241,234,0.25)",
+              <button onClick={() => { setCheckoutId(null); setDone(false); setPrice(''); setNote(''); }}
+                style={{ background: "transparent", border: "1px solid rgba(245,241,234,0.25)",
                   color: "#F5F1EA", padding: "14px 28px", cursor: "pointer",
                   fontFamily: "'Outfit', sans-serif", fontSize: 12,
-                  letterSpacing: "0.18em", textTransform: "uppercase",
-                }}>Siguiente cliente →</button>
+                  letterSpacing: "0.18em", textTransform: "uppercase" }}>← Ver agenda</button>
             </>
-          ) : !inServiceAppt ? (
+          ) : !inService ? (
             <>
-              <PMono style={{ color: "#C29E66" }}>
-                {employee ? `${employee.name} · ${employee.role}` : "Todas las sillas"}
-              </PMono>
-              <h2 style={{
-                fontFamily: "'Marcellus', serif", fontSize: 48, fontWeight: 400,
-                margin: "20px 0 16px",
-              }}>Sin cliente activo.</h2>
-              <p style={{ opacity: 0.45, fontSize: 14, lineHeight: 1.6 }}>
-                No hay ningún cliente en espera o en servicio
-                {employee ? ` para ${employee.name}` : ""}. Cuando el cliente active su turno desde recepción, aparecerá aquí.
+              <h2 style={{ fontFamily: "'Marcellus', serif", fontSize: 40, fontWeight: 400, margin: "0 0 16px" }}>
+                Cita no activa.
+              </h2>
+              <p style={{ opacity: 0.45, fontSize: 14 }}>
+                Esta cita no está en cola activa. Actívala desde recepción primero.
               </p>
             </>
           ) : (
             <>
-              <div style={{
-                display: "flex", alignItems: "center", gap: 12, marginBottom: 24,
-              }}>
-                <div style={{
-                  padding: "4px 12px",
-                  background: inServiceAppt.status === "in-service"
-                    ? "rgba(102,196,153,0.12)" : "rgba(138,176,255,0.1)",
-                  border: `1px solid ${inServiceAppt.status === "in-service" ? "rgba(102,196,153,0.4)" : "rgba(138,176,255,0.3)"}`,
-                  fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
-                  letterSpacing: "0.15em", textTransform: "uppercase",
-                  color: inServiceAppt.status === "in-service" ? "#66C499" : "#8ab0ff",
-                }}>
-                  {inServiceAppt.status === "in-service" ? "En silla" : "En espera"}
-                </div>
-                <PMono style={{ color: "#C29E66", fontSize: 11 }}>{inServiceAppt.code}</PMono>
-              </div>
-
-              <h2 style={{
-                fontFamily: "'Marcellus', serif", fontSize: 52, fontWeight: 400,
-                margin: "0 0 32px", letterSpacing: "-0.01em",
-              }}>{inServiceAppt.name}</h2>
-
-              <div style={{
-                background: "#141212", border: "1px solid rgba(245,241,234,0.08)",
+              <PMono style={{ color: "#C29E66" }}>{inService.code}</PMono>
+              <h2 style={{ fontFamily: "'Marcellus', serif", fontSize: 52, fontWeight: 400, margin: "16px 0 32px" }}>
+                {inService.name}
+              </h2>
+              <div style={{ background: "#141212", border: "1px solid rgba(245,241,234,0.08)",
                 padding: "24px", marginBottom: 28,
-                display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20,
-              }}>
-                {[
-                  ["Servicio", inServiceAppt.service],
-                  ["Estilista", inServiceAppt.stylist],
-                  ["Teléfono", inServiceAppt.phone],
-                  ["Cédula", inServiceAppt.cedula],
-                ].map(([label, val]) => (
+                display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                {[["Servicio", inService.service], ["Estilista", inService.stylist],
+                  ["Teléfono", inService.phone], ["Cédula", inService.cedula]].map(([label, val]) => (
                   <div key={label}>
-                    <PMono style={{ color: "rgba(245,241,234,0.35)", fontSize: 9, display: "block", marginBottom: 6 }}>
-                      {label}
-                    </PMono>
+                    <PMono style={{ color: "rgba(245,241,234,0.35)", fontSize: 9, display: "block", marginBottom: 6 }}>{label}</PMono>
                     <div style={{ fontFamily: "'Marcellus', serif", fontSize: 17 }}>{val || "—"}</div>
                   </div>
                 ))}
               </div>
-
               <div style={{ display: "flex", flexDirection: "column", gap: 16, marginBottom: 32 }}>
                 <div>
-                  <label style={{
-                    display: "block", fontFamily: "'JetBrains Mono', monospace",
+                  <label style={{ display: "block", fontFamily: "'JetBrains Mono', monospace",
                     fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase",
-                    color: "rgba(245,241,234,0.4)", marginBottom: 10,
-                  }}>Precio final (COP)</label>
-                  <input
-                    type="text"
+                    color: "rgba(245,241,234,0.4)", marginBottom: 10 }}>Precio final (COP)</label>
+                  <input type="text"
                     value={price ? Number(price).toLocaleString('es-CO') : ''}
                     onChange={e => setPrice(e.target.value.replace(/\D/g, ''))}
                     placeholder="85.000"
-                    style={{
-                      width: "100%", background: "#141212",
+                    style={{ width: "100%", background: "#141212",
                       border: "1px solid rgba(245,241,234,0.12)",
                       color: "#F5F1EA", padding: "14px 16px",
                       fontFamily: "'JetBrains Mono', monospace", fontSize: 16,
-                      letterSpacing: "0.08em",
-                    }}
-                  />
+                      letterSpacing: "0.08em" }} />
                 </div>
                 <div>
-                  <label style={{
-                    display: "block", fontFamily: "'JetBrains Mono', monospace",
+                  <label style={{ display: "block", fontFamily: "'JetBrains Mono', monospace",
                     fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase",
-                    color: "rgba(245,241,234,0.4)", marginBottom: 10,
-                  }}>Notas internas</label>
-                  <textarea
-                    value={note}
-                    onChange={e => setNote(e.target.value)}
-                    placeholder="Ej: cliente requirió tratamiento adicional…"
-                    rows={3}
-                    style={{
-                      width: "100%", background: "#141212",
+                    color: "rgba(245,241,234,0.4)", marginBottom: 10 }}>Notas internas</label>
+                  <textarea value={note} onChange={e => setNote(e.target.value)}
+                    placeholder="Ej: cliente requirió tratamiento adicional…" rows={3}
+                    style={{ width: "100%", background: "#141212",
                       border: "1px solid rgba(245,241,234,0.12)",
                       color: "#F5F1EA", padding: "14px 16px",
                       fontFamily: "'Outfit', sans-serif", fontSize: 14,
-                      resize: "vertical", lineHeight: 1.5,
-                    }}
-                  />
+                      resize: "vertical", lineHeight: 1.5 }} />
                 </div>
               </div>
-
-              <button onClick={checkout} style={{
-                width: "100%", background: "#C29E66", color: "#0C0C0C", border: "none",
-                padding: "18px 32px", cursor: "pointer",
+              <button onClick={checkout} style={{ width: "100%", background: "#C29E66", color: "#0C0C0C",
+                border: "none", padding: "18px 32px", cursor: "pointer",
                 fontFamily: "'Outfit', sans-serif", fontSize: 12,
-                letterSpacing: "0.18em", textTransform: "uppercase",
-              }}>Completar servicio →</button>
+                letterSpacing: "0.18em", textTransform: "uppercase" }}>
+                Completar servicio →
+              </button>
             </>
           )}
         </main>
@@ -2160,7 +2170,200 @@ const CheckInPortal = () => {
     );
   }
 
-  // ── MODO CLIENTE / SIN SESIÓN ───────────────────────────────
+  // ── Agenda del día ────────────────────────────────────────
+  return (
+    <PortalShell tone="noir" header={
+      <PortalHeader
+        subtitle={employee ? `Silla · ${employee.name}` : "Admin · Agenda"}
+        title={employee ? `Agenda de ${employee.name}` : "Agenda hoy"}
+        right={headerRight}
+      />
+    }>
+      <main style={{ flex: 1, padding: "40px", maxWidth: 860, margin: "0 auto", width: "100%" }}>
+
+        {/* Modal de confirmación */}
+        {confirm && (
+          <div style={{
+            position: "fixed", inset: 0, background: "rgba(12,12,12,0.85)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 100, padding: 24,
+          }}>
+            <div style={{ background: "#141212", border: "1px solid rgba(245,241,234,0.15)",
+              padding: 40, maxWidth: 420, width: "100%" }}>
+              {confirm.action === 'noshow' ? (
+                <>
+                  <PMono style={{ color: "#e07070" }}>Marcar incumplida</PMono>
+                  <h3 style={{ fontFamily: "'Marcellus', serif", fontSize: 28, fontWeight: 400, margin: "12px 0 8px" }}>
+                    {confirm.appt.name}
+                  </h3>
+                  <p style={{ fontSize: 13, opacity: 0.55, lineHeight: 1.6, marginBottom: 28 }}>
+                    Esto registrará la cita como incumplida
+                    {adminState.noShowFine?.enabled ? " y aplicará la multa configurada" : ""}.
+                    Esta acción no se puede deshacer desde aquí.
+                  </p>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <button onClick={() => setConfirm(null)} style={{
+                      flex: 1, background: "transparent", border: "1px solid rgba(245,241,234,0.2)",
+                      color: "#F5F1EA", padding: "12px", cursor: "pointer",
+                      fontFamily: "'Outfit', sans-serif", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase",
+                    }}>Cancelar</button>
+                    <button onClick={() => markNoShow(confirm.appt)} style={{
+                      flex: 1, background: "rgba(196,102,102,0.15)", border: "1px solid rgba(196,102,102,0.4)",
+                      color: "#e07070", padding: "12px", cursor: "pointer",
+                      fontFamily: "'Outfit', sans-serif", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase",
+                    }}>Confirmar →</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <PMono style={{ color: "#C29E66" }}>Check-in manual</PMono>
+                  <h3 style={{ fontFamily: "'Marcellus', serif", fontSize: 28, fontWeight: 400, margin: "12px 0 8px" }}>
+                    {confirm.appt.name}
+                  </h3>
+                  <p style={{ fontSize: 13, opacity: 0.55, lineHeight: 1.6, marginBottom: 28 }}>
+                    Confirmarás la asistencia de este cliente manualmente. Esto evita la multa por no-show.
+                  </p>
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <button onClick={() => setConfirm(null)} style={{
+                      flex: 1, background: "transparent", border: "1px solid rgba(245,241,234,0.2)",
+                      color: "#F5F1EA", padding: "12px", cursor: "pointer",
+                      fontFamily: "'Outfit', sans-serif", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase",
+                    }}>Cancelar</button>
+                    <button onClick={() => manualCheckIn(confirm.appt)} style={{
+                      flex: 1, background: "#C29E66", border: "none",
+                      color: "#0C0C0C", padding: "12px", cursor: "pointer",
+                      fontFamily: "'Outfit', sans-serif", fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase",
+                    }}>Confirmar →</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        <PMono style={{ color: "rgba(245,241,234,0.4)", display: "block", marginBottom: 24 }}>
+          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </PMono>
+
+        {todayAppts.length === 0 ? (
+          <div style={{ opacity: 0.4, textAlign: "center", padding: "80px 0" }}>
+            <div style={{ fontSize: 36, marginBottom: 16 }}>—</div>
+            <PMono>Sin citas para hoy{employee ? ` · ${employee.name}` : ""}</PMono>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {todayAppts.map(appt => {
+              const chip  = STATUS_CHIP[appt.computedStatus] || STATUS_CHIP.scheduled;
+              const done  = ["completed", "no-show", "cancelled"].includes(appt.computedStatus);
+              const isActive = activeIds.has(appt.id);
+              const canCheckIn  = !done && !appt.checkedIn && appt.computedStatus !== "no-show";
+              const canNoShow   = !done && !appt.checkedIn;
+              return (
+                <div key={appt.id} style={{
+                  background: "#141212", border: "1px solid rgba(245,241,234,0.07)",
+                  padding: "20px 24px",
+                  display: "grid", gridTemplateColumns: "64px 1fr auto",
+                  gap: 20, alignItems: "center",
+                  opacity: done && appt.computedStatus !== "completed" ? 0.5 : 1,
+                }}>
+                  {/* Hora */}
+                  <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15,
+                    color: "#C29E66", letterSpacing: "0.08em" }}>{appt.time || "—"}</div>
+
+                  {/* Info cliente */}
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                      <span style={{ fontFamily: "'Marcellus', serif", fontSize: 20 }}>{appt.name}</span>
+                      {appt.checkedIn && (
+                        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 8,
+                          letterSpacing: "0.15em", textTransform: "uppercase",
+                          color: "#66C499", border: "1px solid rgba(102,196,153,0.4)",
+                          padding: "2px 8px", background: "rgba(102,196,153,0.08)" }}>✓ Check-in</span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 13, opacity: 0.55 }}>{appt.service}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 8 }}>
+                      <span style={{
+                        padding: "3px 10px", fontSize: 9, fontFamily: "'JetBrains Mono', monospace",
+                        letterSpacing: "0.12em", textTransform: "uppercase",
+                        background: chip.bg, color: chip.color, border: `1px solid ${chip.border}`,
+                      }}>{chip.label}</span>
+                      {!employee && (
+                        <span style={{ fontSize: 11, opacity: 0.4 }}>{appt.stylist}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
+                    {isActive && (
+                      <button onClick={() => { setCheckoutId(appt.id); setPrice(''); setNote(''); setDone(false); }}
+                        style={{ background: "rgba(102,196,153,0.1)", border: "1px solid rgba(102,196,153,0.35)",
+                          color: "#66C499", padding: "8px 16px", cursor: "pointer",
+                          fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                          letterSpacing: "0.15em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                        Completar →
+                      </button>
+                    )}
+                    {canCheckIn && (
+                      <button onClick={() => setConfirm({ appt, action: 'checkin' })}
+                        style={{ background: "transparent", border: "1px solid rgba(194,158,102,0.35)",
+                          color: "#C29E66", padding: "8px 16px", cursor: "pointer",
+                          fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                          letterSpacing: "0.15em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                        Check-in
+                      </button>
+                    )}
+                    {canNoShow && (
+                      <button onClick={() => setConfirm({ appt, action: 'noshow' })}
+                        style={{ background: "transparent", border: "1px solid rgba(196,102,102,0.25)",
+                          color: "#e07070", padding: "8px 16px", cursor: "pointer",
+                          fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                          letterSpacing: "0.15em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                        No-show
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </PortalShell>
+  );
+};
+
+// ── Vista cliente / estilista / anónimo ──────────────────────
+const CheckInClientView = ({ store, setStore, employee, headerRight }) => {
+  const [cedula,    setCedula]    = React.useState('');
+  const [confirmed, setConfirmed] = React.useState(null);
+  const [notFound,  setNotFound]  = React.useState(false);
+
+  const confirmVisit = () => {
+    const clean = cedula.replace(/\D/g, '');
+    if (clean.length < 5) return;
+    const today = todayStr();
+    // Busca en citas pendientes; no permite check-in si ya está como no-show
+    const admin   = loadAdminCI();
+    const noShowIds = admin.noShowIds || [];
+    const appt = store.appointments.find(a =>
+      a.cedula === clean &&
+      a.date === today &&
+      (!employee || a.stylist === employee.name) &&
+      !noShowIds.includes(a.id)
+    );
+    if (!appt) { setNotFound(true); return; }
+    setStore(s => ({
+      ...s,
+      appointments: s.appointments.map(a =>
+        a.id === appt.id ? { ...a, checkedIn: true, checkedInAt: Date.now() } : a
+      ),
+    }));
+    setConfirmed(appt);
+    setNotFound(false);
+  };
+
   return (
     <PortalShell tone="noir" header={
       <PortalHeader
@@ -2169,10 +2372,7 @@ const CheckInPortal = () => {
         right={headerRight}
       />
     }>
-      <main style={{
-        flex: 1, display: "flex", alignItems: "center",
-        justifyContent: "center", padding: "48px 20px",
-      }}>
+      <main style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 20px" }}>
         {confirmed ? (
           <div style={{ width: "100%", maxWidth: 480, textAlign: "center" }}>
             <div style={{
@@ -2182,22 +2382,21 @@ const CheckInPortal = () => {
               fontSize: 28, color: "#66C499", margin: "0 auto 28px",
             }}>✓</div>
             <PMono style={{ color: "#66C499" }}>Asistencia confirmada</PMono>
-            <h2 style={{
-              fontFamily: "'Marcellus', serif", fontSize: 48, fontWeight: 400,
-              margin: "16px 0 8px",
-            }}>{confirmed.name}</h2>
+            <h2 style={{ fontFamily: "'Marcellus', serif", fontSize: 48, fontWeight: 400, margin: "16px 0 8px" }}>
+              {confirmed.name}
+            </h2>
             {employee && (
               <p style={{ fontSize: 14, opacity: 0.5, margin: "0 0 28px" }}>
                 Silla de <span style={{ color: "#C29E66" }}>{employee.name}</span>
               </p>
             )}
-            <div style={{
-              padding: "16px 24px",
-              background: "#141212", border: "1px solid rgba(245,241,234,0.1)",
+            <div style={{ padding: "16px 24px", background: "#141212",
+              border: "1px solid rgba(245,241,234,0.1)",
               fontFamily: "'JetBrains Mono', monospace", fontSize: 13,
               letterSpacing: "0.15em", color: "#C29E66",
-              display: "inline-block", marginBottom: 32,
-            }}>{confirmed.code} · {confirmed.service}</div>
+              display: "inline-block", marginBottom: 32 }}>
+              {confirmed.code} · {confirmed.service}
+            </div>
             <p style={{ fontSize: 13, opacity: 0.4, lineHeight: 1.6 }}>
               Tu visita ha sido registrada. ¡Disfruta tu servicio!
             </p>
@@ -2209,52 +2408,36 @@ const CheckInPortal = () => {
                 Silla de {employee.name} · {employee.role}
               </PMono>
             )}
-            <h1 style={{
-              fontFamily: "'Marcellus', serif",
-              fontSize: "clamp(34px, 6vw, 50px)",
-              fontWeight: 400, margin: "0 0 12px",
-              letterSpacing: "-0.01em", lineHeight: 1.1, color: "#F5F1EA",
-            }}>
-              {employee
-                ? `Bienvenido a la silla de ${employee.name}.`
-                : "Confirma tu visita."}
+            <h1 style={{ fontFamily: "'Marcellus', serif",
+              fontSize: "clamp(34px, 6vw, 50px)", fontWeight: 400,
+              margin: "0 0 12px", letterSpacing: "-0.01em",
+              lineHeight: 1.1, color: "#F5F1EA" }}>
+              {employee ? `Bienvenido a la silla de ${employee.name}.` : "Confirma tu visita."}
             </h1>
             <p style={{ fontSize: 15, opacity: 0.55, lineHeight: 1.6, marginBottom: 40, color: "#F5F1EA" }}>
               Ingresa tu cédula para confirmar tu asistencia al servicio de hoy.
             </p>
-
-            <div style={{
-              background: "#141212", border: "1px solid rgba(245,241,234,0.1)", padding: 32,
-            }}>
-              <label style={{
-                display: "block", fontFamily: "'JetBrains Mono', monospace",
+            <div style={{ background: "#141212", border: "1px solid rgba(245,241,234,0.1)", padding: 32 }}>
+              <label style={{ display: "block", fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase",
-                color: "#C29E66", marginBottom: 10,
-              }}>Cédula de ciudadanía</label>
+                color: "#C29E66", marginBottom: 10 }}>Cédula de ciudadanía</label>
               <input
                 type="tel"
                 value={cedula}
-                onChange={e => {
-                  setCedula(e.target.value.replace(/\D/g, '').slice(0, 12));
-                  setNotFound(false);
-                }}
+                onChange={e => { setCedula(e.target.value.replace(/\D/g, '').slice(0, 12)); setNotFound(false); }}
                 onKeyDown={e => e.key === 'Enter' && confirmVisit()}
                 placeholder="1234567890"
                 autoFocus
-                style={{
-                  width: "100%", background: "#0C0C0C",
+                style={{ width: "100%", background: "#0C0C0C",
                   border: `1px solid ${notFound ? "#C46666" : "rgba(245,241,234,0.18)"}`,
                   color: "#F5F1EA", padding: "18px 20px",
                   fontFamily: "'JetBrains Mono', monospace", fontSize: 20,
-                  letterSpacing: "0.1em", marginBottom: notFound ? 10 : 20,
-                }}
+                  letterSpacing: "0.1em", marginBottom: notFound ? 10 : 20 }}
               />
               {notFound && (
-                <div style={{
-                  color: "#C46666", fontFamily: "'JetBrains Mono', monospace",
+                <div style={{ color: "#C46666", fontFamily: "'JetBrains Mono', monospace",
                   fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase",
-                  marginBottom: 20, lineHeight: 1.5,
-                }}>
+                  marginBottom: 20, lineHeight: 1.5 }}>
                   No encontramos una cita para hoy con esa cédula
                   {employee ? ` en la silla de ${employee.name}` : ""}.
                 </div>
@@ -2262,26 +2445,18 @@ const CheckInPortal = () => {
               <button
                 onClick={confirmVisit}
                 disabled={cedula.replace(/\D/g, '').length < 5}
-                style={{
-                  width: "100%",
-                  background: cedula.replace(/\D/g, '').length >= 5
-                    ? "#C29E66" : "rgba(194,158,102,0.15)",
-                  color: "#0C0C0C", border: "none",
-                  padding: "16px", cursor: cedula.replace(/\D/g, '').length >= 5
-                    ? "pointer" : "not-allowed",
+                style={{ width: "100%",
+                  background: cedula.replace(/\D/g, '').length >= 5 ? "#C29E66" : "rgba(194,158,102,0.15)",
+                  color: "#0C0C0C", border: "none", padding: "16px",
+                  cursor: cedula.replace(/\D/g, '').length >= 5 ? "pointer" : "not-allowed",
                   fontFamily: "'Outfit', sans-serif", fontSize: 12,
-                  letterSpacing: "0.18em", textTransform: "uppercase",
-                }}>Confirmar asistencia →</button>
+                  letterSpacing: "0.18em", textTransform: "uppercase" }}>
+                Confirmar asistencia →
+              </button>
             </div>
-
-            <p style={{
-              fontSize: 11, opacity: 0.3, marginTop: 20,
-              textAlign: "center", color: "#F5F1EA",
-              fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.1em",
-            }}>
-              {employee
-                ? `QR exclusivo · silla de ${employee.name}`
-                : "Escanea el QR de tu silla para registrar tu visita"}
+            <p style={{ fontSize: 11, opacity: 0.3, marginTop: 20, textAlign: "center", color: "#F5F1EA",
+              fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.1em" }}>
+              {employee ? `QR exclusivo · silla de ${employee.name}` : "Escanea el QR de tu silla para registrar tu visita"}
             </p>
           </div>
         )}
