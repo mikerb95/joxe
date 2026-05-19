@@ -285,16 +285,53 @@ const pseudoQR = (text) => {
   return grid;
 };
 
-const QRCode = ({value,size=120,fg=C.text,bg=C.s2}) => {
-  const grid = pseudoQR(value);
-  const cell = size/grid.length;
+// Real QR code using the qrcode library (loaded via CDN in Admin.html)
+// value = full URL to encode; empName = label shown al imprimir
+const ChairQRCode = ({ empId, empName, size = 200 }) => {
+  const url = `${window.location.origin}/CheckIn.html#chair-${empId}`;
+  const [dataUrl, setDataUrl] = React.useState(null);
+
+  React.useEffect(() => {
+    const lib = window.QRCode;
+    if (!lib) return;
+    lib.toDataURL(url, { width: size, margin: 2, color: { dark: "#0C0C0C", light: "#F5F1EA" } })
+      .then(setDataUrl)
+      .catch(() => {});
+  }, [url, size]);
+
+  const printQR = () => {
+    if (!dataUrl) return;
+    const w = window.open("", "_blank", "width=480,height=600");
+    w.document.write(`<!DOCTYPE html><html><head><title>QR · ${empName}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-height:100vh;background:#fff;font-family:'Helvetica Neue',sans-serif;gap:16px}
+  img{display:block}
+  .name{font-size:22px;font-weight:600;letter-spacing:0.05em;text-align:center}
+  .sub{font-size:11px;color:#888;letter-spacing:0.15em;text-transform:uppercase}
+  @media print{@page{margin:0.5cm}}
+</style></head>
+<body>
+<img src="${dataUrl}" width="${size}" height="${size}" />
+<div class="name">${empName}</div>
+<div class="sub">JOXE · Check-In</div>
+<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script>
+</body></html>`);
+    w.document.close();
+  };
+
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{display:"block"}}>
-      <rect width={size} height={size} fill={bg}/>
-      {grid.map((row,y)=>row.map((on,x)=>on&&(
-        <rect key={`${x}-${y}`} x={x*cell} y={y*cell} width={cell} height={cell} fill={fg}/>
-      )))}
-    </svg>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+      {dataUrl
+        ? <img src={dataUrl} width={size} height={size} style={{display:"block",border:`1px solid ${C.bdr}`}} />
+        : <div style={{width:size,height:size,background:C.s1,border:`1px solid ${C.bdr}`,
+            display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <Mono style={{color:C.muted,fontSize:9}}>Generando…</Mono>
+          </div>
+      }
+      <Btn onClick={printQR} disabled={!dataUrl} small>⎙ Imprimir QR</Btn>
+    </div>
   );
 };
 
