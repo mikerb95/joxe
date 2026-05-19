@@ -3020,6 +3020,27 @@ const SettingsView = () => {
           </div>
         </Card>
 
+        {/* QR de puestos */}
+        <Card style={{maxWidth:"none"}}>
+          <Mono style={{color:C.gold,display:"block",marginBottom:4}}>QR de puestos</Mono>
+          <div style={{fontSize:13,color:C.muted,marginBottom:20,lineHeight:1.5}}>
+            Un QR por silla. Imprime y pega en el espejo — nunca cambian.
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:32}}>
+            {(admin.employees||[]).filter(e=>e.active!==false).map(emp=>(
+              <div key={emp.id} style={{
+                background:C.s1,border:`1px solid ${C.bdr}`,
+                padding:"24px 20px",display:"flex",flexDirection:"column",
+                alignItems:"center",gap:16,minWidth:200,
+              }}>
+                <Mono style={{color:C.muted,fontSize:9}}>{emp.role}</Mono>
+                <div style={{fontFamily:"'Marcellus',serif",fontSize:20,color:C.text}}>{emp.name}</div>
+                <ChairQRCode empId={emp.id} empName={emp.name} size={160} />
+              </div>
+            ))}
+          </div>
+        </Card>
+
         {/* Links */}
         <Card>
           <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Accesos rápidos</Mono>
