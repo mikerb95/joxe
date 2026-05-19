@@ -47,19 +47,32 @@ const useStore = () => {
     };
   }, [pull]);
 
-  const update = React.useCallback(async (updater) => {
+  const update = React.useCallback(async (updater, bookingAppt) => {
     const current = loadCache();
     const next = typeof updater === "function" ? updater(current) : updater;
     // Optimistic: apply immediately
     setStore(next);
     localStorage.setItem(STORE_KEY, JSON.stringify(next));
     // Persist to Turso
+    const token = sessionStorage.getItem("joxe_admin_session") || "";
     try {
-      await fetch("/api/store", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(next),
-      });
+      if (bookingAppt && !token) {
+        // Client booking without session: use append-only endpoint
+        await fetch("/api/book", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bookingAppt),
+        });
+      } else {
+        // Admin / employee: full store write (with auth if available)
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        await fetch("/api/store", {
+          method: "POST",
+          headers,
+          body: JSON.stringify(next),
+        });
+      }
       broadcastUpdate();
     } catch (err) {
       console.warn("[store] save failed, using local cache", err.message);
@@ -331,7 +344,7 @@ const BookingPortal = () => {
       createdAt: Date.now(),
       status: "pending",
     };
-    setStore(s => ({ ...s, appointments: [...s.appointments, appt] }));
+    setStore(s => ({ ...s, appointments: [...s.appointments, appt] }), appt);
     setTicket(appt);
     setStep(5);
   };
@@ -2023,28 +2036,54 @@ const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
     setConfirm(null);
   };
 
-  const markNoShow = (appt) => {
+  const CI_DAY_KEYS = ["dom","lun","mar","mie","jue","vie","sab"];
+
+  const markNoShow = async (appt) => {
     const admin = loadAdminCI();
     const ids   = [...(admin.noShowIds || []), appt.id];
     const fine  = admin.noShowFine;
     let next    = { ...admin, noShowIds: ids };
     if (fine?.enabled) {
-      const day    = new Date(appt.date).toLocaleDateString('es-CO', { weekday: 'long' }).toLowerCase();
+      // Use same day-key format as admin.jsx ("lun","mar"...) to match byDay config
+      const day    = CI_DAY_KEYS[new Date(appt.date + "T12:00").getDay()];
       const amount = (fine.byDay?.[day] > 0 ? fine.byDay[day] : fine.defaultAmount) || 0;
       if (amount > 0) {
-        next = {
-          ...next,
-          revenue: [...(admin.revenue || []), {
-            id: `ns-${appt.id}`, date: appt.date, type: 'no-show-fine',
-            client: appt.name, service: appt.service,
-            stylist: appt.stylist, amount,
-          }],
-        };
+        const fineId = `ns-${appt.id}`;
+        // Guard: prevent double-registering the same fine
+        const alreadyExists = (admin.revenue || []).some(r => r.id === fineId);
+        if (!alreadyExists) {
+          next = {
+            ...next,
+            revenue: [...(admin.revenue || []), {
+              id: fineId, date: appt.date, type: 'no-show-fine',
+              client: appt.name, service: appt.service,
+              phone: appt.phone || "",
+              stylist: appt.stylist || "",
+              method: "Multa",
+              note: `Incumplimiento · ${appt.code || appt.id}`,
+              amount,
+              createdAt: Date.now(),
+            }],
+          };
+        }
       }
     }
     saveAdminCI(next);
     setAdminState(next);
     setConfirm(null);
+    // Persist to server so admin panel syncs correctly
+    const token = sessionStorage.getItem("joxe_admin_session") || "";
+    if (token) {
+      try {
+        await fetch("/api/admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify(next),
+        });
+      } catch (err) {
+        console.warn("[checkin] admin save failed", err.message);
+      }
+    }
   };
 
   const checkout = () => {

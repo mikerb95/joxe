@@ -59,6 +59,12 @@ const loadAdminCache = () => {
 
 const useAdmin = () => {
   const [a, setA] = React.useState(loadAdminCache);
+  const stateRef  = React.useRef(null);
+
+  const setAWithRef = React.useCallback((next) => {
+    stateRef.current = next;
+    setA(next);
+  }, []);
 
   const pull = React.useCallback(async () => {
     try {
@@ -67,9 +73,9 @@ const useAdmin = () => {
       if (!res.ok) return;
       const data = await res.json();
       localStorage.setItem(ADMIN_KEY, JSON.stringify(data));
-      setA(prev => ({ ...prev, ...data }));
+      setAWithRef(prev => ({ ...prev, ...data }));
     } catch {}
-  }, []);
+  }, [setAWithRef]);
 
   React.useEffect(() => {
     if (!isAuthed()) return;
@@ -79,9 +85,10 @@ const useAdmin = () => {
   }, [pull]);
 
   const setAdmin = React.useCallback(async (fn) => {
-    const current = loadAdminCache();
+    // Use in-memory ref (fresh state) instead of stale localStorage
+    const current = stateRef.current ?? loadAdminCache();
     const next = typeof fn === "function" ? fn(current) : fn;
-    setA(next);
+    setAWithRef(next);
     localStorage.setItem(ADMIN_KEY, JSON.stringify(next));
     try {
       await fetch("/api/admin", {
@@ -92,7 +99,7 @@ const useAdmin = () => {
     } catch (err) {
       console.warn("[admin] save failed", err.message);
     }
-  }, []);
+  }, [setAWithRef]);
 
   return [a, setAdmin];
 };
@@ -193,7 +200,7 @@ const useAppts = () => {
     try {
       await fetch("/api/store", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
         body: JSON.stringify(next),
       });
       try { new BroadcastChannel("joxe_turnos").postMessage({ type:"update" }); } catch {}
@@ -747,7 +754,7 @@ const DashboardView = ({onNav}) => {
   const completedToday = appts.completed.filter(a=>a.completedAt&&new Date(a.completedAt).toISOString().split("T")[0]===todayD).length;
 
   const revenueToday = (admin.revenue||[])
-    .filter(r=>r.date===todayD)
+    .filter(r=>r.date===todayD && !r.deleted)
     .reduce((s,r)=>s+Number(r.amount||0),0);
 
   const upcomingRaw = allAppts
@@ -1076,14 +1083,18 @@ const AppointmentsView = () => {
         ? fine.byDay[dayKey]
         : (fine.defaultAmount || 0);
       if (!amount) return {...a, noShowIds};
+      const fineId = `ns-${appt.id}`;
+      // Guard: prevent double-registering the same fine
+      if ((a.revenue||[]).some(r => r.id === fineId)) return {...a, noShowIds};
       const entry = {
-        id: genId(),
+        id: fineId,
         apptId: appt.id,
         date: appt.date || todayStr(),
         amount,
         service: appt.service || "",
         client: appt.name || "",
         phone: appt.phone || "",
+        stylist: appt.stylist || "",
         method: "Multa",
         note: `Incumplimiento · ${appt.code||appt.id}`,
         createdAt: Date.now(),
@@ -1115,6 +1126,8 @@ const AppointmentsView = () => {
   };
 
   const registerPay = (appt) => {
+    const alreadyPaid = (admin.revenue||[]).some(r => r.apptId===appt.id && !r.deleted);
+    if (alreadyPaid && !confirm("Ya hay un pago registrado para esta cita. ¿Registrar otro igualmente?")) return;
     setPayForm({
       apptId:appt.id, date:appt.date||todayStr(),
       amount:"", service:appt.service||"", client:appt.name||"",
@@ -1400,7 +1413,7 @@ const CrmView = () => {
       loyaltyVisits: cd.loyaltyVisits || 0, loyaltyRedeemed: cd.loyaltyRedeemed || 0,
       totalVisits: completed.length,
       lastVisit: completed.sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0]?.date || null,
-      totalSpent: (admin.revenue || []).filter(r => base.appts.some(a => a.id === r.apptId))
+      totalSpent: (admin.revenue || []).filter(r => !r.deleted && base.appts.some(a => a.id === r.apptId))
         .reduce((s, r) => s + Number(r.amount || 0), 0),
       appts: base.appts,
     };
@@ -1842,7 +1855,7 @@ const RevenueView = () => {
   const [showDaySummary,setShowDaySummary] = React.useState(false);
   const [form,setForm] = React.useState({date:todayStr(),amount:"",service:"",client:"",method:"Efectivo",note:"",stylist:""});
 
-  const revenue   = admin.revenue||[];
+  const revenue   = (admin.revenue||[]).filter(r=>!r.deleted);
   const employees = (admin.employees||[]).filter(e=>e.active);
   const todayD    = todayStr();
   const now       = new Date();
@@ -1909,8 +1922,10 @@ const RevenueView = () => {
   };
 
   const deleteEntry = (id) => {
-    if (!confirm("¿Eliminar este ingreso?")) return;
-    setAdmin(a=>({...a, revenue:a.revenue.filter(r=>r.id!==id)}));
+    if (!confirm("¿Eliminar este ingreso? Quedará oculto pero no se borrará del historial.")) return;
+    setAdmin(a=>({...a, revenue:(a.revenue||[]).map(r=>
+      r.id===id ? {...r, deleted:true, deletedAt:Date.now()} : r
+    )}));
   };
 
   const PERIODS = [
@@ -2219,9 +2234,9 @@ const EmployeesView = () => {
   const services  = (admin.services||[]).filter(s=>s.active);
   const revenue   = admin.revenue||[];
 
-  // Revenue per employee (all time)
+  // Revenue per employee (all time, excluding soft-deleted)
   const revByEmp = {};
-  revenue.forEach(r=>{
+  revenue.filter(r=>!r.deleted).forEach(r=>{
     if (r.stylist) revByEmp[r.stylist]=(revByEmp[r.stylist]||0)+Number(r.amount||0);
   });
 
@@ -2515,7 +2530,7 @@ const ServicesView = () => {
   const [newSvc,setNewSvc] = React.useState({name:"",price:"",dur:"",note:""});
 
   const services = admin.services||[];
-  const revenue  = admin.revenue||[];
+  const revenue  = (admin.revenue||[]).filter(r=>!r.deleted);
 
   const revenueByService = {};
   revenue.forEach(r=>{
