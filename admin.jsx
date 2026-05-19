@@ -1132,18 +1132,19 @@ const AppointmentsView = () => {
     setPayForm({
       apptId:appt.id, date:appt.date||todayStr(),
       amount:"", service:appt.service||"", client:appt.name||"",
-      phone:appt.phone||"", method:"Efectivo", note:"", addLoyalty:true,
+      phone:appt.phone||"", cedula:appt.cedula||"", method:"Efectivo", note:"", addLoyalty:true,
     });
   };
 
   const submitPay = () => {
     if (!payForm.amount) return;
-    const {addLoyalty, phone, ...entry} = payForm;
+    const {addLoyalty, phone, cedula: apptCedula, ...entry} = payForm;
     setAdmin(a=>({...a, revenue:[...a.revenue, {
       id:genId(), ...entry, amount:Number(entry.amount), createdAt:Date.now(),
     }]}));
-    if (addLoyalty && phone && (admin.loyalty?.enabled)) {
-      const key = phone.replace(/\D/g,"");
+    if (addLoyalty && admin.loyalty?.enabled) {
+      // Use cedula as CRM key; fall back to phone for old appointments without cedula
+      const key = (apptCedula||"").replace(/\D/g,"") || (phone||"").replace(/\D/g,"");
       if (key) {
         setCrm(d=>({...d, [key]:{...(d[key]||{}),
           loyaltyVisits:(d[key]?.loyaltyVisits||0)+1,
@@ -1395,21 +1396,26 @@ const CrmView = () => {
   const loyalty = admin.loyalty || { enabled: false, target: 10, reward: "Corte gratis" };
 
   const all = getAllAppts(appts, admin.cancelledIds || []);
-  const byPhone = {};
-  all.filter(a => a.phone).forEach(a => {
-    const k = (a.phone || "").replace(/\D/g, "");
-    if (!byPhone[k]) byPhone[k] = { name: a.name, phone: k, rawPhone: a.phone, appts: [] };
-    byPhone[k].appts.push(a);
-    if (a.createdAt >= (byPhone[k].latestAt || 0)) {
-      byPhone[k].name = a.name; byPhone[k].latestAt = a.createdAt || 0;
+  // Group by cédula (primary identifier). Fall back to phone for old appointments without cédula.
+  const byCedula = {};
+  all.filter(a => a.cedula || a.phone).forEach(a => {
+    const k = (a.cedula || "").replace(/\D/g,"") || (a.phone || "").replace(/\D/g, "");
+    if (!byCedula[k]) byCedula[k] = { name: a.name, phone: a.phone, cedula: a.cedula || "", crmKey: k, appts: [] };
+    byCedula[k].appts.push(a);
+    if (a.createdAt >= (byCedula[k].latestAt || 0)) {
+      byCedula[k].name = a.name; byCedula[k].latestAt = a.createdAt || 0;
+      // Update to latest known cedula/phone for this key
+      if (a.cedula) byCedula[k].cedula = a.cedula;
+      if (a.phone)  byCedula[k].phone  = a.phone;
     }
   });
 
-  const clients = Object.entries(byPhone).map(([phone, base]) => {
-    const cd = crm[phone] || {};
+  const clients = Object.entries(byCedula).map(([crmKey, base]) => {
+    // Try cedula key first, then phone key for legacy CRM data
+    const cd = crm[crmKey] || crm[(base.phone||"").replace(/\D/g,"")] || {};
     const completed = base.appts.filter(a => a.computedStatus === "completed");
     return {
-      phone, name: base.name, rawPhone: base.rawPhone,
+      crmKey, name: base.name, phone: base.phone, cedula: base.cedula,
       email: cd.email || "", birthday: cd.birthday || "", notes: cd.notes || "",
       loyaltyVisits: cd.loyaltyVisits || 0, loyaltyRedeemed: cd.loyaltyRedeemed || 0,
       totalVisits: completed.length,
@@ -1427,38 +1433,40 @@ const CrmView = () => {
     if (filter === "ready" && c.loyaltyVisits < loyalty.target) return false;
     if (search) {
       const q = search.toLowerCase();
-      return c.name.toLowerCase().includes(q) || c.phone.includes(q);
+      return c.name.toLowerCase().includes(q)
+        || (c.cedula||"").includes(q)
+        || (c.phone||"").replace(/\D/g,"").includes(q);
     }
     return true;
   });
 
   const startEdit = (c) => {
-    setEditing(c.phone);
+    setEditing(c.crmKey);
     setEditForm({ email: c.email, birthday: c.birthday, notes: c.notes });
   };
 
-  const saveEdit = (phone) => {
-    setCrm(d => ({ ...d, [phone]: { ...(d[phone] || {}), ...editForm, updatedAt: Date.now() } }));
+  const saveEdit = (crmKey) => {
+    setCrm(d => ({ ...d, [crmKey]: { ...(d[crmKey] || {}), ...editForm, updatedAt: Date.now() } }));
     setEditing(null);
   };
 
-  const addVisit = (phone) => setCrm(d => ({
-    ...d, [phone]: { ...(d[phone]||{}), loyaltyVisits:(d[phone]?.loyaltyVisits||0)+1, updatedAt:Date.now() }
+  const addVisit = (crmKey) => setCrm(d => ({
+    ...d, [crmKey]: { ...(d[crmKey]||{}), loyaltyVisits:(d[crmKey]?.loyaltyVisits||0)+1, updatedAt:Date.now() }
   }));
 
-  const removeVisit = (phone) => {
-    const cur = crm[phone]?.loyaltyVisits || 0;
+  const removeVisit = (crmKey) => {
+    const cur = crm[crmKey]?.loyaltyVisits || 0;
     if (cur <= 0) return;
-    setCrm(d => ({ ...d, [phone]: { ...(d[phone]||{}), loyaltyVisits:cur-1, updatedAt:Date.now() } }));
+    setCrm(d => ({ ...d, [crmKey]: { ...(d[crmKey]||{}), loyaltyVisits:cur-1, updatedAt:Date.now() } }));
   };
 
-  const redeem = (phone, c) => {
+  const redeem = (crmKey, c) => {
     if (!confirm(`¿Canjear "${loyalty.reward}" para ${c.name}?`)) return;
     setCrm(d => ({
-      ...d, [phone]: {
-        ...(d[phone]||{}),
-        loyaltyVisits: Math.max(0, (d[phone]?.loyaltyVisits||0) - loyalty.target),
-        loyaltyRedeemed: (d[phone]?.loyaltyRedeemed||0) + 1,
+      ...d, [crmKey]: {
+        ...(d[crmKey]||{}),
+        loyaltyVisits: Math.max(0, (d[crmKey]?.loyaltyVisits||0) - loyalty.target),
+        loyaltyRedeemed: (d[crmKey]?.loyaltyRedeemed||0) + 1,
         updatedAt: Date.now(),
       }
     }));
@@ -1537,19 +1545,22 @@ const CrmView = () => {
         ) : (
           <div style={{display:"flex",flexDirection:"column",gap:4}}>
             {filtered.map(c=>{
-              const isExp = expanded===c.phone;
-              const isEditing = editing===c.phone;
+              const isExp = expanded===c.crmKey;
+              const isEditing = editing===c.crmKey;
               const ready = loyalty.enabled && c.loyaltyVisits >= loyalty.target;
               return (
-                <div key={c.phone} style={{border:`1px solid ${ready?C.green+"60":C.bdr}`,background:C.s1}}>
-                  <div onClick={()=>setExpanded(isExp?null:c.phone)} style={{
+                <div key={c.crmKey} style={{border:`1px solid ${ready?C.green+"60":C.bdr}`,background:C.s1}}>
+                  <div onClick={()=>setExpanded(isExp?null:c.crmKey)} style={{
                     display:"grid",
                     gridTemplateColumns:loyalty.enabled?"200px 110px 60px 100px 1fr auto":"200px 110px 60px 100px auto",
                     gap:12,padding:"14px 18px",cursor:"pointer",alignItems:"center",
                   }}>
                     <div>
                       <div style={{fontSize:14}}>{c.name}</div>
-                      <div style={{fontSize:11,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{c.phone}</div>
+                      {c.cedula
+                        ? <div style={{fontSize:11,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{c.cedula}</div>
+                        : <div style={{fontSize:11,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{(c.phone||"")}</div>
+                      }
                     </div>
                     <div style={{fontSize:12,color:C.muted}}>
                       {c.lastVisit?fmtDateShort(c.lastVisit):"—"}
@@ -1602,13 +1613,19 @@ const CrmView = () => {
                                   }} />
                               </div>
                               <div style={{display:"flex",gap:8}}>
-                                <Btn small onClick={()=>saveEdit(c.phone)}>Guardar</Btn>
+                                <Btn small onClick={()=>saveEdit(c.crmKey)}>Guardar</Btn>
                                 <Btn small variant="ghost" onClick={()=>setEditing(null)}>Cancelar</Btn>
                               </div>
                             </div>
                           ) : (
                             <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                              {[["Email",c.email],["Cumpleaños",c.birthday?fmtDateShort(c.birthday):null],["Notas",c.notes]].map(([k,v])=>(
+                              {[
+                                ["Cédula", c.cedula||"—"],
+                                ["Teléfono", c.phone||"—"],
+                                ["Email", c.email],
+                                ["Cumpleaños", c.birthday?fmtDateShort(c.birthday):null],
+                                ["Notas", c.notes],
+                              ].map(([k,v])=>(
                                 <div key={k}>
                                   <Mono style={{color:C.muted,fontSize:9,display:"block"}}>{k}</Mono>
                                   <div style={{fontSize:13,marginTop:2,color:v?C.text:C.muted}}>{v||"—"}</div>
@@ -1616,8 +1633,8 @@ const CrmView = () => {
                               ))}
                               <div style={{display:"flex",gap:8,marginTop:4}}>
                                 <Btn small variant="subtle" onClick={()=>startEdit(c)}>✎ Editar</Btn>
-                                {c.rawPhone && (
-                                  <a href={`https://wa.me/57${c.rawPhone.replace(/\D/g,"")}`}
+                                {c.phone && (
+                                  <a href={`https://wa.me/57${(c.phone||"").replace(/\D/g,"")}`}
                                     target="_blank" rel="noopener"
                                     style={{
                                       padding:"7px 14px",background:"transparent",
@@ -1657,14 +1674,14 @@ const CrmView = () => {
                             </div>
                             <div style={{display:"flex",flexDirection:"column",gap:8}}>
                               {ready && (
-                                <Btn small onClick={()=>redeem(c.phone,c)}
+                                <Btn small onClick={()=>redeem(c.crmKey,c)}
                                   style={{background:C.green,color:"#0C0C0C",border:"none"}}>
                                   ✓ Canjear {loyalty.reward}
                                 </Btn>
                               )}
                               <div style={{display:"flex",gap:6}}>
-                                <Btn small variant="subtle" onClick={()=>addVisit(c.phone)}>+ Visita</Btn>
-                                <Btn small variant="ghost" onClick={()=>removeVisit(c.phone)}>− Visita</Btn>
+                                <Btn small variant="subtle" onClick={()=>addVisit(c.crmKey)}>+ Visita</Btn>
+                                <Btn small variant="ghost" onClick={()=>removeVisit(c.crmKey)}>− Visita</Btn>
                               </div>
                             </div>
                           </div>

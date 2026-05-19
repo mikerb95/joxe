@@ -50,11 +50,10 @@ export default async function handler(req, res) {
       return { ...a, computedStatus };
     });
 
-    // CRM/loyalty data is keyed by phone — derive it from found appointments
-    const crmKey    = cedula
-      ? ((all.find(a => a.phone) || {}).phone || "").replace(/\D/g, "")
-      : phone;
-    const clientCrm = crmStore[crmKey] || {};
+    // CRM data is keyed by cedula (primary). Fall back to phone for legacy records.
+    const phoneKey  = ((all.find(a => a.phone) || {}).phone || "").replace(/\D/g, "");
+    const crmKey    = cedula || phone;
+    const clientCrm = crmStore[crmKey] || crmStore[phoneKey] || {};
     const loyalty   = adminData.loyalty?.enabled
       ? {
           enabled:  true,
