@@ -21,6 +21,7 @@ const DEFAULT_ADMIN = () => ({
     { id: "s8", name: "Peinado novia",      price: 220000, dur: 120, active: true, note: "desde" },
   ],
   revenue: [],
+  archivedEmployees: [],
 });
 
 async function getStoredPassword() {
@@ -60,6 +61,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "services must be an array" });
       if (body.employees !== undefined && !Array.isArray(body.employees))
         return res.status(400).json({ error: "employees must be an array" });
+      if (body.archivedEmployees !== undefined && !Array.isArray(body.archivedEmployees))
+        return res.status(400).json({ error: "archivedEmployees must be an array" });
       await kvSet("admin_store", body);
       return res.status(200).json({ ok: true });
     }

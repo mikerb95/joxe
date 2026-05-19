@@ -2222,6 +2222,86 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
   );
 };
 
+// ==================== ARCHIVED EMPLOYEES ====================
+const ArchivedEmployeesSection = ({ archived, revenue }) => {
+  const [open, setOpen] = React.useState(false);
+  if (!archived.length) return null;
+
+  const activeRevenue = revenue.filter(r=>!r.deleted);
+
+  return (
+    <div style={{marginTop:32,borderTop:`1px solid ${C.bdr}`,paddingTop:24}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{
+        display:"flex",alignItems:"center",gap:10,background:"none",border:"none",
+        cursor:"pointer",padding:0,marginBottom: open?20:0,
+      }}>
+        <Mono style={{color:C.muted,fontSize:9}}>
+          {open?"▾":"▸"} HISTORIAL DE BAJAS · {archived.length} empleado{archived.length!==1?"s":""}
+        </Mono>
+      </button>
+
+      {open && (
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {[...archived].sort((a,b)=>b.archivedAt-a.archivedAt).map(emp=>{
+            const empRevenue = activeRevenue.filter(r=>r.stylist===emp.name);
+            const total      = empRevenue.reduce((s,r)=>s+Number(r.amount||0),0);
+            const byMethod   = {};
+            empRevenue.forEach(r=>{ byMethod[r.method]=(byMethod[r.method]||0)+Number(r.amount||0); });
+            const archivedDate = new Date(emp.archivedAt).toLocaleDateString("es-CO",{day:"numeric",month:"short",year:"numeric"});
+            return (
+              <div key={emp.id} style={{
+                padding:"18px 20px",background:C.s1,
+                border:`1px solid ${C.bdr}`,opacity:0.75,
+              }}>
+                <div style={{
+                  display:"grid",gridTemplateColumns:"1fr auto auto",
+                  gap:16,alignItems:"center",marginBottom: total>0?12:0,
+                }}>
+                  <div>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                      <div style={{fontFamily:"'Marcellus',serif",fontSize:16,color:C.muted}}>{emp.name}</div>
+                      <Mono style={{fontSize:8,padding:"2px 8px",background:"rgba(245,241,234,0.04)",
+                        border:`1px solid ${C.bdr}`,color:C.muted}}>Baja</Mono>
+                    </div>
+                    <div style={{display:"flex",gap:8,marginTop:4,flexWrap:"wrap",alignItems:"center"}}>
+                      <Mono style={{fontSize:9,color:C.muted}}>{emp.role}</Mono>
+                      <span style={{color:C.bdr}}>·</span>
+                      <Mono style={{fontSize:9,color:C.muted}}>Archivado el {archivedDate}</Mono>
+                    </div>
+                  </div>
+                  <div style={{textAlign:"right"}}>
+                    <div style={{fontSize:14,color:total>0?C.green:C.muted,fontFamily:"'Marcellus',serif"}}>
+                      {total>0?fmtCOP(total):"Sin ingresos"}
+                    </div>
+                    <Mono style={{fontSize:8,color:C.muted}}>{empRevenue.length} transacción{empRevenue.length!==1?"es":""} · total facturado</Mono>
+                  </div>
+                  <div style={{textAlign:"right",minWidth:80}}>
+                    <Mono style={{fontSize:9,color:C.muted}}>{empRevenue.length} svc</Mono>
+                  </div>
+                </div>
+
+                {total>0 && Object.keys(byMethod).length>0 && (
+                  <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:8}}>
+                    {Object.entries(byMethod).map(([m,v])=>(
+                      <span key={m} style={{
+                        padding:"2px 10px",fontSize:10,
+                        fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.08em",
+                        background:`${PAY_COLORS[m]||C.gold}10`,
+                        color:PAY_COLORS[m]||C.gold,
+                        border:`1px solid ${PAY_COLORS[m]||C.gold}25`,
+                      }}>{m} · {fmtCOP(v)}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ==================== EMPLOYEES ====================
 const EmployeesView = () => {
   const [admin,setAdmin] = useAdmin();
