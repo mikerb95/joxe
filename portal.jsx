@@ -1964,7 +1964,7 @@ const CheckInPortal = () => {
 
   // ── MODO ADMIN: agenda del estilista ───────────────────────
   if (isAdmin) {
-    return <CheckInAdminView store={store} setStore={setStore} catalog={catalog}
+    return <CheckInAdminView store={store} setStore={setStore}
       employee={employee} headerRight={headerRight} />;
   }
 
@@ -1974,7 +1974,7 @@ const CheckInPortal = () => {
 };
 
 // ── Vista admin ─────────────────────────────────────────────
-const CheckInAdminView = ({ store, setStore, catalog, employee, headerRight }) => {
+const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
   const [adminState, setAdminState] = React.useState(loadAdminCI);
   const [checkoutId, setCheckoutId] = React.useState(null);
   const [price, setPrice] = React.useState('');
