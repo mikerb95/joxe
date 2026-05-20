@@ -1,4 +1,5 @@
 import { createClient } from "@libsql/client/http";
+import { timingSafeEqual } from "node:crypto";
 
 let _db = null;
 
