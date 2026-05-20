@@ -399,17 +399,15 @@ const BookingPortal = () => {
 
   // Inline field validation for step 4
   const cleanDigits = (s) => (s || "").replace(/\D/g, "");
-  const nameOk   = form.name.trim().length >= 3 && /\s/.test(form.name.trim()) === false
-                    ? form.name.trim().length >= 3
-                    : form.name.trim().length >= 3; // at least 3 chars; allow single-word names too
   const trimmedName = form.name.trim();
+  const phoneDigits = cleanDigits(form.phone);
   const errors = {
     name:   trimmedName.length === 0 ? "" : trimmedName.length < 3 ? "Ingresa al menos 3 caracteres." : "",
-    phone:  cleanDigits(form.phone).length === 0 ? "" : cleanDigits(form.phone).length !== 10 ? "Debe tener 10 dígitos (ej: 300 123 4567)." : "",
+    phone:  phoneDigits.length === 0 ? "" : phoneDigits.length !== 10 ? "Debe tener 10 dígitos (ej: 300 123 4567)." : "",
     cedula: form.cedula.length === 0 ? "" : (form.cedula.length < 6 || form.cedula.length > 12) ? "Cédula entre 6 y 12 dígitos." : "",
   };
   const step4Valid = trimmedName.length >= 3
-    && cleanDigits(form.phone).length === 10
+    && phoneDigits.length === 10
     && form.cedula.length >= 6 && form.cedula.length <= 12;
 
   const canNext = (step === 1 && !!form.service)
@@ -689,38 +687,69 @@ const BookingPortal = () => {
             }}>Un último paso.</h1>
             <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 520 }}>
               <div>
-                <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>Nombre completo</PMono>
-                <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                <label htmlFor="bk-name">
+                  <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>Nombre completo</PMono>
+                </label>
+                <input id="bk-name" name="name" autoComplete="name" required
+                  value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
                   placeholder="María Pérez"
+                  aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? "bk-name-err" : undefined}
                   style={{
                     width: "100%", padding: "18px 20px",
-                    border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
+                    border: `1px solid ${errors.name ? "#C46666" : "rgba(12,12,12,0.2)"}`, background: "#FFF",
                     fontFamily: "'Outfit', sans-serif", fontSize: 15, color: "#0C0C0C",
                   }} />
+                {errors.name && (
+                  <div id="bk-name-err" role="alert" style={{ marginTop: 6, fontSize: 12, color: "#C46666" }}>
+                    {errors.name}
+                  </div>
+                )}
               </div>
               <div>
-                <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>WhatsApp</PMono>
-                <input value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
+                <label htmlFor="bk-phone">
+                  <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>WhatsApp</PMono>
+                </label>
+                <input id="bk-phone" name="tel" type="tel" autoComplete="tel" required
+                  value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
                   placeholder="300 123 4567" inputMode="tel"
+                  aria-invalid={!!errors.phone}
+                  aria-describedby={errors.phone ? "bk-phone-err" : undefined}
                   style={{
                     width: "100%", padding: "18px 20px",
-                    border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
+                    border: `1px solid ${errors.phone ? "#C46666" : "rgba(12,12,12,0.2)"}`, background: "#FFF",
                     fontFamily: "'Outfit', sans-serif", fontSize: 15, color: "#0C0C0C",
                   }} />
+                {errors.phone && (
+                  <div id="bk-phone-err" role="alert" style={{ marginTop: 6, fontSize: 12, color: "#C46666" }}>
+                    {errors.phone}
+                  </div>
+                )}
               </div>
               <div>
-                <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>Cédula de ciudadanía</PMono>
-                <input value={form.cedula} onChange={e => setForm({ ...form, cedula: e.target.value.replace(/\D/g, "") })}
+                <label htmlFor="bk-cedula">
+                  <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>Cédula de ciudadanía</PMono>
+                </label>
+                <input id="bk-cedula" name="cedula" required
+                  value={form.cedula} onChange={e => setForm({ ...form, cedula: e.target.value.replace(/\D/g, "").slice(0, 12) })}
                   placeholder="1234567890" inputMode="numeric"
+                  aria-invalid={!!errors.cedula}
+                  aria-describedby={errors.cedula ? "bk-cedula-err" : "bk-cedula-hint"}
                   style={{
                     width: "100%", padding: "18px 20px",
-                    border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
+                    border: `1px solid ${errors.cedula ? "#C46666" : "rgba(12,12,12,0.2)"}`, background: "#FFF",
                     fontFamily: "'JetBrains Mono', monospace", fontSize: 15, color: "#0C0C0C",
                     letterSpacing: "0.08em",
                   }} />
-                <div style={{ marginTop: 6, fontSize: 11, color: "rgba(12,12,12,0.45)", fontFamily: "'Outfit', sans-serif" }}>
-                  Con tu cédula podrás consultar tu historial de visitas en cualquier momento.
-                </div>
+                {errors.cedula ? (
+                  <div id="bk-cedula-err" role="alert" style={{ marginTop: 6, fontSize: 12, color: "#C46666" }}>
+                    {errors.cedula}
+                  </div>
+                ) : (
+                  <div id="bk-cedula-hint" style={{ marginTop: 6, fontSize: 11, color: "rgba(12,12,12,0.45)", fontFamily: "'Outfit', sans-serif" }}>
+                    Con tu cédula podrás consultar tu historial de visitas en cualquier momento.
+                  </div>
+                )}
               </div>
 
               {/* Summary card */}
