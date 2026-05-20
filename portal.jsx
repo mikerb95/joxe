@@ -2630,7 +2630,7 @@ const AgendaPortal = () => {
 
   const logout = () => {
     sessionStorage.removeItem(AGENDA_SES);
-    setSession(null); setPin(""); setSelId(""); setErr("");
+    setSession(null); setPin(""); setSelId(""); setErr(""); setConfirmErr("");
   };
 
   const fmtDate = (d) => {
