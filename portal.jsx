@@ -2555,16 +2555,23 @@ const AGENDA_SES = "joxe_agenda_session"; // { id, name, role }
 
 const AgendaPortal = () => {
   const [store, setStore] = useStore();
-  const [session, setSession] = React.useState(() => {
-    try { return JSON.parse(sessionStorage.getItem(AGENDA_SES)); } catch { return null; }
-  });
+  const [session, setSession] = React.useState(null); // always require login — pin is not persisted
   const [empList, setEmpList] = React.useState([]);
   const [selId, setSelId] = React.useState("");
   const [pin, setPin] = React.useState("");
   const [err, setErr] = React.useState("");
+  const [confirmErr, setConfirmErr] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [confirming, setConfirming] = React.useState(null);
   const [confirmed, setConfirmed] = React.useState(null);
+
+  React.useEffect(() => {
+    // Pre-select employee from previous session if available
+    try {
+      const s = JSON.parse(sessionStorage.getItem(AGENDA_SES));
+      if (s?.id) setSelId(s.id);
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
     fetch("/api/catalog")
@@ -2593,12 +2600,14 @@ const AgendaPortal = () => {
 
   const confirmAppt = async (appt) => {
     setConfirming(appt.id);
+    setConfirmErr("");
     try {
       const res = await fetch("/api/agenda", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "confirm", empId: session.id, pin, apptId: appt.id }),
       });
+      const data = await res.json();
       if (res.ok) {
         setStore(s => ({
           ...s,
@@ -2610,8 +2619,12 @@ const AgendaPortal = () => {
         }));
         setConfirmed(appt.id);
         setTimeout(() => setConfirmed(null), 3000);
+      } else {
+        setConfirmErr(data.error || "Error al confirmar la cita.");
       }
-    } catch {}
+    } catch {
+      setConfirmErr("Error de conexión. Intenta de nuevo.");
+    }
     setConfirming(null);
   };
 
@@ -2731,6 +2744,14 @@ const AgendaPortal = () => {
         <PMono style={{ color: "#C29E66", display: "block", marginBottom: 20 }}>
           Solicitudes pendientes · {myPending.length}
         </PMono>
+
+        {confirmErr && (
+          <div style={{
+            padding: "12px 16px", marginBottom: 16,
+            background: "rgba(196,102,102,0.1)", border: "1px solid rgba(196,102,102,0.3)",
+            color: "#C46666", fontSize: 13,
+          }}>{confirmErr}</div>
+        )}
 
         {myPending.length === 0 ? (
           <div style={{
