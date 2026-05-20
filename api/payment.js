@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   try {
     await initTables();
 
-    if (!(await validateAuth(req))) return res.status(401).json({ error: "Unauthorized" });
+    if (!(await verifyAdminAuth(req))) return res.status(401).json({ error: "Unauthorized" });
 
     const store = await kvGet("turno_store") ?? { appointments: [], active: [], completed: [], blockedSlots: [] };
 
