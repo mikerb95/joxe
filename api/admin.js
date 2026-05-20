@@ -32,7 +32,7 @@ export default async function handler(req, res) {
     await initTables();
 
     if (req.method === "GET") {
-      if (!(await validateAuth(req))) return res.status(401).json({ error: "Unauthorized" });
+      if (!(await verifyAdminAuth(req))) return res.status(401).json({ error: "Unauthorized" });
       const stored = await kvGet("admin_store");
       const data   = { ...DEFAULT_ADMIN(), ...(stored || {}) };
       // Never expose the stored password over the wire
@@ -41,7 +41,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "POST") {
-      if (!(await validateAuth(req))) return res.status(401).json({ error: "Unauthorized" });
+      if (!(await verifyAdminAuth(req))) return res.status(401).json({ error: "Unauthorized" });
       const body = req.body;
       if (body.revenue !== undefined && !Array.isArray(body.revenue))
         return res.status(400).json({ error: "revenue must be an array" });
