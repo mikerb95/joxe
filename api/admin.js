@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet } from "./db.js";
+import { initTables, kvGet, kvSet, verifyAdminAuth } from "./db.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -23,18 +23,6 @@ const DEFAULT_ADMIN = () => ({
   revenue: [],
   archivedEmployees: [],
 });
-
-async function getStoredPassword() {
-  const admin = await kvGet("admin_store");
-  return admin?.password ?? "joxe2026";
-}
-
-async function validateAuth(req) {
-  const auth  = req.headers.authorization ?? "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!token) return false;
-  return token === (await getStoredPassword());
-}
 
 export default async function handler(req, res) {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
