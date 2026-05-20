@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet } from "./db.js";
+import { initTables, kvGet, kvSet, verifyAdminAuth } from "./db.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -7,18 +7,6 @@ const CORS = {
 };
 
 const DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [] });
-
-async function getStoredPassword() {
-  const admin = await kvGet("admin_store");
-  return admin?.password ?? "joxe2026";
-}
-
-async function validateAuth(req) {
-  const auth  = req.headers.authorization ?? "";
-  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-  if (!token) return false;
-  return token === (await getStoredPassword());
-}
 
 export default async function handler(req, res) {
   Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
@@ -37,7 +25,7 @@ export default async function handler(req, res) {
 
       // Require auth for full store replace (admin/employee with admin token)
       // Fall through to append-only path for unauthenticated employee check-in writes
-      const authed = await validateAuth(req);
+      const authed = await verifyAdminAuth(req);
 
       // Body shape validation: all array fields must be arrays if present
       for (const field of ["appointments", "active", "completed", "blockedSlots"]) {
