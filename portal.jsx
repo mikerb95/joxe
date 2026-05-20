@@ -237,7 +237,28 @@ const fmtDateSub = (d) => {
 
 const fmtCOP = (n) => n == null ? "" : "$" + Number(n).toLocaleString("es-CO");
 
-const TIMES = ["9:00", "10:30", "12:00", "14:00", "15:30", "17:00"];
+// Business hours — JS getDay(): 0=dom, 1=lun, 2=mar, ..., 6=sab
+// JOXE: Mar—Vie 9-19, Sáb 8-18, Dom—Lun cerrado
+const BUSINESS_HOURS = {
+  0: null,                                                     // dom — cerrado
+  1: null,                                                     // lun — cerrado
+  2: ["9:00", "10:30", "12:00", "14:00", "15:30", "17:00"],   // mar
+  3: ["9:00", "10:30", "12:00", "14:00", "15:30", "17:00"],   // mie
+  4: ["9:00", "10:30", "12:00", "14:00", "15:30", "17:00"],   // jue
+  5: ["9:00", "10:30", "12:00", "14:00", "15:30", "17:00"],   // vie
+  6: ["8:00", "9:30", "11:00", "13:00", "14:30", "16:00"],    // sab — abre más temprano
+};
+
+// Closing time per day in minutes — used to filter slots that don't fit a service's duration
+const CLOSE_TIME_MIN = {
+  2: 19 * 60, 3: 19 * 60, 4: 19 * 60, 5: 19 * 60,   // mar—vie cierra 19:00
+  6: 18 * 60,                                          // sab cierra 18:00
+};
+
+const dayOfWeek = (dateStr) => new Date(dateStr + "T12:00").getDay();
+const isClosedDay = (dateStr) => !BUSINESS_HOURS[dayOfWeek(dateStr)];
+const slotsForDate = (dateStr) => BUSINESS_HOURS[dayOfWeek(dateStr)] || [];
+const closesAtMin  = (dateStr) => CLOSE_TIME_MIN[dayOfWeek(dateStr)] ?? 0;
 
 const DEFAULT_SERVICES = [
   { id:"s1", name:"Corte mujer",        price:85000,  dur:60  },
