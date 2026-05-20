@@ -1324,7 +1324,7 @@ const CuentaPortal = () => {
     setCedula(""); setData(null); setInput(""); localStorage.removeItem(ACCT_KEY);
   };
 
-  const todayStr  = new Date().toISOString().split("T")[0];
+  const todayStr  = (() => { const d = nowCOT(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
   const fmtDate   = d => !d ? "—" : new Date(d + "T12:00").toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" });
   const fmtShort  = d => !d ? "—" : new Date(d + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" });
 
