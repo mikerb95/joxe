@@ -963,11 +963,24 @@ const ScanPortal = () => {
               position: "relative", aspectRatio: "1", background: "#141212",
               border: "1px solid rgba(245,241,234,0.15)", overflow: "hidden",
             }}>
-              {/* Camera feed simulation */}
-              <div style={{
-                position: "absolute", inset: 0,
-                background: "radial-gradient(circle at 30% 40%, rgba(194,158,102,0.08), transparent 50%), repeating-linear-gradient(180deg, rgba(245,241,234,0.02) 0 2px, transparent 2px 4px)",
-              }} />
+              {/* Real camera feed */}
+              <video ref={videoRef} muted playsInline
+                style={{
+                  position: "absolute", inset: 0,
+                  width: "100%", height: "100%",
+                  objectFit: "cover",
+                  display: camStatus === "active" ? "block" : "none",
+                }}
+              />
+              <canvas ref={canvasRef} style={{ display: "none" }} />
+
+              {/* Fallback background when no camera */}
+              {camStatus !== "active" && (
+                <div style={{
+                  position: "absolute", inset: 0,
+                  background: "radial-gradient(circle at 30% 40%, rgba(194,158,102,0.08), transparent 50%), repeating-linear-gradient(180deg, rgba(245,241,234,0.02) 0 2px, transparent 2px 4px)",
+                }} />
+              )}
               {/* Corner brackets */}
               {[
                 { top: 24, left: 24, borderTop: "2px solid #C29E66", borderLeft: "2px solid #C29E66" },
@@ -975,43 +988,74 @@ const ScanPortal = () => {
                 { bottom: 24, left: 24, borderBottom: "2px solid #C29E66", borderLeft: "2px solid #C29E66" },
                 { bottom: 24, right: 24, borderBottom: "2px solid #C29E66", borderRight: "2px solid #C29E66" },
               ].map((s, i) => (
-                <div key={i} style={{ position: "absolute", width: 32, height: 32, ...s }} />
+                <div key={i} style={{ position: "absolute", width: 32, height: 32, pointerEvents: "none", ...s }} />
               ))}
-              {/* Scanning line */}
-              {scanning && (
-                <div style={{
-                  position: "absolute", left: 24, right: 24, height: 2,
-                  background: "linear-gradient(90deg, transparent, #C29E66, transparent)",
-                  animation: "scanLine 1.2s ease-in-out infinite",
-                  top: "50%",
-                }} />
-              )}
 
+              {/* Status indicator */}
               <div style={{
                 position: "absolute", top: 16, left: 16, display: "flex",
-                alignItems: "center", gap: 8,
+                alignItems: "center", gap: 8, padding: "4px 10px",
+                background: "rgba(12,12,12,0.55)", backdropFilter: "blur(6px)",
               }}>
                 <div style={{
-                  width: 8, height: 8, borderRadius: "50%", background: "#C29E66",
-                  animation: "pulse 2s ease-in-out infinite",
+                  width: 8, height: 8, borderRadius: "50%",
+                  background: camStatus === "active" ? "#66C499" : "#C46666",
+                  animation: camStatus === "active" ? "pulse 2s ease-in-out infinite" : "none",
                 }} />
-                <PMono style={{ color: "#C29E66", fontSize: 9 }}>
-                  {scanning ? "Leyendo..." : "Cámara activa"}
+                <PMono style={{ color: camStatus === "active" ? "#66C499" : "#C46666", fontSize: 9 }}>
+                  {camStatus === "active"   ? "Cámara activa" :
+                   camStatus === "requesting" ? "Solicitando…" :
+                   camStatus === "denied"   ? "Sin acceso" :
+                   camStatus === "unsupported" ? "No disponible" :
+                   "Cámara apagada"}
                 </PMono>
               </div>
 
-              <div style={{
-                position: "absolute", bottom: 24, left: 0, right: 0,
-                textAlign: "center",
-              }}>
-                <PMono style={{ color: "rgba(245,241,234,0.5)", fontSize: 9 }}>
-                  Centra el QR dentro del marco
-                </PMono>
-              </div>
+              {camStatus !== "active" && (
+                <div style={{
+                  position: "absolute", inset: 0,
+                  display: "flex", flexDirection: "column",
+                  alignItems: "center", justifyContent: "center",
+                  textAlign: "center", padding: 24, gap: 14,
+                }}>
+                  <div style={{ fontSize: 36, opacity: 0.4 }}>⊡</div>
+                  <PMono style={{ color: "rgba(245,241,234,0.6)", fontSize: 10, maxWidth: 240, lineHeight: 1.6 }}>
+                    {camStatus === "denied" || camStatus === "unsupported"
+                      ? "Usa la lista de reservas de hoy"
+                      : "Permite el acceso a la cámara para escanear"}
+                  </PMono>
+                  {(camStatus === "denied" || camStatus === "idle") && (
+                    <button onClick={startCamera}
+                      style={{
+                        marginTop: 4, padding: "10px 18px",
+                        background: "#C29E66", color: "#0C0C0C", border: "none",
+                        fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                        letterSpacing: "0.15em", textTransform: "uppercase", cursor: "pointer",
+                      }}>
+                      Activar cámara
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {camStatus === "active" && (
+                <div style={{
+                  position: "absolute", bottom: 24, left: 0, right: 0,
+                  textAlign: "center", pointerEvents: "none",
+                }}>
+                  <PMono style={{
+                    color: "#F5F1EA", fontSize: 9,
+                    background: "rgba(12,12,12,0.55)", padding: "4px 10px",
+                    backdropFilter: "blur(6px)",
+                  }}>
+                    Centra el QR dentro del marco
+                  </PMono>
+                </div>
+              )}
             </div>
 
             {error && (
-              <div style={{
+              <div role="alert" style={{
                 marginTop: 16, padding: 14,
                 background: "rgba(200,80,80,0.1)", border: "1px solid rgba(200,80,80,0.3)",
                 fontSize: 13,
@@ -1020,7 +1064,7 @@ const ScanPortal = () => {
 
             <div style={{ marginTop: 24 }}>
               <PMono style={{ color: "rgba(245,241,234,0.5)", fontSize: 9, display: "block", marginBottom: 10 }}>
-                Simulación — reservas recientes
+                Reservas de hoy · activar manualmente
               </PMono>
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {recent.length === 0 && (
@@ -1051,7 +1095,7 @@ const ScanPortal = () => {
             border: "1px solid rgba(245,241,234,0.1)", minHeight: 460,
             display: "flex", flexDirection: "column",
           }}>
-            {!scanned && !scanning && (
+            {!scanned && (
               <div style={{
                 flex: 1, display: "flex", flexDirection: "column",
                 alignItems: "center", justifyContent: "center", textAlign: "center",
@@ -1059,19 +1103,6 @@ const ScanPortal = () => {
               }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>⊡</div>
                 <PMono>Esperando escaneo</PMono>
-              </div>
-            )}
-            {scanning && (
-              <div style={{
-                flex: 1, display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center", textAlign: "center",
-              }}>
-                <div style={{
-                  width: 40, height: 40, border: "2px solid rgba(194,158,102,0.2)",
-                  borderTopColor: "#C29E66", borderRadius: "50%",
-                  animation: "spin 1s linear infinite", marginBottom: 20,
-                }} />
-                <PMono style={{ color: "#C29E66" }}>Verificando ticket…</PMono>
               </div>
             )}
             {scanned && !scanned.activated && (
@@ -1135,13 +1166,21 @@ const ScanPortal = () => {
                     {scanned.name}, toma asiento. Tu nombre aparecerá en la pantalla
                     de sala cuando sea tu turno.
                   </p>
-                  <a href="Lobby.html" style={{
-                    color: "#C29E66", textDecoration: "none",
-                    fontFamily: "'Outfit', sans-serif", fontSize: 12,
-                    letterSpacing: "0.2em", textTransform: "uppercase",
-                    padding: "14px 20px", border: "1px solid #C29E66",
-                    display: "inline-block",
-                  }}>Ver pantalla de sala →</a>
+                  <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+                    <button onClick={rescan} style={{
+                      color: "#0C0C0C", background: "#C29E66", border: "none",
+                      fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                      letterSpacing: "0.2em", textTransform: "uppercase",
+                      padding: "14px 20px", cursor: "pointer",
+                    }}>Escanear otro →</button>
+                    <a href="Lobby.html" style={{
+                      color: "#C29E66", textDecoration: "none",
+                      fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                      letterSpacing: "0.2em", textTransform: "uppercase",
+                      padding: "14px 20px", border: "1px solid #C29E66",
+                      display: "inline-block",
+                    }}>Ver sala →</a>
+                  </div>
                 </div>
               </>
             )}
