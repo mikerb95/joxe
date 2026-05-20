@@ -300,7 +300,6 @@ const BookingPortal = () => {
 
   const services = catalog.services;
   const employees = catalog.employees;
-  const times = TIMES;
 
   // Employees that offer the currently selected service
   const eligibleEmployees = React.useMemo(() => {
@@ -308,7 +307,16 @@ const BookingPortal = () => {
     return employees.filter(e => (e.services || []).includes(form.serviceId));
   }, [form.serviceId, employees]);
 
-  const availableDates = Array.from({ length: 5 }, (_, i) => addDays(todayStr(), i));
+  // Show next 14 days, skipping closed days (Dom/Lun)
+  const availableDates = React.useMemo(() => {
+    const out = [];
+    const today = todayStr();
+    for (let i = 0; i < 21 && out.length < 14; i++) {
+      const d = addDays(today, i);
+      if (!isClosedDay(d)) out.push(d);
+    }
+    return out;
+  }, []);
 
   // Duration of the currently selected service in minutes
   const selectedDur = React.useMemo(() => {
@@ -318,8 +326,10 @@ const BookingPortal = () => {
 
   // Check if a time slot is available for a given date + stylist
   // Takes into account service duration — a long service blocks subsequent slots
+  // and must finish before the salon closes for that day.
   const isSlotTaken = (date, time, stylistName, newDur) => {
     if (!date) return false;
+    if (isClosedDay(date)) return true;
     if (isTimePast(date, time)) return true;
     const adminBlocked = (store.blockedSlots || []).some(b => b.date === date && b.time === time);
     if (adminBlocked) return true;
@@ -327,6 +337,9 @@ const BookingPortal = () => {
     const dur = newDur ?? selectedDur;
     const newStart = timeToMin(time);
     const newEnd   = newStart + dur;
+
+    // Service must finish before closing time
+    if (newEnd > closesAtMin(date)) return true;
 
     const aptsOnDay = (store.appointments || []).filter(
       a => a.date === date && !["cancelled"].includes(a.status)
@@ -383,10 +396,26 @@ const BookingPortal = () => {
   };
 
   const TOTAL_STEPS = 4;
+
+  // Inline field validation for step 4
+  const cleanDigits = (s) => (s || "").replace(/\D/g, "");
+  const nameOk   = form.name.trim().length >= 3 && /\s/.test(form.name.trim()) === false
+                    ? form.name.trim().length >= 3
+                    : form.name.trim().length >= 3; // at least 3 chars; allow single-word names too
+  const trimmedName = form.name.trim();
+  const errors = {
+    name:   trimmedName.length === 0 ? "" : trimmedName.length < 3 ? "Ingresa al menos 3 caracteres." : "",
+    phone:  cleanDigits(form.phone).length === 0 ? "" : cleanDigits(form.phone).length !== 10 ? "Debe tener 10 dígitos (ej: 300 123 4567)." : "",
+    cedula: form.cedula.length === 0 ? "" : (form.cedula.length < 6 || form.cedula.length > 12) ? "Cédula entre 6 y 12 dígitos." : "",
+  };
+  const step4Valid = trimmedName.length >= 3
+    && cleanDigits(form.phone).length === 10
+    && form.cedula.length >= 6 && form.cedula.length <= 12;
+
   const canNext = (step === 1 && !!form.service)
     || (step === 2 && !!form.stylist)
     || (step === 3 && !!form.date && !!form.time)
-    || (step === 4 && !!form.name && !!form.phone && !!form.cedula);
+    || (step === 4 && step4Valid);
 
   return (
     <PortalShell tone="ivory" header={
@@ -501,7 +530,7 @@ const BookingPortal = () => {
                   a => a.date === todayStr() && a.stylist === e.name && !["cancelled"].includes(a.status)
                 ).length;
                 const availSlots = availableDates.reduce((acc, d) =>
-                  acc + times.filter(t => !isSlotTaken(d, t, e.name, selectedDur)).length, 0
+                  acc + slotsForDate(d).filter(t => !isSlotTaken(d, t, e.name, selectedDur)).length, 0
                 );
                 return (
                   <button key={e.id}
@@ -568,7 +597,7 @@ const BookingPortal = () => {
               {form.stylist !== "Sin preferencia" ? form.stylist : "Cualquier profesional"} · {form.service}
             </p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5,minmax(160px,1fr))", gap: 12, overflowX: "auto" }}>
+            <div style={{ display: "grid", gridAutoFlow: "column", gridAutoColumns: "minmax(160px, 1fr)", gap: 12, overflowX: "auto", paddingBottom: 8 }}>
               {availableDates.map(date => {
                 const isSelectedDate = form.date === date;
                 return (
@@ -595,7 +624,7 @@ const BookingPortal = () => {
 
                     {/* Time slots */}
                     <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-                      {times.map(t => {
+                      {slotsForDate(date).map(t => {
                         const blocked = isSlotTaken(date, t, form.stylist);
                         const isSelected = form.date === date && form.time === t;
                         return (
