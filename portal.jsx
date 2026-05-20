@@ -496,6 +496,15 @@ const BookingPortal = () => {
                       }}>
                         {availSlots > 0 ? `${availSlots} turnos libres` : "Sin disponibilidad"}
                       </div>
+                      {todayApts > 0 && (
+                        <div style={{
+                          fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+                          color: sel ? "rgba(245,241,234,0.4)" : "rgba(12,12,12,0.35)",
+                          letterSpacing: "0.06em", marginTop: 3,
+                        }}>
+                          {todayApts} hoy
+                        </div>
+                      )}
                     </div>
                   </button>
                 );
