@@ -800,7 +800,7 @@ const ScanPortal = () => {
     setScanning(true);
     setError("");
     setTimeout(() => {
-      const s = loadStore();
+      const s = loadCache();
       const appt = s.appointments.find(a => a.id === id);
       if (!appt) {
         setError("Ticket no encontrado. Verifica tu QR.");
@@ -826,8 +826,10 @@ const ScanPortal = () => {
   };
 
   const recent = store.appointments.filter(a =>
+    a.date === todayStr() &&
+    !["cancelled"].includes(a.status) &&
     !store.active.find(x => x.id === a.id) && !store.completed.find(x => x.id === a.id)
-  ).slice(-3).reverse();
+  ).slice(-5).reverse();
 
   return (
     <PortalShell tone="noir" header={
@@ -2009,9 +2011,9 @@ const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
       ...store.active.map(a => ({ ...a, _src: 'active' })),
       ...store.completed.map(a => ({ ...a, _src: 'completed' })),
     ];
-    // Dedup por id (active/completed override scheduled)
+    // Dedup por id: active/completed override scheduled (last wins)
     const seen = new Map();
-    all.forEach(a => { if (!seen.has(a.id)) seen.set(a.id, a); });
+    all.forEach(a => seen.set(a.id, a));
     return [...seen.values()]
       .filter(a => a.date === today && (!employee || a.stylist === employee.name))
       .map(a => ({
@@ -2027,12 +2029,19 @@ const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
     : null;
 
   const manualCheckIn = (appt) => {
-    setStore(s => ({
-      ...s,
-      appointments: s.appointments.map(a =>
-        a.id === appt.id ? { ...a, checkedIn: true, checkedInAt: Date.now() } : a
-      ),
-    }));
+    setStore(s => {
+      const alreadyActive = s.active.some(a => a.id === appt.id);
+      return {
+        ...s,
+        appointments: s.appointments.map(a =>
+          a.id === appt.id ? { ...a, checkedIn: true, checkedInAt: Date.now() } : a
+        ),
+        active: alreadyActive ? s.active : [
+          ...s.active,
+          { ...appt, activatedAt: Date.now(), status: "waiting", position: s.active.length + 1 },
+        ],
+      };
+    });
     setConfirm(null);
   };
 
