@@ -35,3 +35,41 @@ export async function kvSet(key, value) {
     args: [key, JSON.stringify(value), Date.now()],
   });
 }
+
+// ------------------------------------------------------------
+// Admin auth
+// Resolves the active admin password from (in order):
+//   1. admin_store.password (set via admin panel)
+//   2. ADMIN_PASSWORD env var (for initial bootstrap)
+// Returns null if neither is configured — callers MUST fail closed.
+// ------------------------------------------------------------
+export async function getAdminPassword() {
+  const admin = await kvGet("admin_store");
+  const stored = admin?.password;
+  if (typeof stored === "string" && stored.length > 0) return stored;
+  const env = process.env.ADMIN_PASSWORD;
+  if (typeof env === "string" && env.length > 0) return env;
+  return null;
+}
+
+// Constant-time string comparison. Returns false if either input is not a
+// non-empty string or lengths differ (after equalizing buffer length).
+export function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  if (a.length === 0 || b.length === 0) return false;
+  const ab = Buffer.from(a, "utf8");
+  const bb = Buffer.from(b, "utf8");
+  if (ab.length !== bb.length) return false;
+  try { return timingSafeEqual(ab, bb); } catch { return false; }
+}
+
+// Validates a request's Authorization: Bearer <token> header against the
+// configured admin password. Fails closed if no password is configured.
+export async function verifyAdminAuth(req) {
+  const auth  = req.headers.authorization ?? "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!token) return false;
+  const pw = await getAdminPassword();
+  if (!pw) return false;
+  return safeEqual(token, pw);
+}

@@ -1,4 +1,4 @@
-import { initTables, kvGet } from "./db.js";
+import { initTables, getAdminPassword, safeEqual } from "./db.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -16,11 +16,13 @@ export default async function handler(req, res) {
     const { password } = req.body ?? {};
     if (!password) return res.status(400).json({ error: "Missing password" });
 
-    const admin   = await kvGet("admin_store");
-    const stored  = admin?.password ?? "joxe2026";
-    const ok      = password === stored;
+    const stored = await getAdminPassword();
+    if (!stored) {
+      console.error("[auth] No admin password configured (set ADMIN_PASSWORD env or admin_store.password)");
+      return res.status(503).json({ error: "Auth not configured" });
+    }
 
-    // Constant-time comparison to prevent timing attacks
+    const ok = safeEqual(password, stored);
     return res.status(200).json({ ok });
   } catch (err) {
     console.error("[auth]", err.message);
