@@ -288,15 +288,37 @@ const useCatalog = () => {
   return catalog;
 };
 
+const BOOKING_DRAFT_KEY = "joxe_booking_draft_v1";
+const EMPTY_BOOKING_FORM = {
+  service: "", serviceId: "", stylist: "", stylistId: "", date: "", time: "",
+  name: "", phone: "", cedula: "",
+};
+
 const BookingPortal = () => {
   const [store, setStore] = useStore();
   const catalog = useCatalog();
-  const [step, setStep] = React.useState(1);
-  const [form, setForm] = React.useState({
-    service: "", serviceId: "", stylist: "", stylistId: "", date: "", time: "",
-    name: "", phone: "", cedula: "",
-  });
+  // Restore draft from sessionStorage (cleared on submit)
+  const initial = React.useMemo(() => {
+    try {
+      const raw = sessionStorage.getItem(BOOKING_DRAFT_KEY);
+      if (raw) {
+        const d = JSON.parse(raw);
+        return {
+          step: typeof d.step === "number" && d.step >= 1 && d.step <= 4 ? d.step : 1,
+          form: { ...EMPTY_BOOKING_FORM, ...(d.form || {}) },
+        };
+      }
+    } catch {}
+    return { step: 1, form: EMPTY_BOOKING_FORM };
+  }, []);
+  const [step, setStep] = React.useState(initial.step);
+  const [form, setForm] = React.useState(initial.form);
   const [ticket, setTicket] = React.useState(null);
+
+  // Auto-save form/step to sessionStorage on every change (so refresh keeps the draft)
+  React.useEffect(() => {
+    try { sessionStorage.setItem(BOOKING_DRAFT_KEY, JSON.stringify({ form, step })); } catch {}
+  }, [form, step]);
 
   const services = catalog.services;
   const employees = catalog.employees;
@@ -393,6 +415,7 @@ const BookingPortal = () => {
     setStore(s => ({ ...s, appointments: [...s.appointments, appt] }), appt);
     setTicket(appt);
     setStep(5);
+    try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch {}
   };
 
   const TOTAL_STEPS = 4;
