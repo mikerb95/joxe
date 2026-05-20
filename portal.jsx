@@ -802,40 +802,116 @@ const BookingPortal = () => {
 
 // ============================================================
 // PAGE 2 — ESCANEAR QR (RECEPCIÓN)
+// Uses the real camera via getUserMedia + jsQR (loaded as a global in Scan.html)
 // ============================================================
 const ScanPortal = () => {
   const [store, setStore] = useStore();
   const [scanned, setScanned] = React.useState(null);
-  const [scanning, setScanning] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [camStatus, setCamStatus] = React.useState("idle"); // idle | requesting | active | denied | unsupported
+  const videoRef  = React.useRef(null);
+  const canvasRef = React.useRef(null);
+  const streamRef = React.useRef(null);
+  const rafRef    = React.useRef(0);
 
-  // Auto-detect from hash
-  React.useEffect(() => {
-    const id = window.location.hash.slice(1);
-    if (id) {
-      setTimeout(() => handleScan(id), 800);
+  const lookupAppt = (id) => {
+    const s = loadCache();
+    const appt = s.appointments.find(a => a.id === id);
+    if (!appt) return { error: "Ticket no encontrado. Verifica tu QR." };
+    if (s.active.find(a => a.id === id) || s.completed.find(a => a.id === id)) {
+      return { error: "Este turno ya fue activado." };
+    }
+    return { appt };
+  };
+
+  const handleScan = React.useCallback((id) => {
+    const r = lookupAppt(id);
+    if (r.error) { setError(r.error); return; }
+    setError("");
+    setScanned(r.appt);
+    stopCamera();
+  }, []);
+
+  const stopCamera = () => {
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = 0;
+    const s = streamRef.current;
+    if (s) { s.getTracks().forEach(t => t.stop()); streamRef.current = null; }
+    if (videoRef.current) videoRef.current.srcObject = null;
+  };
+
+  const startCamera = React.useCallback(async () => {
+    if (typeof window.jsQR !== "function") {
+      setCamStatus("unsupported");
+      setError("La biblioteca de escaneo no cargó. Usa la lista de abajo o recarga.");
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCamStatus("unsupported");
+      setError("Tu navegador no soporta acceso a cámara. Usa la lista de abajo.");
+      return;
+    }
+    setCamStatus("requesting");
+    setError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } }, audio: false,
+      });
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (!video) { stream.getTracks().forEach(t => t.stop()); return; }
+      video.srcObject = stream;
+      video.setAttribute("playsinline", "true");
+      await video.play();
+      setCamStatus("active");
+      tick();
+    } catch (err) {
+      console.warn("[scan] camera denied/failed", err.name, err.message);
+      setCamStatus("denied");
+      setError(err.name === "NotAllowedError"
+        ? "Permiso de cámara denegado. Usa la lista de abajo o habilítala en el navegador."
+        : "No se pudo abrir la cámara. Usa la lista de abajo.");
     }
   }, []);
 
-  const handleScan = (id) => {
-    setScanning(true);
+  const tick = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || !streamRef.current) return;
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      const w = video.videoWidth, h = video.videoHeight;
+      if (w && h) {
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(video, 0, 0, w, h);
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const code = window.jsQR(imageData.data, w, h, { inversionAttempts: "dontInvert" });
+        if (code?.data) {
+          handleScan(code.data);
+          return;
+        }
+      }
+    }
+    rafRef.current = requestAnimationFrame(tick);
+  };
+
+  // Auto-detect from hash (QR may also be opened as a deep link)
+  React.useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (id) handleScan(id);
+  }, [handleScan]);
+
+  // Start camera on mount; cleanup on unmount
+  React.useEffect(() => {
+    startCamera();
+    return stopCamera;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const rescan = () => {
+    setScanned(null);
     setError("");
-    setTimeout(() => {
-      const s = loadCache();
-      const appt = s.appointments.find(a => a.id === id);
-      if (!appt) {
-        setError("Ticket no encontrado. Verifica tu QR.");
-        setScanning(false);
-        return;
-      }
-      if (s.active.find(a => a.id === id) || s.completed.find(a => a.id === id)) {
-        setError("Este turno ya fue activado.");
-        setScanning(false);
-        return;
-      }
-      setScanned(appt);
-      setScanning(false);
-    }, 1200);
+    startCamera();
   };
 
   const activateTurn = () => {
