@@ -139,45 +139,57 @@ const PortalHeader = ({ title, subtitle, right, tone = "noir" }) => (
 );
 
 // ============================================================
-// QR RENDERER (simple pseudo-QR using a deterministic grid)
+// QR RENDERER — real, scannable QR using `qrcode-generator` (UMD via CDN)
+// The library exposes a global `qrcode(typeNumber, errorCorrectionLevel)` factory.
+// We pick the smallest type that fits the payload and use error level "M".
 // ============================================================
-const pseudoQR = (text) => {
-  // Deterministic 21x21 grid from text hash — visual only (decorative QR)
-  const size = 25;
-  const grid = Array.from({ length: size }, () => Array(size).fill(false));
-  let h = 0;
-  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) >>> 0;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      h = (h * 1103515245 + 12345) >>> 0;
-      grid[y][x] = (h & 0xff) < 128;
-    }
-  }
-  // finder patterns (corners)
-  const finder = (cx, cy) => {
-    for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) {
-      const on = (x === 0 || x === 6 || y === 0 || y === 6) || (x >= 2 && x <= 4 && y >= 2 && y <= 4);
-      if (cx + x < size && cy + y < size) grid[cy + y][cx + x] = on;
-    }
-    // clear border area
-    for (let y = -1; y <= 7; y++) for (let x = -1; x <= 7; x++) {
-      if (x === -1 || x === 7 || y === -1 || y === 7) {
-        if (cx + x >= 0 && cx + x < size && cy + y >= 0 && cy + y < size) grid[cy + y][cx + x] = false;
-      }
-    }
-  };
-  finder(0, 0); finder(size - 7, 0); finder(0, size - 7);
+const buildQRMatrix = (text) => {
+  if (typeof window.qrcode !== "function") return null;
+  // typeNumber=0 lets the lib auto-pick the smallest version that fits.
+  const qr = window.qrcode(0, "M");
+  qr.addData(String(text));
+  qr.make();
+  const n = qr.getModuleCount();
+  const grid = Array.from({ length: n }, (_, y) =>
+    Array.from({ length: n }, (_, x) => qr.isDark(y, x))
+  );
   return grid;
 };
 
 const QRCode = ({ value, size = 220, fg = "#0C0C0C", bg = "#F5F1EA" }) => {
-  const grid = pseudoQR(value);
-  const cell = size / grid.length;
+  // Re-render when the lib finishes loading (the script is async on the page).
+  const [, force] = React.useReducer(x => x + 1, 0);
+  React.useEffect(() => {
+    if (typeof window.qrcode === "function") return;
+    const i = setInterval(() => {
+      if (typeof window.qrcode === "function") { force(); clearInterval(i); }
+    }, 80);
+    return () => clearInterval(i);
+  }, []);
+
+  const grid = buildQRMatrix(value);
+  if (!grid) {
+    return (
+      <div style={{
+        width: size, height: size, background: bg, color: fg,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'JetBrains Mono', monospace", fontSize: 11, opacity: 0.5,
+      }}>cargando QR…</div>
+    );
+  }
+
+  const n = grid.length;
+  const pad = 2; // quiet zone in modules (spec recommends 4; 2 is enough for screens)
+  const total = n + pad * 2;
+  const cell = size / total;
   return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}>
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: "block" }}
+      role="img" aria-label="Código QR de tu cita">
       <rect width={size} height={size} fill={bg} />
       {grid.map((row, y) => row.map((on, x) => on && (
-        <rect key={`${x}-${y}`} x={x * cell} y={y * cell} width={cell} height={cell} fill={fg} />
+        <rect key={`${x}-${y}`}
+          x={(x + pad) * cell} y={(y + pad) * cell}
+          width={cell} height={cell} fill={fg} />
       )))}
     </svg>
   );
