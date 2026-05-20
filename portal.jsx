@@ -2031,6 +2031,7 @@ const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
   const manualCheckIn = (appt) => {
     setStore(s => {
       const alreadyActive = s.active.some(a => a.id === appt.id);
+      const rawAppt = s.appointments.find(a => a.id === appt.id) || appt;
       return {
         ...s,
         appointments: s.appointments.map(a =>
@@ -2038,7 +2039,7 @@ const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
         ),
         active: alreadyActive ? s.active : [
           ...s.active,
-          { ...appt, activatedAt: Date.now(), status: "waiting", position: s.active.length + 1 },
+          { ...rawAppt, checkedIn: true, checkedInAt: Date.now(), activatedAt: Date.now(), status: "waiting", position: s.active.length + 1 },
         ],
       };
     });
