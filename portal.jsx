@@ -384,6 +384,22 @@ const isClosedDay = (dateStr) => !BUSINESS_HOURS[dayOfWeek(dateStr)];
 const slotsForDate = (dateStr) => BUSINESS_HOURS[dayOfWeek(dateStr)] || [];
 const closesAtMin  = (dateStr) => CLOSE_TIME_MIN[dayOfWeek(dateStr)] ?? 0;
 
+// Maps JS getDay() index to workHours key stored in each employee profile
+const WORK_DAY_KEYS = ["dom","lun","mar","mie","jue","vie","sab"];
+
+// Returns false if the slot falls outside the employee's configured work hours for that day
+const empWorksOnSlot = (emp, date, timeStr, dur) => {
+  if (!emp?.workHours) return true; // no schedule configured — no restriction
+  const dayKey = WORK_DAY_KEYS[new Date(date + "T12:00").getDay()];
+  const day = emp.workHours[dayKey];
+  if (!day?.active) return false; // employee doesn't work this day
+  const startMin = timeToMin(day.start);
+  const endMin   = timeToMin(day.end);
+  const slotStart = timeToMin(timeStr);
+  const slotEnd   = slotStart + dur;
+  return slotStart >= startMin && slotEnd <= endMin;
+};
+
 const DEFAULT_SERVICES = [
   { id:"s1", name:"Corte mujer",        price:85000,  dur:60  },
   { id:"s2", name:"Corte hombre",       price:45000,  dur:40  },
