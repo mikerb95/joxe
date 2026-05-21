@@ -318,6 +318,15 @@ const pseudoQR = (text) => {
 const ChairQRCode = ({ empId, empName, size = 200 }) => {
   const url = `${window.location.origin}/CheckIn.html#chair-${empId}`;
   const [dataUrl, setDataUrl] = React.useState(null);
+  const [showUrl, setShowUrl] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   React.useEffect(() => {
     let cancelled = false;
