@@ -3715,8 +3715,23 @@ const SettingsView = ({ onNav }) => {
     setNewStylist("");
   };
 
-  const removeStylist = (s) => {
-    setAdmin(a=>({...a,stylists:a.stylists.filter(x=>x!==s)}));
+  const deleteStylist = (s) => {
+    if (!confirm(`¿Eliminar a ${s}? Se archivará su historial pero ya no aparecerá en el equipo ni en el portal de reservas.`)) return;
+    const empMatch = (admin.employees||[]).find(e=>e.name===s);
+    setAdmin(a => {
+      const next = {
+        ...a,
+        stylists: a.stylists.filter(x=>x!==s),
+      };
+      if (empMatch) {
+        next.employees = a.employees.filter(e=>e.id!==empMatch.id);
+        next.archivedEmployees = [...(a.archivedEmployees||[]), {...empMatch, archivedAt:Date.now()}];
+        const chairs = {...(a.chairAssignments||{})};
+        Object.keys(chairs).forEach(k=>{ if (chairs[k]===empMatch.id) delete chairs[k]; });
+        next.chairAssignments = chairs;
+      }
+      return next;
+    });
   };
 
   return (
@@ -3757,10 +3772,11 @@ const SettingsView = ({ onNav }) => {
                         ⚙ Configurar
                       </button>
                     )}
-                    <button onClick={()=>removeStylist(s)} style={{
-                      background:"transparent",border:"none",color:C.muted,
-                      cursor:"pointer",fontSize:16,
-                    }}>✕</button>
+                    <button onClick={()=>deleteStylist(s)} style={{
+                      background:"transparent",border:`1px solid ${C.bdr}`,color:C.red||"#c46666",
+                      cursor:"pointer",fontSize:11,padding:"4px 10px",
+                      fontFamily:"'Outfit',sans-serif",letterSpacing:"0.05em",
+                    }} title="Eliminar estilista">Eliminar</button>
                   </div>
                 </div>
               );
