@@ -2069,23 +2069,31 @@ const BlockSlotsView = () => {
               <div style={{color:C.muted,fontSize:12}}>Sin bloqueos para este día.</div>
             ) : (
               <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                {selectedBlocked.sort((a,b)=>a.time.localeCompare(b.time)).map(b=>(
-                  <div key={b.id} style={{
-                    display:"flex",justifyContent:"space-between",alignItems:"center",
-                    padding:"6px 10px",background:C.s2,
-                  }}>
-                    <div>
-                      <Mono style={{color:C.red,fontSize:10}}>{b.time}</Mono>
-                      {b.reason && b.reason!=="No disponible" && (
-                        <div style={{fontSize:10,color:C.muted,marginTop:2}}>{b.reason}</div>
-                      )}
+                {selectedBlocked.sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0).map(b=>{
+                  const emp = employees.find(e=>e.id===b.employeeId);
+                  const color = b.employeeId ? empColor(b.employeeId) : C.red;
+                  return (
+                    <div key={b.id} style={{
+                      display:"flex",justifyContent:"space-between",alignItems:"center",
+                      padding:"6px 10px",background:C.s2,
+                      borderLeft:`2px solid ${color}50`,
+                    }}>
+                      <div>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <Mono style={{color,fontSize:10}}>{b.time}</Mono>
+                          {emp && <Mono style={{color:C.muted,fontSize:8}}>{emp.name}</Mono>}
+                        </div>
+                        {b.reason && b.reason!=="No disponible" && (
+                          <div style={{fontSize:10,color:C.muted,marginTop:2}}>{b.reason}</div>
+                        )}
+                      </div>
+                      <button onClick={()=>setAppts(s=>({...s,blockedSlots:(s.blockedSlots||[]).filter(x=>x.id!==b.id)}))} style={{
+                        background:"transparent",border:"none",color:C.muted,
+                        cursor:"pointer",fontSize:13,padding:"2px 6px",
+                      }}>✕</button>
                     </div>
-                    <button onClick={()=>toggleSlot(b.date,b.time)} style={{
-                      background:"transparent",border:"none",color:C.muted,
-                      cursor:"pointer",fontSize:13,padding:"2px 6px",
-                    }}>✕</button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </Card>
