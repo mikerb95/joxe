@@ -1735,15 +1735,19 @@ const CuentaPortal = () => {
             <div style={{
               background: "#141212", border: "1px solid rgba(245,241,234,0.1)", padding: 32,
             }}>
-              <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 10 }}>
-                Cédula de ciudadanía
-              </PMono>
-              <input
+              <label htmlFor="cuenta-cedula">
+                <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 10 }}>
+                  Cédula de ciudadanía
+                </PMono>
+              </label>
+              <input id="cuenta-cedula" name="cedula" autoComplete="off"
                 value={input}
                 onChange={e => { setInput(e.target.value.replace(/\D/g, "")); setError(""); }}
                 onKeyDown={e => e.key === "Enter" && login()}
                 placeholder="1234567890"
                 inputMode="numeric"
+                aria-invalid={!!error}
+                aria-describedby={error ? "cuenta-cedula-err" : undefined}
                 style={{
                   width: "100%", padding: "18px 20px",
                   background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",

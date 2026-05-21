@@ -971,6 +971,7 @@ const WhatsAppBlob = () => {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
+      aria-label="Escríbenos por WhatsApp"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
