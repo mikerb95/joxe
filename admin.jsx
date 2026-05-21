@@ -3323,7 +3323,337 @@ const NotificationsCard = () => {
   );
 };
 
-const SettingsView = () => {
+// ==================== STYLIST SETTINGS ====================
+const StylistSettingsView = ({ empId, onNav }) => {
+  const [admin, setAdmin] = useAdmin();
+  const [appts, setAppts] = useAppts();
+  const [form, setForm]   = React.useState(null);
+  const [saved, setSaved] = React.useState(false);
+  const [weekOffset, setWeekOffset] = React.useState(0);
+  const [selectedDate, setSelectedDate] = React.useState(todayStr());
+  const [reason, setReason] = React.useState("");
+
+  const emp      = (admin.employees || []).find(e => e.id === empId);
+  const services = (admin.services  || []).filter(s => s.active);
+
+  React.useEffect(() => {
+    if (emp) {
+      setForm({
+        name:      emp.name,
+        role:      emp.role,
+        pin:       emp.pin || "",
+        services:  [...(emp.services  || [])],
+        workHours: { ...DEFAULT_WORK_HOURS(), ...(emp.workHours || {}) },
+      });
+    }
+  }, [empId]);
+
+  if (!emp || !form) return (
+    <div style={{ padding: "32px" }}>
+      <Mono style={{ color: C.red }}>Empleado no encontrado.</Mono>
+      <div style={{ marginTop: 16 }}>
+        <Btn variant="ghost" onClick={() => onNav("settings")}>← Volver</Btn>
+      </div>
+    </div>
+  );
+
+  const toggleSvc = (svcId) => setForm(f => ({
+    ...f,
+    services: f.services.includes(svcId)
+      ? f.services.filter(s => s !== svcId)
+      : [...f.services, svcId],
+  }));
+
+  const save = () => {
+    const nameChanged = emp.name !== form.name;
+    let stylists = [...(admin.stylists || [])];
+    if (nameChanged) stylists = stylists.map(s => s === emp.name ? form.name : s);
+    setAdmin(a => ({
+      ...a,
+      employees: a.employees.map(e => e.id === empId ? { ...e, ...form } : e),
+      stylists,
+    }));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
+  };
+
+  const ALL_TIMES = [
+    "9:00","9:30","10:00","10:30","11:00","11:30",
+    "12:00","12:30","13:00","13:30","14:00","14:30",
+    "15:00","15:30","16:00","16:30","17:00","17:30","18:00",
+  ];
+  const weekDates    = getWeekDates(weekOffset);
+  const todayD       = todayStr();
+  const blockedSlots = appts.blockedSlots || [];
+  const DAY_LABELS   = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+  const myBlocks   = (date, time) => blockedSlots.filter(b => b.date === date && b.time === time && b.employeeId === empId);
+  const isBlocked  = (date, time) => myBlocks(date, time).length > 0;
+
+  const toggleSlot = (date, time) => {
+    const existing = blockedSlots.find(b => b.date === date && b.time === time && b.employeeId === empId);
+    if (existing) {
+      setAppts(s => ({ ...s, blockedSlots: (s.blockedSlots || []).filter(b => b.id !== existing.id) }));
+    } else {
+      setAppts(s => ({ ...s, blockedSlots: [...(s.blockedSlots || []), {
+        id: genId(), date, time, reason: reason || "No disponible", employeeId: empId,
+      }] }));
+    }
+  };
+
+  const blockedForDay   = (date) => blockedSlots.filter(b => b.date === date && b.employeeId === empId);
+  const selectedBlocked = blockedForDay(selectedDate);
+
+  const clearDay = (date) => {
+    if (!confirm(`¿Desbloquear todas las horas de ${fmtDateShort(date)}?`)) return;
+    setAppts(s => ({ ...s, blockedSlots: (s.blockedSlots || []).filter(b =>
+      !(b.date === date && b.employeeId === empId)
+    ) }));
+  };
+
+  const weekLabel = () => {
+    const first = weekDates[0]; const last = weekDates[weekDates.length - 1];
+    const f = new Date(first + "T12:00"); const l = new Date(last + "T12:00");
+    return `${f.getDate()} – ${l.getDate()} ${l.toLocaleDateString("es-CO", { month: "long", year: "numeric" })}`;
+  };
+
+  return (
+    <div>
+      <div style={{
+        padding: "16px 32px", borderBottom: `1px solid ${C.bdr}`,
+        display: "flex", alignItems: "center", gap: 16, background: C.s1,
+      }}>
+        <button onClick={() => onNav("settings")} style={{
+          background: "transparent", border: `1px solid ${C.bdr}`, color: C.muted,
+          cursor: "pointer", padding: "7px 14px",
+          fontFamily: "'Outfit',sans-serif", fontSize: 11, letterSpacing: "0.1em",
+        }}>← Volver</button>
+        <div>
+          <Mono style={{ color: C.gold, fontSize: 9 }}>Configuración · Estilista</Mono>
+          <h1 style={{ fontFamily: "'Marcellus',serif", fontSize: 26, fontWeight: 400, margin: "4px 0 0", color: C.text }}>
+            {emp.name}
+          </h1>
+        </div>
+        <Mono style={{ color: C.muted, fontSize: 9, marginLeft: 4 }}>{emp.role}</Mono>
+      </div>
+
+      <div style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: 20, maxWidth: 760 }}>
+
+        {/* Basic info + services */}
+        <Card>
+          <Mono style={{ color: C.gold, display: "block", marginBottom: 16 }}>Información básica</Mono>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
+            <FieldInput label="Nombre"
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+            <FieldSelect label="Rol" value={form.role}
+              onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
+              options={ROLES} />
+            <div>
+              <FieldInput label="PIN (4–6 dígitos)" type="password"
+                value={form.pin} placeholder="••••"
+                onChange={e => setForm(f => ({ ...f, pin: e.target.value.replace(/\D/g, "").slice(0, 6) }))} />
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 4 }}>
+                {form.pin ? `${form.pin.length} dígito${form.pin.length !== 1 ? "s" : ""}` : "Sin PIN · no puede iniciar sesión"}
+              </div>
+            </div>
+          </div>
+
+          <Mono style={{ color: C.muted, fontSize: 9, display: "block", marginBottom: 10 }}>Servicios que ofrece</Mono>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+            {services.map(s => {
+              const on = form.services.includes(s.id);
+              return (
+                <button key={s.id} onClick={() => toggleSvc(s.id)} style={{
+                  padding: "6px 14px", fontSize: 11, cursor: "pointer",
+                  fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.08em",
+                  background: on ? "rgba(194,158,102,0.15)" : C.s3,
+                  color: on ? C.gold : C.muted,
+                  border: `1px solid ${on ? C.gold + "50" : C.bdr}`,
+                }}>{s.name}</button>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <Btn onClick={save}>Guardar</Btn>
+            {saved && <Mono style={{ color: C.green, fontSize: 9 }}>✓ Guardado</Mono>}
+          </div>
+        </Card>
+
+        {/* Work hours */}
+        <Card>
+          <WorkHoursEditor
+            value={form.workHours}
+            onChange={wh => setForm(f => ({ ...f, workHours: wh }))}
+          />
+          <div style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "center" }}>
+            <Btn onClick={save}>Guardar horario</Btn>
+            {saved && <Mono style={{ color: C.green, fontSize: 9 }}>✓ Guardado</Mono>}
+          </div>
+        </Card>
+
+        {/* Blocked slots */}
+        <Card style={{ padding: 0, overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: `1px solid ${C.bdr}` }}>
+            <Mono style={{ color: C.gold }}>Horas bloqueadas</Mono>
+          </div>
+
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "12px 20px", borderBottom: `1px solid ${C.bdr}`,
+          }}>
+            <button onClick={() => setWeekOffset(o => o - 1)} style={{
+              background: "transparent", border: `1px solid ${C.bdr}`, color: C.text,
+              cursor: "pointer", padding: "5px 12px", fontSize: 14,
+            }}>←</button>
+            <div style={{ textAlign: "center" }}>
+              <Mono style={{ color: C.gold, fontSize: 10 }}>{weekLabel()}</Mono>
+              {weekOffset !== 0 && (
+                <button onClick={() => setWeekOffset(0)} style={{
+                  background: "transparent", border: "none", color: C.muted,
+                  cursor: "pointer", fontSize: 10, display: "block",
+                  fontFamily: "'Outfit',sans-serif", marginTop: 2,
+                }}>Esta semana</button>
+              )}
+            </div>
+            <button onClick={() => setWeekOffset(o => o + 1)} style={{
+              background: "transparent", border: `1px solid ${C.bdr}`, color: C.text,
+              cursor: "pointer", padding: "5px 12px", fontSize: 14,
+            }}>→</button>
+          </div>
+
+          <div style={{
+            padding: "10px 20px", borderBottom: `1px solid ${C.bdr}`,
+            display: "flex", gap: 10, alignItems: "center",
+          }}>
+            <Mono style={{ color: C.muted, fontSize: 8, whiteSpace: "nowrap" }}>Motivo</Mono>
+            <input value={reason} onChange={e => setReason(e.target.value)}
+              placeholder="Almuerzo, descanso… (opcional)"
+              style={{
+                flex: 1, background: C.s2, border: `1px solid ${C.bdr}`,
+                color: C.text, padding: "6px 10px",
+                fontFamily: "'Outfit',sans-serif", fontSize: 12, outline: "none",
+              }} />
+          </div>
+
+          <div style={{ overflowX: "auto" }}>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: `52px repeat(${weekDates.length}, 1fr)`,
+              gridAutoRows: "28px",
+              minWidth: 480,
+            }}>
+              <div style={{ background: C.s1, borderBottom: `1px solid ${C.bdr}`, borderRight: `1px solid ${C.bdr}` }} />
+              {weekDates.map((d, i) => {
+                const isToday    = d === todayD;
+                const isSelected = d === selectedDate;
+                const cnt        = blockedForDay(d).length;
+                return (
+                  <button key={d} onClick={() => setSelectedDate(d)} style={{
+                    background: isToday ? "rgba(194,158,102,0.07)" : isSelected ? C.s2 : C.s1,
+                    borderBottom: `1px solid ${C.bdr}`, borderRight: `1px solid ${C.bdr}`,
+                    borderLeft: "none", borderTop: "none",
+                    padding: "5px 4px", cursor: "pointer", textAlign: "center",
+                    outline: isSelected ? `1px solid ${C.gold + "50"}` : "none", outlineOffset: -1,
+                  }}>
+                    <Mono style={{ color: isToday ? C.gold : C.muted, fontSize: 7, display: "block" }}>{DAY_LABELS[i]}</Mono>
+                    <span style={{ color: isToday ? C.gold : C.text, fontSize: 12, fontFamily: "'Outfit',sans-serif", fontWeight: isToday ? 600 : 400 }}>
+                      {new Date(d + "T12:00").getDate()}
+                    </span>
+                    {cnt > 0 && <Mono style={{ display: "block", fontSize: 7, color: C.red, marginTop: 1 }}>{cnt}✕</Mono>}
+                  </button>
+                );
+              })}
+
+              {ALL_TIMES.map(t => {
+                const isBookingTime = TIMES.includes(t);
+                return (
+                  <React.Fragment key={t}>
+                    <div style={{
+                      background: C.s1,
+                      borderBottom: `1px solid ${C.bdr}`, borderRight: `1px solid ${C.bdr}`,
+                      display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 8px",
+                    }}>
+                      <Mono style={{ color: isBookingTime ? C.gold + "90" : C.muted, fontSize: 8 }}>{t}</Mono>
+                    </div>
+                    {weekDates.map(d => {
+                      const blocked = isBlocked(d, t);
+                      const isToday = d === todayD;
+                      return (
+                        <button key={d} onClick={() => toggleSlot(d, t)} style={{
+                          background: blocked ? C.red + "22" : isToday ? "rgba(194,158,102,0.03)" : "transparent",
+                          border: "none",
+                          borderBottom: `1px solid ${C.bdr}`, borderRight: `1px solid ${C.bdr}`,
+                          cursor: "pointer",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          transition: "background 0.1s",
+                        }}>
+                          {blocked
+                            ? <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.red, opacity: 0.9 }} />
+                            : isBookingTime
+                              ? <div style={{ width: 3, height: 3, borderRadius: "50%", background: C.gold, opacity: 0.25 }} />
+                              : null
+                          }
+                        </button>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ padding: "16px 20px", borderTop: `1px solid ${C.bdr}`, background: C.s2 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <Mono style={{ color: C.gold, fontSize: 9 }}>
+                {fmtDateMed(selectedDate)} · {selectedBlocked.length} bloqueado{selectedBlocked.length !== 1 ? "s" : ""}
+              </Mono>
+              {selectedBlocked.length > 0 && (
+                <button onClick={() => clearDay(selectedDate)} style={{
+                  background: "transparent", border: `1px solid ${C.red + "50"}`,
+                  color: C.red, cursor: "pointer", fontSize: 9, padding: "4px 8px",
+                  fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.1em",
+                }}>Limpiar día</button>
+              )}
+            </div>
+            {selectedBlocked.length === 0 ? (
+              <div style={{ color: C.muted, fontSize: 12 }}>Sin bloqueos para este día. Haz clic en la grilla para bloquear.</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {selectedBlocked.sort((a, b) => a.time < b.time ? -1 : 1).map(b => (
+                  <div key={b.id} style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "6px 10px", background: C.s1, borderLeft: `2px solid ${C.red}50`,
+                  }}>
+                    <div>
+                      <Mono style={{ color: C.red, fontSize: 10 }}>{b.time}</Mono>
+                      {b.reason && b.reason !== "No disponible" && (
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{b.reason}</div>
+                      )}
+                    </div>
+                    <button onClick={() => setAppts(s => ({ ...s, blockedSlots: (s.blockedSlots || []).filter(x => x.id !== b.id) }))}
+                      style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, padding: "2px 6px" }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ padding: "10px 20px", borderTop: `1px solid ${C.bdr}` }}>
+            <Mono style={{ color: C.muted, fontSize: 8 }}>
+              Clic en la grilla para bloquear / desbloquear · Los puntos dorados son horas de reserva
+            </Mono>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+const SettingsView = ({ onNav }) => {
   const [admin,setAdmin] = useAdmin();
   const [,setAppts] = useAppts();
   const [pwForm,setPwForm] = React.useState({current:"",newPw:"",confirm:""});
