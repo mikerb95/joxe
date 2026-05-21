@@ -2349,12 +2349,85 @@ const ArchivedEmployeesSection = ({ archived, revenue }) => {
 };
 
 // ==================== EMPLOYEES ====================
+const WorkHoursEditor = ({ value, onChange }) => {
+  const hours = { ...DEFAULT_WORK_HOURS(), ...value };
+  const setDay = (key, patch) => onChange({ ...hours, [key]: { ...hours[key], ...patch } });
+
+  return (
+    <div>
+      <Mono style={{ color: C.muted, fontSize: 9, display: "block", marginBottom: 10 }}>Horario laboral</Mono>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {DAYS_WORK.map(({ key, label }) => {
+          const day = hours[key] || { active: false, start: "09:00", end: "18:00" };
+          return (
+            <div key={key} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 12px", background: day.active ? "rgba(194,158,102,0.06)" : C.s3,
+              border: `1px solid ${day.active ? C.gold + "40" : C.bdr}`,
+            }}>
+              <button onClick={() => setDay(key, { active: !day.active })} style={{
+                width: 36, padding: "4px 0", fontSize: 10,
+                fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.06em",
+                background: day.active ? "rgba(194,158,102,0.2)" : "transparent",
+                border: `1px solid ${day.active ? C.gold + "60" : C.bdr}`,
+                color: day.active ? C.gold : C.muted, cursor: "pointer",
+              }}>{label}</button>
+              {day.active ? (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
+                  <input type="time" value={day.start}
+                    onChange={e => setDay(key, { start: e.target.value })}
+                    style={{
+                      background: C.s2, border: `1px solid ${C.bdr}`, color: C.text,
+                      padding: "5px 10px", fontFamily: "'JetBrains Mono',monospace",
+                      fontSize: 12, width: 100,
+                    }} />
+                  <Mono style={{ color: C.muted, fontSize: 9 }}>—</Mono>
+                  <input type="time" value={day.end}
+                    onChange={e => setDay(key, { end: e.target.value })}
+                    style={{
+                      background: C.s2, border: `1px solid ${C.bdr}`, color: C.text,
+                      padding: "5px 10px", fontFamily: "'JetBrains Mono',monospace",
+                      fontSize: 12, width: 100,
+                    }} />
+                </div>
+              ) : (
+                <Mono style={{ color: C.muted2, fontSize: 9 }}>Día libre</Mono>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const WorkHoursSummary = ({ workHours }) => {
+  const hours = { ...DEFAULT_WORK_HOURS(), ...workHours };
+  const activeDays = DAYS_WORK.filter(d => hours[d.key]?.active);
+  if (!activeDays.length) return <Mono style={{ fontSize: 9, color: C.muted }}>Sin horario</Mono>;
+  return (
+    <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      {activeDays.map(({ key, label }) => {
+        const d = hours[key];
+        return (
+          <span key={key} style={{
+            padding: "2px 8px", fontSize: 9,
+            fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.06em",
+            background: "rgba(194,158,102,0.08)", color: C.gold,
+            border: `1px solid ${C.gold}25`,
+          }} title={`${d.start} – ${d.end}`}>{label}</span>
+        );
+      })}
+    </div>
+  );
+};
+
 const EmployeesView = () => {
   const [admin,setAdmin] = useAdmin();
   const [showAdd,setShowAdd] = React.useState(false);
   const [editId,setEditId] = React.useState(null);
   const [editForm,setEditForm] = React.useState({});
-  const [newEmp,setNewEmp] = React.useState({name:"",role:"Estilista",services:[],pin:""});
+  const [newEmp,setNewEmp] = React.useState({name:"",role:"Estilista",services:[],pin:"",workHours:DEFAULT_WORK_HOURS()});
   const [chairQROpen,setChairQROpen] = React.useState(null);
 
   const employees = admin.employees || [];
@@ -2383,18 +2456,19 @@ const EmployeesView = () => {
 
   const addEmployee = () => {
     if (!newEmp.name.trim()) return;
-    const emp = { id:genId(), name:newEmp.name.trim(), role:newEmp.role, services:newEmp.services, active:true };
+    const emp = { id:genId(), name:newEmp.name.trim(), role:newEmp.role, services:newEmp.services,
+      pin:newEmp.pin||"", workHours:newEmp.workHours||DEFAULT_WORK_HOURS(), active:true };
     // Also sync to stylists list for booking portal
     const stylists = [...(admin.stylists||[])];
     if (!stylists.includes(emp.name)) stylists.push(emp.name);
     setAdmin(a=>({...a, employees:[...(a.employees||[]),emp], stylists}));
-    setNewEmp({name:"",role:"Estilista",services:[],pin:""});
+    setNewEmp({name:"",role:"Estilista",services:[],pin:"",workHours:DEFAULT_WORK_HOURS()});
     setShowAdd(false);
   };
 
   const startEdit = (e) => {
     setEditId(e.id);
-    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||""});
+    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})}});
   };
 
   const saveEdit = (id) => {
