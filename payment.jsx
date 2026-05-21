@@ -28,6 +28,109 @@ const Mono = ({ children, style }) => (
   }}>{children}</span>
 );
 
+// ——————————————————————————————————————————————
+// Dialog — branded, accessible confirm/alert (replaces window.confirm/alert)
+// ——————————————————————————————————————————————
+const Dialog = ({ open, title, body, confirmLabel = "Confirmar", cancelLabel = "Cancelar",
+                  danger = false, hideCancel = false, onConfirm, onCancel }) => {
+  const cancelRef = React.useRef(null);
+  const confirmRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const target = hideCancel ? confirmRef.current : (cancelRef.current || confirmRef.current);
+    setTimeout(() => target?.focus(), 0);
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); onCancel?.(); }
+      if (e.key === "Tab") {
+        const focusables = [cancelRef.current, confirmRef.current].filter(Boolean);
+        if (focusables.length === 0) return;
+        const idx = focusables.indexOf(document.activeElement);
+        e.preventDefault();
+        const next = e.shiftKey
+          ? focusables[(idx - 1 + focusables.length) % focusables.length]
+          : focusables[(idx + 1) % focusables.length];
+        next.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, hideCancel, onCancel]);
+  if (!open) return null;
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="pay-dlg-title"
+      style={{
+        position: "fixed", inset: 0, zIndex: 9000,
+        background: "rgba(12,12,12,0.78)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 24, animation: "fadeIn 0.2s ease",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel?.(); }}
+    >
+      <div style={{
+        background: C.s1, color: C.text,
+        border: `1px solid ${C.bdr}`,
+        padding: 32, maxWidth: 440, width: "100%",
+        fontFamily: "'Outfit', sans-serif",
+      }}>
+        {title && (
+          <h2 id="pay-dlg-title" style={{
+            fontFamily: "'Marcellus', serif", fontSize: 24, fontWeight: 400,
+            margin: "0 0 12px", color: danger ? C.red : C.text,
+            letterSpacing: "-0.005em",
+          }}>{title}</h2>
+        )}
+        {body && (
+          <div style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.75, marginBottom: 28 }}>
+            {body}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", flexWrap: "wrap" }}>
+          {!hideCancel && (
+            <button ref={cancelRef} onClick={onCancel} type="button" style={{
+              flex: "1 1 120px", minWidth: 0,
+              background: "transparent", color: C.text,
+              border: `1px solid ${C.bdr}`, padding: "12px 18px",
+              cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+              fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase",
+            }}>{cancelLabel}</button>
+          )}
+          <button ref={confirmRef} onClick={onConfirm} type="button" style={{
+            flex: "1 1 120px", minWidth: 0,
+            background: danger ? "rgba(196,102,102,0.15)" : C.gold,
+            color: danger ? C.red : "#0C0C0C",
+            border: danger ? `1px solid ${C.red}40` : "none",
+            padding: "12px 18px", cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+            fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase",
+          }}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const useDialog = () => {
+  const [state, setState] = React.useState(null);
+  const ask = React.useCallback((opts, hideCancel) =>
+    new Promise((resolve) => setState({ resolve, opts: { ...opts, hideCancel: !!hideCancel } })),
+    []
+  );
+  const close = (r) => { state?.resolve(r); setState(null); };
+  const node = (
+    <Dialog
+      open={!!state}
+      title={state?.opts?.title} body={state?.opts?.body}
+      confirmLabel={state?.opts?.confirmLabel} cancelLabel={state?.opts?.cancelLabel}
+      danger={state?.opts?.danger} hideCancel={state?.opts?.hideCancel}
+      onConfirm={() => close(true)} onCancel={() => close(false)}
+    />
+  );
+  return {
+    confirm: (opts) => ask(opts, false),
+    alert:   (opts) => ask({ confirmLabel: "Entendido", ...opts }, true),
+    node,
+  };
+};
+
 const getPaymentId = () => {
   const params = new URLSearchParams(window.location.search);
   return params.get("paymentID") || params.get("paymentId") || params.get("id") || "";
@@ -116,6 +219,7 @@ const PaymentScreen = ({ paymentId }) => {
   const [appt, setAppt] = React.useState(null);
   const [status, setStatus] = React.useState("idle"); // idle | loading | confirmed | cancelled | error | not_found
   const [actionLoading, setActionLoading] = React.useState(false);
+  const dlg = useDialog();
 
   const load = React.useCallback(async () => {
     setStatus("loading");
@@ -139,7 +243,12 @@ const PaymentScreen = ({ paymentId }) => {
   React.useEffect(() => { load(); }, [load]);
 
   const act = async (action) => {
-    if (!confirm(action === "confirm" ? "¿Confirmar recibo del abono?" : "¿Cancelar esta reserva?")) return;
+    const ok = await dlg.confirm(
+      action === "confirm"
+        ? { title: "Confirmar recibo del abono", body: "Marcarás esta reserva como pagada. El cliente recibirá su cita confirmada.", confirmLabel: "Confirmar abono" }
+        : { title: "Cancelar esta reserva", body: "La cita quedará marcada como cancelada y el cliente lo verá en su cuenta. Esta acción no se puede deshacer desde aquí.", confirmLabel: "Cancelar reserva", danger: true }
+    );
+    if (!ok) return;
     setActionLoading(true);
     try {
       const res = await fetch("/api/payment", {
@@ -148,10 +257,13 @@ const PaymentScreen = ({ paymentId }) => {
         body: JSON.stringify({ id: paymentId, action }),
       });
       if (res.status === 401) { doLogout(); window.location.reload(); return; }
-      if (!res.ok) { alert("Error al procesar la acción."); }
-      else { load(); }
+      if (!res.ok) {
+        await dlg.alert({ title: "Error al procesar", body: "No pudimos completar la acción. Intenta de nuevo." });
+      } else {
+        load();
+      }
     } catch {
-      alert("Error de conexión.");
+      await dlg.alert({ title: "Error de conexión", body: "Revisa tu internet e intenta de nuevo." });
     }
     setActionLoading(false);
   };
@@ -303,6 +415,7 @@ const PaymentScreen = ({ paymentId }) => {
           </>
         )}
       </div>
+      {dlg.node}
     </div>
   );
 };
