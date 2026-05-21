@@ -376,7 +376,27 @@ const ChairQRCode = ({ empId, empName, size = 200 }) => {
             <Mono style={{color:C.muted,fontSize:9}}>Generando…</Mono>
           </div>
       }
-      <Btn onClick={printQR} disabled={!dataUrl} small>⎙ Imprimir QR</Btn>
+      <div style={{display:"flex",gap:8}}>
+        <Btn onClick={printQR} disabled={!dataUrl} small>⎙ Imprimir QR</Btn>
+        <Btn onClick={() => setShowUrl(v => !v)} variant="ghost" small>
+          {showUrl ? "Ocultar URL" : "Ver URL"}
+        </Btn>
+      </div>
+      {showUrl && (
+        <div style={{width:"100%",background:C.s1,border:`1px solid ${C.bdr}`,borderRadius:6,padding:"10px 12px",display:"flex",flexDirection:"column",gap:8}}>
+          <Mono style={{fontSize:9,color:C.muted,wordBreak:"break-all",lineHeight:1.6,userSelect:"all"}}>
+            {url}
+          </Mono>
+          <button onClick={copyUrl} style={{
+            alignSelf:"flex-start",background:"transparent",border:`1px solid ${copied?C.gold:C.bdr}`,
+            color:copied?C.gold:C.muted,borderRadius:4,padding:"4px 10px",
+            fontFamily:"'Outfit',sans-serif",fontSize:10,cursor:"pointer",letterSpacing:"0.05em",
+            transition:"color 0.2s,border-color 0.2s",
+          }}>
+            {copied ? "✓ Copiado" : "Copiar"}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -2358,6 +2378,20 @@ const ArchivedEmployeesSection = ({ archived, revenue }) => {
 };
 
 // ==================== EMPLOYEES ====================
+const HOUR_OPTIONS = Array.from({ length: 17 }, (_, i) => {
+  const h = i + 6;
+  return { value: `${String(h).padStart(2, "0")}:00`, label: `${h}:00` };
+});
+
+const HourSelect = ({ value, onChange }) => (
+  <select value={value} onChange={onChange} style={{
+    background: C.s2, border: `1px solid ${C.bdr}`, color: C.text,
+    padding: "5px 10px", fontFamily: "'JetBrains Mono',monospace", fontSize: 12,
+  }}>
+    {HOUR_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+  </select>
+);
+
 const WorkHoursEditor = ({ value, onChange }) => {
   const hours = { ...DEFAULT_WORK_HOURS(), ...value };
   const setDay = (key, patch) => onChange({ ...hours, [key]: { ...hours[key], ...patch } });
@@ -2383,21 +2417,9 @@ const WorkHoursEditor = ({ value, onChange }) => {
               }}>{label}</button>
               {day.active ? (
                 <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1 }}>
-                  <input type="time" value={day.start}
-                    onChange={e => setDay(key, { start: e.target.value })}
-                    style={{
-                      background: C.s2, border: `1px solid ${C.bdr}`, color: C.text,
-                      padding: "5px 10px", fontFamily: "'JetBrains Mono',monospace",
-                      fontSize: 12, width: 100,
-                    }} />
+                  <HourSelect value={day.start} onChange={e => setDay(key, { start: e.target.value })} />
                   <Mono style={{ color: C.muted, fontSize: 9 }}>—</Mono>
-                  <input type="time" value={day.end}
-                    onChange={e => setDay(key, { end: e.target.value })}
-                    style={{
-                      background: C.s2, border: `1px solid ${C.bdr}`, color: C.text,
-                      padding: "5px 10px", fontFamily: "'JetBrains Mono',monospace",
-                      fontSize: 12, width: 100,
-                    }} />
+                  <HourSelect value={day.end} onChange={e => setDay(key, { end: e.target.value })} />
                 </div>
               ) : (
                 <Mono style={{ color: C.muted2, fontSize: 9 }}>Día libre</Mono>
