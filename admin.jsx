@@ -3436,16 +3436,22 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
 
+  const needsConfirm = (a) =>
+    a.computedStatus==="pending" ||
+    (a.computedStatus==="scheduled" && !a.confirmedBy);
+
   const filtered = myAppts.filter(a=>{
-    if (tab==="confirmaciones") return a.computedStatus==="scheduled"&&!a.confirmedBy;
+    if (tab==="confirmaciones") return needsConfirm(a);
     if (tab==="hoy") return a.date===todayStr();
     if (search) return a.name?.toLowerCase().includes(search.toLowerCase())||a.service?.toLowerCase().includes(search.toLowerCase());
     return true;
   }).sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(a.time||"").localeCompare(b.time||""));
 
-  const confirmAppt = async (apptId) => {
+  const confirmAppt = async (apptId, isPending) => {
     const confirmInList = (list) => list.map(a=>
-      a.id===apptId ? {...a, confirmedBy:emp.name, confirmedAt:Date.now()} : a
+      a.id===apptId
+        ? {...a, status: isPending ? "scheduled" : a.status, confirmedBy:emp.name, confirmedAt:Date.now()}
+        : a
     );
     setAppts(s=>({
       ...s,
@@ -3462,7 +3468,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
     }));
   };
 
-  const pendingCount = myAppts.filter(a=>a.computedStatus==="scheduled"&&!a.confirmedBy).length;
+  const pendingCount = myAppts.filter(needsConfirm).length;
 
   const TABS = [
     {id:"todas",label:"Todas"},
