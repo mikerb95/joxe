@@ -139,6 +139,130 @@ const PortalHeader = ({ title, subtitle, right, tone = "noir" }) => (
 );
 
 // ============================================================
+// Dialog (confirm/alert replacement) — branded, accessible, focus-trap.
+// Usage:
+//   const dlg = useDialog();
+//   const ok = await dlg.confirm({ title, body, confirmLabel, danger });
+//   await dlg.alert({ title, body });
+// ============================================================
+const Dialog = ({ open, title, body, confirmLabel = "Confirmar", cancelLabel = "Cancelar",
+                  danger = false, hideCancel = false, onConfirm, onCancel }) => {
+  const cancelRef = React.useRef(null);
+  const confirmRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    // Focus the safe action: cancel for confirm dialogs, confirm for alerts (hideCancel).
+    const target = hideCancel ? confirmRef.current : (cancelRef.current || confirmRef.current);
+    setTimeout(() => target?.focus(), 0);
+    const onKey = (e) => {
+      if (e.key === "Escape") { e.preventDefault(); onCancel?.(); }
+      if (e.key === "Enter" && document.activeElement === confirmRef.current) onConfirm?.();
+      if (e.key === "Tab") {
+        const focusables = [cancelRef.current, confirmRef.current].filter(Boolean);
+        if (focusables.length === 0) return;
+        const idx = focusables.indexOf(document.activeElement);
+        e.preventDefault();
+        const next = e.shiftKey
+          ? focusables[(idx - 1 + focusables.length) % focusables.length]
+          : focusables[(idx + 1) % focusables.length];
+        next.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, hideCancel, onCancel, onConfirm]);
+
+  if (!open) return null;
+
+  return (
+    <div role="dialog" aria-modal="true" aria-labelledby="joxe-dlg-title"
+      style={{
+        position: "fixed", inset: 0, zIndex: 9000,
+        background: "rgba(12,12,12,0.78)", backdropFilter: "blur(6px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: 24, animation: "fadeIn 0.2s ease",
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onCancel?.(); }}
+    >
+      <div style={{
+        background: "#141212", color: "#F5F1EA",
+        border: "1px solid rgba(245,241,234,0.12)",
+        padding: 32, maxWidth: 440, width: "100%",
+        fontFamily: "'Outfit', sans-serif",
+      }}>
+        {title && (
+          <h2 id="joxe-dlg-title" style={{
+            fontFamily: "'Marcellus', serif", fontSize: 24, fontWeight: 400,
+            margin: "0 0 12px", color: danger ? "#e07070" : "#F5F1EA",
+            letterSpacing: "-0.005em",
+          }}>{title}</h2>
+        )}
+        {body && (
+          <div style={{ fontSize: 14, lineHeight: 1.6, opacity: 0.75, marginBottom: 28 }}>
+            {body}
+          </div>
+        )}
+        <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", flexWrap: "wrap" }}>
+          {!hideCancel && (
+            <button ref={cancelRef} onClick={onCancel} type="button" style={{
+              flex: "1 1 120px", minWidth: 0,
+              background: "transparent", color: "#F5F1EA",
+              border: "1px solid rgba(245,241,234,0.2)", padding: "12px 18px",
+              cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+              fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase",
+            }}>{cancelLabel}</button>
+          )}
+          <button ref={confirmRef} onClick={onConfirm} type="button" style={{
+            flex: "1 1 120px", minWidth: 0,
+            background: danger ? "rgba(196,102,102,0.15)" : "#C29E66",
+            color: danger ? "#e07070" : "#0C0C0C",
+            border: danger ? "1px solid rgba(196,102,102,0.45)" : "none",
+            padding: "12px 18px", cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+            fontSize: 12, letterSpacing: "0.18em", textTransform: "uppercase",
+          }}>{confirmLabel}</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const useDialog = () => {
+  const [state, setState] = React.useState(null); // { resolve, opts }
+
+  const ask = React.useCallback((opts, hideCancel) =>
+    new Promise((resolve) => {
+      setState({ resolve, opts: { ...opts, hideCancel: !!hideCancel } });
+    }), []
+  );
+
+  const close = (result) => {
+    state?.resolve(result);
+    setState(null);
+  };
+
+  const node = (
+    <Dialog
+      open={!!state}
+      title={state?.opts?.title}
+      body={state?.opts?.body}
+      confirmLabel={state?.opts?.confirmLabel}
+      cancelLabel={state?.opts?.cancelLabel}
+      danger={state?.opts?.danger}
+      hideCancel={state?.opts?.hideCancel}
+      onConfirm={() => close(true)}
+      onCancel={() => close(false)}
+    />
+  );
+
+  return {
+    confirm: (opts) => ask(opts, false),
+    alert:   (opts) => ask({ confirmLabel: "Entendido", ...opts }, true),
+    node,
+  };
+};
+
+// ============================================================
 // QR RENDERER — real, scannable QR using `qrcode-generator` (UMD via CDN)
 // The library exposes a global `qrcode(typeNumber, errorCorrectionLevel)` factory.
 // We pick the smallest type that fits the payload and use error level "M".
@@ -1299,6 +1423,7 @@ const ScanPortal = () => {
 const LobbyPortal = () => {
   const [store, setStore] = useStore();
   const [now, setNow] = React.useState(new Date());
+  const dlg = useDialog();
   React.useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
@@ -1325,10 +1450,14 @@ const LobbyPortal = () => {
     });
   };
 
-  const reset = () => {
-    if (confirm("¿Limpiar todos los turnos activos y completados?")) {
-      setStore(s => ({ ...s, active: [], completed: [] }));
-    }
+  const reset = async () => {
+    const ok = await dlg.confirm({
+      title: "¿Limpiar la sala?",
+      body: "Esto borra todos los turnos activos y completados de hoy. Las citas agendadas no se ven afectadas.",
+      confirmLabel: "Limpiar",
+      danger: true,
+    });
+    if (ok) setStore(s => ({ ...s, active: [], completed: [] }));
   };
 
   const timeStr = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
@@ -1508,6 +1637,7 @@ const LobbyPortal = () => {
           </div>
         </div>
       </main>
+      {dlg.node}
     </PortalShell>
   );
 };
@@ -3065,4 +3195,5 @@ Object.assign(window, {
   BookingPortal, ScanPortal, LobbyPortal, HomePortal, CuentaPortal, CheckInPortal,
   AgendaPortal,
   QRCode, PortalShell, PortalHeader, PMono, useStore, WABlob,
+  Dialog, useDialog,
 });
