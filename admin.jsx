@@ -496,6 +496,7 @@ const VIEWS = [
   {id:"employees",   label:"Empleados",        icon:"◉", tooltip:"Gestión del equipo y sus PINs"},
   {id:"services",    label:"Servicios",        icon:"✦", tooltip:"Catálogo de servicios y precios"},
   {id:"settings",    label:"Configuración",    icon:"⊛", tooltip:"Ajustes generales del salón"},
+  {id:"help",        label:"Ayuda",            icon:"?", tooltip:"Guías y documentación del panel"},
 ];
 
 const Sidebar = ({active,onNav,onLogout,open,onClose}) => {
@@ -3485,6 +3486,7 @@ const SettingsView = () => {
                 {key:"jue",label:"Jueves"},
                 {key:"vie",label:"Viernes"},
                 {key:"sab",label:"Sábado"},
+                {key:"dom",label:"Domingo"},
               ];
               const fines = admin.noShowFine?.byDay || {};
               const defaultVal = admin.noShowFine?.defaultAmount ?? 0;
@@ -3692,6 +3694,123 @@ const SettingsView = () => {
             ))}
           </div>
         </Card>
+      </div>
+    </div>
+  );
+};
+
+const HelpView = () => {
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+
+  const Step = ({ n, text }) => (
+    <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+      <div style={{
+        width:26,height:26,flexShrink:0,borderRadius:"50%",
+        background:"rgba(194,158,102,0.12)",border:`1px solid ${C.gold}40`,
+        display:"flex",alignItems:"center",justifyContent:"center",
+        fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:C.gold,
+      }}>{n}</div>
+      <div style={{fontSize:14,lineHeight:1.6,color:C.text,paddingTop:3}}>{text}</div>
+    </div>
+  );
+
+  const Section = ({ title, badge, badgeColor, children }) => (
+    <Card>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+        <Mono style={{color:C.gold,fontSize:13}}>{title}</Mono>
+        {badge && (
+          <span style={{
+            padding:"2px 8px",fontSize:10,fontFamily:"'JetBrains Mono',monospace",
+            background:`${badgeColor}18`,border:`1px solid ${badgeColor}40`,
+            color:badgeColor,letterSpacing:"0.08em",textTransform:"uppercase",
+          }}>{badge}</span>
+        )}
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>{children}</div>
+    </Card>
+  );
+
+  return (
+    <div>
+      <PageHeader title="Ayuda" subtitle="Panel · Guías" />
+      <div style={{padding:"24px 32px",display:"flex",flexDirection:"column",gap:20,maxWidth:640}}>
+
+        {(isIos || (!isIos && !isAndroid)) && (
+          <Section title="Notificaciones push" badge="iPhone · iOS" badgeColor={C.gold}>
+            <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
+              En iPhone las notificaciones requieren que el panel esté instalado como app.
+              Solo hay que hacerlo una vez por dispositivo.
+            </div>
+            <Step n="1" text={<>Abre <strong style={{color:C.text}}>/admin</strong> en <strong style={{color:C.text}}>Safari</strong> (no Chrome ni otro navegador).</>} />
+            <Step n="2" text={<>Toca el botón <strong style={{color:C.text}}>Compartir</strong> (el cuadrado con la flecha hacia arriba) en la barra inferior.</>} />
+            <Step n="3" text={<>Selecciona <strong style={{color:C.text}}>"Agregar a inicio"</strong> y confirma.</>} />
+            <Step n="4" text={<>Cierra Safari y abre la app <strong style={{color:C.text}}>JOXE Admin</strong> desde el Home Screen.</>} />
+            <Step n="5" text={<>Inicia sesión, ve a <strong style={{color:C.text}}>Configuración → Notificaciones push</strong> y activa el toggle.</>} />
+            <Step n="6" text={<>Acepta el permiso cuando el sistema lo solicite.</>} />
+            <div style={{
+              padding:"12px 14px",fontSize:12,color:C.muted,lineHeight:1.6,
+              background:"rgba(194,158,102,0.05)",border:`1px solid ${C.gold}20`,
+            }}>
+              A partir de ese momento recibirás una notificación cada vez que alguien haga una reserva, aunque el teléfono esté bloqueado.
+            </div>
+          </Section>
+        )}
+
+        {(isAndroid || (!isIos && !isAndroid)) && (
+          <Section title="Notificaciones push" badge="Android" badgeColor={C.green}>
+            <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
+              En Android no es necesario instalar nada — funciona directamente desde Chrome.
+            </div>
+            <Step n="1" text={<>Abre <strong style={{color:C.text}}>/admin</strong> en <strong style={{color:C.text}}>Chrome</strong>.</>} />
+            <Step n="2" text={<>Inicia sesión con tu contraseña de administrador.</>} />
+            <Step n="3" text={<>Ve a <strong style={{color:C.text}}>Configuración → Notificaciones push</strong> y activa el toggle.</>} />
+            <Step n="4" text={<>Acepta el permiso cuando Chrome lo solicite.</>} />
+            <div style={{
+              padding:"12px 14px",fontSize:12,color:C.muted,lineHeight:1.6,
+              background:"rgba(102,196,153,0.05)",border:`1px solid ${C.green}20`,
+            }}>
+              Las notificaciones llegarán aunque Chrome esté cerrado. No hay que volver a configurarlo.
+            </div>
+          </Section>
+        )}
+
+        {!isIos && !isAndroid && (
+          <Section title="Notificaciones push" badge="Escritorio" badgeColor="#8ab0ff">
+            <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
+              También puedes activar notificaciones en un computador con Chrome o Edge.
+            </div>
+            <Step n="1" text={<>Ve a <strong style={{color:C.text}}>Configuración → Notificaciones push</strong> y activa el toggle.</>} />
+            <Step n="2" text={<>Acepta el permiso del navegador.</>} />
+          </Section>
+        )}
+
+        <Section title="Preguntas frecuentes">
+          {[
+            {
+              q:"¿Cuántos dispositivos pueden recibir notificaciones?",
+              a:"No hay límite. Puedes activarlo en el iPhone del dueño, el Android de un empleado, una tablet en recepción — todos reciben el aviso al mismo tiempo.",
+            },
+            {
+              q:"¿Las notificaciones se detienen si cierro sesión?",
+              a:"No. La suscripción vive de forma independiente a la sesión. Una vez activada, sigue funcionando aunque no estés logueado.",
+            },
+            {
+              q:"¿Cómo desactivo las notificaciones?",
+              a:"Ve a Configuración → Notificaciones push y toca el toggle para desactivarlas en ese dispositivo.",
+            },
+            {
+              q:"En iPhone no aparece el toggle de notificaciones.",
+              a:"Asegúrate de estar abriendo el panel desde el ícono del Home Screen, no desde Safari directamente.",
+            },
+          ].map(({ q, a }) => (
+            <div key={q} style={{borderBottom:`1px solid ${C.bdr}`,paddingBottom:14}}>
+              <div style={{fontSize:13,fontWeight:500,marginBottom:6}}>{q}</div>
+              <div style={{fontSize:13,color:C.muted,lineHeight:1.6}}>{a}</div>
+            </div>
+          ))}
+        </Section>
+
       </div>
     </div>
   );
@@ -4222,6 +4341,7 @@ const AdminPortal = () => {
     employees:    EmployeesView,
     services:     ServicesView,
     settings:     SettingsView,
+    help:         HelpView,
   }[view] || DashboardView;
 
   return (
