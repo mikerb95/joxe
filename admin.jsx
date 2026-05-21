@@ -2710,7 +2710,7 @@ const EmployeesView = () => {
 
   const startEdit = (e) => {
     setEditId(e.id);
-    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})},chairNum:e.chairNum||""});
+    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})}});
   };
 
   const saveEdit = (id) => {
