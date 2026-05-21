@@ -300,11 +300,20 @@ const ChairQRCode = ({ empId, empName, size = 200 }) => {
   const [dataUrl, setDataUrl] = React.useState(null);
 
   React.useEffect(() => {
-    const lib = window.QRCode;
-    if (!lib) return;
-    lib.toDataURL(url, { width: size, margin: 2, color: { dark: "#0C0C0C", light: "#F5F1EA" } })
-      .then(setDataUrl)
-      .catch(() => {});
+    let cancelled = false;
+    const generate = () => {
+      const lib = window.QRCode;
+      if (!lib) return false;
+      lib.toDataURL(url, { width: size, margin: 2, color: { dark: "#0C0C0C", light: "#F5F1EA" } })
+        .then(d => { if (!cancelled) setDataUrl(d); })
+        .catch(() => {});
+      return true;
+    };
+    if (!generate()) {
+      const i = setInterval(() => { if (generate()) clearInterval(i); }, 200);
+      return () => { cancelled = true; clearInterval(i); };
+    }
+    return () => { cancelled = true; };
   }, [url, size]);
 
   const printQR = () => {
@@ -3196,7 +3205,7 @@ const EmpDashboardView = ({emp, onNav}) => {
   const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
   const todayAll = myAppts.filter(a=>a.date===todayD);
-  const pending  = myAppts.filter(a=>a.computedStatus==="pending");
+  const pending  = myAppts.filter(a=>a.computedStatus==="pending"||(a.computedStatus==="scheduled"&&!a.confirmedBy));
   const upcoming = myAppts.filter(a=>a.date>todayD&&a.computedStatus==="scheduled").slice(0,5);
   const todayRevenue = (admin.revenue||[])
     .filter(r=>r.date===todayD&&r.stylist===emp.name)
@@ -3529,9 +3538,9 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
                 </div>
                 <Badge status={a.computedStatus}/>
                 <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
-                  {a.computedStatus==="scheduled"&&!a.confirmedBy && (
+                  {needsConfirm(a) && (
                     <>
-                      <button onClick={()=>confirmAppt(a.id)} style={{
+                      <button onClick={()=>confirmAppt(a.id, a.computedStatus==="pending")} style={{
                         padding:"7px 16px",background:"rgba(102,196,153,0.1)",
                         border:`1px solid ${C.green}40`,color:C.green,
                         cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
