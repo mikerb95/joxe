@@ -3739,18 +3739,33 @@ const SettingsView = ({ onNav }) => {
         <Card>
           <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Estilistas</Mono>
           <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:16}}>
-            {(admin.stylists||[]).map(s=>(
-              <div key={s} style={{
-                display:"flex",justifyContent:"space-between",alignItems:"center",
-                padding:"10px 14px",background:C.s2,border:`1px solid ${C.bdr}`,
-              }}>
-                <span style={{fontSize:14}}>{s}</span>
-                <button onClick={()=>removeStylist(s)} style={{
-                  background:"transparent",border:"none",color:C.muted,
-                  cursor:"pointer",fontSize:16,
-                }}>✕</button>
-              </div>
-            ))}
+            {(admin.stylists||[]).map(s=>{
+              const empMatch = (admin.employees||[]).find(e=>e.name===s);
+              return (
+                <div key={s} style={{
+                  display:"flex",justifyContent:"space-between",alignItems:"center",
+                  padding:"10px 14px",background:C.s2,border:`1px solid ${C.bdr}`,
+                }}>
+                  <span style={{fontSize:14}}>{s}</span>
+                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                    {empMatch && (
+                      <button onClick={()=>onNav("stylist-settings",empMatch.id)} style={{
+                        background:C.s3,border:`1px solid ${C.bdr}`,
+                        color:C.muted,cursor:"pointer",padding:"5px 12px",
+                        fontFamily:"'Outfit',sans-serif",fontSize:10,
+                        letterSpacing:"0.06em",display:"flex",alignItems:"center",gap:5,
+                      }} title="Configurar estilista">
+                        ⚙ Configurar
+                      </button>
+                    )}
+                    <button onClick={()=>removeStylist(s)} style={{
+                      background:"transparent",border:"none",color:C.muted,
+                      cursor:"pointer",fontSize:16,
+                    }}>✕</button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <div style={{display:"flex",gap:10}}>
             <FieldInput value={newStylist} onChange={e=>setNewStylist(e.target.value)}
