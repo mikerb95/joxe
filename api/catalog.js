@@ -38,8 +38,12 @@ export default async function handler(req, res) {
 
     const employees = (admin?.employees || DEFAULT_EMPLOYEES)
       .filter(e => e.active !== false)
-      // Strip PIN and any internal fields before sending publicly
-      .map(({ id, name, role, services: svcs }) => ({ id, name, role, services: svcs || [] }));
+      // Strip PIN — workHours is safe to expose (no sensitive data)
+      .map(({ id, name, role, services: svcs, workHours }) => ({
+        id, name, role,
+        services: svcs || [],
+        ...(workHours ? { workHours } : {}),
+      }));
 
     return res.status(200).json({ services, employees });
   } catch (err) {

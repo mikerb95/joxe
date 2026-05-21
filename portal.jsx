@@ -463,10 +463,13 @@ const BookingPortal = () => {
   const services = catalog.services;
   const employees = catalog.employees;
 
-  // Employees that offer the currently selected service
+  // Employees that offer the currently selected service.
+  // Employees with an empty services array are treated as available for all services.
   const eligibleEmployees = React.useMemo(() => {
     if (!form.serviceId) return employees;
-    return employees.filter(e => (e.services || []).includes(form.serviceId));
+    return employees.filter(e =>
+      !(e.services || []).length || (e.services || []).includes(form.serviceId)
+    );
   }, [form.serviceId, employees]);
 
   // Show next 14 days, skipping closed days (Dom/Lun)

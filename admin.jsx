@@ -1778,19 +1778,23 @@ const CrmView = () => {
 // ==================== BLOCK SLOTS ====================
 const BlockSlotsView = () => {
   const [appts,setAppts] = useAppts();
-  const [date,setDate] = React.useState(todayStr());
+  const [weekOffset,setWeekOffset] = React.useState(0);
   const [reason,setReason] = React.useState("");
-  const [hoveredTime,setHoveredTime] = React.useState(null);
+  const [hovered,setHovered] = React.useState(null); // {date,time}
+  const [selectedDate,setSelectedDate] = React.useState(todayStr());
 
   const ALL_TIMES = ["9:00","9:30","10:00","10:30","11:00","11:30",
     "12:00","12:30","13:00","13:30","14:00","14:30",
     "15:00","15:30","16:00","16:30","17:00","17:30","18:00"];
 
-  const blocked = (appts.blockedSlots||[]).filter(b=>b.date===date);
-  const blockedTimes = new Set(blocked.map(b=>b.time));
+  const weekDates = getWeekDates(weekOffset);
+  const todayD = todayStr();
+  const blockedSlots = appts.blockedSlots || [];
 
-  const toggleSlot = (time) => {
-    if (blockedTimes.has(time)) {
+  const isBlocked = (date,time) => blockedSlots.some(b=>b.date===date&&b.time===time);
+
+  const toggleSlot = (date,time) => {
+    if (isBlocked(date,time)) {
       setAppts(s=>({...s, blockedSlots:(s.blockedSlots||[]).filter(b=>!(b.date===date&&b.time===time))}));
     } else {
       setAppts(s=>({...s, blockedSlots:[...(s.blockedSlots||[]),{
@@ -1799,95 +1803,231 @@ const BlockSlotsView = () => {
     }
   };
 
-  const clearDay = () => {
+  const clearDay = (date) => {
     if (!confirm(`¿Desbloquear todas las horas del ${fmtDateShort(date)}?`)) return;
     setAppts(s=>({...s, blockedSlots:(s.blockedSlots||[]).filter(b=>b.date!==date)}));
   };
 
-  const allBlockedDates = [...new Set((appts.blockedSlots||[]).map(b=>b.date))].sort().reverse();
+  const blockedForDay = (date) => blockedSlots.filter(b=>b.date===date);
+  const selectedBlocked = blockedForDay(selectedDate);
+
+  const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+  const weekLabel = () => {
+    const first = weekDates[0]; const last = weekDates[weekDates.length-1];
+    const f = new Date(first+"T12:00"); const l = new Date(last+"T12:00");
+    return `${f.getDate()} – ${l.getDate()} ${l.toLocaleDateString("es-CO",{month:"long",year:"numeric"})}`;
+  };
 
   return (
     <div>
       <PageHeader title="Bloquear horas" subtitle="Agenda · Disponibilidad" />
-      <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 320px",gap:24}}>
-        <Card>
-          <div style={{display:"flex",gap:16,alignItems:"flex-end",marginBottom:24,flexWrap:"wrap"}}>
-            <FieldInput label="Fecha" type="date" value={date}
-              onChange={e=>setDate(e.target.value)} style={{minWidth:180}} />
-            <FieldInput label="Motivo (opcional)" value={reason}
-              onChange={e=>setReason(e.target.value)} placeholder="Almuerzo, descanso…"
-              style={{flex:1}} />
-            {blocked.length>0 && (
-              <Btn variant="danger" small onClick={clearDay}>
-                Desbloquear todo
-              </Btn>
-            )}
+      <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 280px",gap:24}}>
+
+        {/* Weekly grid */}
+        <Card style={{padding:0,overflow:"hidden"}}>
+          {/* Week nav header */}
+          <div style={{
+            display:"flex",alignItems:"center",justifyContent:"space-between",
+            padding:"16px 20px",borderBottom:`1px solid ${C.bdr}`,
+          }}>
+            <button onClick={()=>setWeekOffset(o=>o-1)} style={{
+              background:"transparent",border:`1px solid ${C.bdr}`,color:C.text,
+              cursor:"pointer",padding:"6px 12px",fontSize:14,
+            }}>←</button>
+            <div style={{textAlign:"center"}}>
+              <Mono style={{color:C.gold,fontSize:10}}>{weekLabel()}</Mono>
+              {weekOffset!==0 && (
+                <button onClick={()=>setWeekOffset(0)} style={{
+                  background:"transparent",border:"none",color:C.muted,
+                  cursor:"pointer",fontSize:10,marginTop:4,display:"block",
+                  fontFamily:"'Outfit',sans-serif",
+                }}>Volver a esta semana</button>
+              )}
+            </div>
+            <button onClick={()=>setWeekOffset(o=>o+1)} style={{
+              background:"transparent",border:`1px solid ${C.bdr}`,color:C.text,
+              cursor:"pointer",padding:"6px 12px",fontSize:14,
+            }}>→</button>
           </div>
 
-          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:12}}>
-            {fmtDateMed(date)} — haz clic para bloquear/desbloquear
-          </Mono>
+          {/* Reason input */}
+          <div style={{padding:"12px 20px",borderBottom:`1px solid ${C.bdr}`,display:"flex",gap:12,alignItems:"center"}}>
+            <Mono style={{color:C.muted,fontSize:8,whiteSpace:"nowrap"}}>Motivo</Mono>
+            <input value={reason} onChange={e=>setReason(e.target.value)}
+              placeholder="Almuerzo, descanso… (opcional)"
+              style={{
+                flex:1,background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,
+                padding:"6px 10px",fontFamily:"'Outfit',sans-serif",fontSize:12,
+                outline:"none",
+              }} />
+          </div>
 
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(100px,1fr))",gap:8}}>
-            {ALL_TIMES.map(t=>{
-              const isBlocked = blockedTimes.has(t);
-              const isBookingTime = TIMES.includes(t);
-              return (
-                <button key={t} onClick={()=>toggleSlot(t)}
-                  onMouseEnter={()=>setHoveredTime(t)}
-                  onMouseLeave={()=>setHoveredTime(null)}
-                  style={{
-                    padding:"12px 8px",
-                    background:isBlocked?"rgba(196,102,102,0.15)":
-                               hoveredTime===t?"rgba(194,158,102,0.1)":C.s2,
-                    border:`1px solid ${isBlocked?C.red+"60":isBookingTime?C.gold+"40":C.bdr}`,
-                    color:isBlocked?C.red:C.text,cursor:"pointer",
-                    fontFamily:"'JetBrains Mono',monospace",fontSize:13,
-                    display:"flex",flexDirection:"column",alignItems:"center",gap:4,
-                    transition:"all 0.15s",
+          {/* Calendar grid */}
+          <div style={{overflowX:"auto"}}>
+            <div style={{
+              display:"grid",
+              gridTemplateColumns:`52px repeat(${weekDates.length},1fr)`,
+              minWidth:520,
+            }}>
+              {/* Header row: day names */}
+              <div style={{
+                background:C.s1,borderBottom:`1px solid ${C.bdr}`,
+                borderRight:`1px solid ${C.bdr}`,
+              }} />
+              {weekDates.map((d,i)=>{
+                const isToday = d===todayD;
+                const isSelected = d===selectedDate;
+                const cnt = blockedForDay(d).length;
+                return (
+                  <button key={d} onClick={()=>setSelectedDate(d)} style={{
+                    background:isToday?`rgba(194,158,102,0.07)`:isSelected?C.s2:C.s1,
+                    borderBottom:`1px solid ${C.bdr}`,
+                    borderRight:`1px solid ${C.bdr}`,
+                    borderLeft:"none",borderTop:"none",
+                    padding:"10px 4px",cursor:"pointer",
+                    textAlign:"center",
+                    outline:isSelected?`1px solid ${C.gold+"50"}`:"none",
+                    outlineOffset:-1,
                   }}>
-                  {t}
-                  {isBlocked && <span style={{fontSize:9,color:C.red}}>BLOQ</span>}
-                  {!isBlocked && isBookingTime && <span style={{fontSize:8,color:C.gold+"80"}}>★</span>}
-                </button>
-              );
-            })}
+                    <Mono style={{
+                      color:isToday?C.gold:C.muted,
+                      fontSize:8,display:"block",
+                    }}>{DAY_LABELS[i]}</Mono>
+                    <span style={{
+                      color:isToday?C.gold:C.text,
+                      fontSize:13,fontFamily:"'Outfit',sans-serif",
+                      fontWeight:isToday?600:400,
+                    }}>
+                      {new Date(d+"T12:00").getDate()}
+                    </span>
+                    {cnt>0 && (
+                      <Mono style={{
+                        display:"block",fontSize:7,
+                        color:C.red,marginTop:2,
+                      }}>{cnt}✕</Mono>
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Time rows */}
+              {ALL_TIMES.map(t=>{
+                const isBookingTime = TIMES.includes(t);
+                return (
+                  <React.Fragment key={t}>
+                    {/* Time label */}
+                    <div style={{
+                      background:C.s1,
+                      borderBottom:`1px solid ${C.bdr}`,
+                      borderRight:`1px solid ${C.bdr}`,
+                      display:"flex",alignItems:"center",justifyContent:"flex-end",
+                      padding:"0 8px",
+                    }}>
+                      <Mono style={{
+                        color:isBookingTime?C.gold+"90":C.muted,
+                        fontSize:8,
+                      }}>{t}</Mono>
+                    </div>
+                    {/* Day cells */}
+                    {weekDates.map(d=>{
+                      const blocked = isBlocked(d,t);
+                      const isHov = hovered&&hovered.date===d&&hovered.time===t;
+                      const isToday = d===todayD;
+                      return (
+                        <button key={d} onClick={()=>toggleSlot(d,t)}
+                          onMouseEnter={()=>setHovered({date:d,time:t})}
+                          onMouseLeave={()=>setHovered(null)}
+                          title={blocked?"Haz clic para desbloquear":"Haz clic para bloquear"}
+                          style={{
+                            background:blocked?"rgba(196,102,102,0.18)":
+                                       isHov?"rgba(194,158,102,0.08)":
+                                       isToday?"rgba(194,158,102,0.03)":"transparent",
+                            border:"none",
+                            borderBottom:`1px solid ${C.bdr}`,
+                            borderRight:`1px solid ${C.bdr}`,
+                            cursor:"pointer",
+                            height:32,
+                            display:"flex",alignItems:"center",justifyContent:"center",
+                            transition:"background 0.1s",
+                            position:"relative",
+                          }}>
+                          {blocked && (
+                            <div style={{
+                              width:6,height:6,borderRadius:"50%",
+                              background:C.red,opacity:0.8,
+                            }}/>
+                          )}
+                          {!blocked && isBookingTime && !isHov && (
+                            <div style={{
+                              width:3,height:3,borderRadius:"50%",
+                              background:C.gold,opacity:0.25,
+                            }}/>
+                          )}
+                          {isHov && !blocked && (
+                            <span style={{fontSize:14,color:C.muted,lineHeight:1}}>+</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
-          <div style={{marginTop:16,display:"flex",gap:20,flexWrap:"wrap"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{width:8,height:8,background:C.red,opacity:0.6}}/>
-              <Mono style={{color:C.muted,fontSize:9}}>Bloqueado</Mono>
+
+          {/* Legend */}
+          <div style={{padding:"12px 20px",display:"flex",gap:20,borderTop:`1px solid ${C.bdr}`}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:C.red,opacity:0.8}}/>
+              <Mono style={{color:C.muted,fontSize:8}}>Bloqueado</Mono>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-              <div style={{width:8,height:8,background:C.gold,opacity:0.4}}/>
-              <Mono style={{color:C.muted,fontSize:9}}>Hora de reserva (★)</Mono>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{width:4,height:4,borderRadius:"50%",background:C.gold,opacity:0.5}}/>
+              <Mono style={{color:C.muted,fontSize:8}}>Hora de reserva</Mono>
             </div>
+            <Mono style={{color:C.muted,fontSize:8,marginLeft:"auto"}}>Haz clic en celda para bloquear/desbloquear</Mono>
           </div>
         </Card>
 
+        {/* Sidebar: selected day details */}
         <div style={{display:"flex",flexDirection:"column",gap:16}}>
           <Card>
-            <Mono style={{color:C.gold,display:"block",marginBottom:12}}>
-              Bloqueado hoy · {blocked.length}
-            </Mono>
-            {blocked.length===0 ? (
-              <div style={{color:C.muted,fontSize:12}}>Sin bloqueos para esta fecha.</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div>
+                <Mono style={{color:C.gold,display:"block",fontSize:9}}>
+                  {fmtDateMed(selectedDate)}
+                </Mono>
+                <Mono style={{color:C.muted,fontSize:8,display:"block",marginTop:2}}>
+                  {selectedBlocked.length} bloqueado{selectedBlocked.length!==1?"s":""}
+                </Mono>
+              </div>
+              {selectedBlocked.length>0 && (
+                <button onClick={()=>clearDay(selectedDate)} style={{
+                  background:"transparent",border:`1px solid ${C.red+"50"}`,
+                  color:C.red,cursor:"pointer",fontSize:9,padding:"4px 8px",
+                  fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.1em",
+                }}>Limpiar</button>
+              )}
+            </div>
+            {selectedBlocked.length===0 ? (
+              <div style={{color:C.muted,fontSize:12}}>Sin bloqueos para este día.</div>
             ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {blocked.sort((a,b)=>a.time.localeCompare(b.time)).map(b=>(
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {selectedBlocked.sort((a,b)=>a.time.localeCompare(b.time)).map(b=>(
                   <div key={b.id} style={{
                     display:"flex",justifyContent:"space-between",alignItems:"center",
-                    padding:"8px 12px",background:C.s2,
+                    padding:"6px 10px",background:C.s2,
                   }}>
                     <div>
-                      <Mono style={{color:C.red,fontSize:11}}>{b.time}</Mono>
+                      <Mono style={{color:C.red,fontSize:10}}>{b.time}</Mono>
                       {b.reason && b.reason!=="No disponible" && (
                         <div style={{fontSize:10,color:C.muted,marginTop:2}}>{b.reason}</div>
                       )}
                     </div>
-                    <button onClick={()=>toggleSlot(b.time)} style={{
+                    <button onClick={()=>toggleSlot(b.date,b.time)} style={{
                       background:"transparent",border:"none",color:C.muted,
-                      cursor:"pointer",fontSize:14,padding:"2px 6px",
+                      cursor:"pointer",fontSize:13,padding:"2px 6px",
                     }}>✕</button>
                   </div>
                 ))}
@@ -1896,26 +2036,29 @@ const BlockSlotsView = () => {
           </Card>
 
           <Card>
-            <Mono style={{color:C.muted,display:"block",marginBottom:12,fontSize:9}}>
-              Otros días con bloqueos
+            <Mono style={{color:C.muted,display:"block",marginBottom:10,fontSize:8}}>
+              Semana actual — total bloqueado
             </Mono>
-            {allBlockedDates.filter(d=>d!==date).slice(0,8).map(d=>{
-              const cnt = (appts.blockedSlots||[]).filter(b=>b.date===d).length;
+            {weekDates.map(d=>{
+              const cnt = blockedForDay(d).length;
+              const isToday = d===todayD;
+              const isSelected = d===selectedDate;
               return (
-                <button key={d} onClick={()=>setDate(d)} style={{
+                <button key={d} onClick={()=>setSelectedDate(d)} style={{
                   display:"flex",justifyContent:"space-between",alignItems:"center",
-                  width:"100%",padding:"8px 0",background:"transparent",border:"none",
-                  borderBottom:`1px solid ${C.bdr}`,cursor:"pointer",color:C.text,
-                  fontFamily:"'Outfit',sans-serif",fontSize:13,
+                  width:"100%",padding:"7px 0",background:"transparent",border:"none",
+                  borderBottom:`1px solid ${C.bdr}`,cursor:"pointer",
+                  color:isSelected?C.gold:isToday?C.gold+"90":C.text,
+                  fontFamily:"'Outfit',sans-serif",fontSize:12,
                 }}>
-                  <span>{fmtDateMed(d)}</span>
-                  <Mono style={{color:C.red,fontSize:10}}>{cnt} bloq</Mono>
+                  <span style={{fontWeight:isSelected?600:400}}>{fmtDateMed(d)}</span>
+                  {cnt>0
+                    ? <Mono style={{color:C.red,fontSize:9}}>{cnt} bloq</Mono>
+                    : <Mono style={{color:C.muted+"60",fontSize:9}}>libre</Mono>
+                  }
                 </button>
               );
             })}
-            {allBlockedDates.filter(d=>d!==date).length===0 && (
-              <div style={{fontSize:12,color:C.muted}}>Sin otros días bloqueados.</div>
-            )}
           </Card>
         </div>
       </div>
