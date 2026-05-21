@@ -2541,6 +2541,12 @@ const EmployeesView = () => {
               })}
             </div>
           </div>
+          <div style={{marginBottom:14}}>
+            <WorkHoursEditor
+              value={newEmp.workHours}
+              onChange={wh=>setNewEmp(e=>({...e,workHours:wh}))}
+            />
+          </div>
           <div style={{display:"flex",gap:10}}>
             <Btn onClick={addEmployee} disabled={!newEmp.name.trim()}>Agregar empleado</Btn>
             <Btn variant="ghost" onClick={()=>setShowAdd(false)}>Cancelar</Btn>
@@ -2630,6 +2636,11 @@ const EmployeesView = () => {
                         ))}
                       </div>
                     )}
+                    {emp.workHours && (
+                      <div style={{marginTop:8}}>
+                        <WorkHoursSummary workHours={emp.workHours} />
+                      </div>
+                    )}
                     {chairQROpen===emp.id && (
                       <div style={{
                         marginTop:16,padding:"24px",
@@ -2685,6 +2696,12 @@ const EmployeesView = () => {
                           }}>{s.name}</button>
                         );
                       })}
+                    </div>
+                    <div style={{marginBottom:14}}>
+                      <WorkHoursEditor
+                        value={editForm.workHours}
+                        onChange={wh=>setEditForm(f=>({...f,workHours:wh}))}
+                      />
                     </div>
                     <div style={{display:"flex",gap:8}}>
                       <Btn small onClick={()=>saveEdit(emp.id)}>Guardar</Btn>
