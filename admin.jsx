@@ -318,8 +318,10 @@ const pseudoQR = (text) => {
 
 // Real QR code using the qrcode library (loaded via CDN in Admin.html)
 // value = full URL to encode; empName = label shown al imprimir
-const ChairQRCode = ({ empId, empName, size = 200 }) => {
-  const url = `${window.location.origin}/CheckIn.html#chair-${empId}`;
+const ChairQRCode = ({ empId, empName, chairNum, size = 200 }) => {
+  const url = chairNum
+    ? `${window.location.origin}/CheckIn.html#puesto-${chairNum}`
+    : `${window.location.origin}/CheckIn.html#chair-${empId}`;
   const [dataUrl, setDataUrl] = React.useState(null);
   const [showUrl, setShowUrl] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
@@ -2826,6 +2828,13 @@ const EmployeesView = () => {
                             background:"rgba(194,158,102,0.1)",border:`1px solid ${C.gold}30`,
                             padding:"2px 8px",display:"inline-block",
                           }}>{emp.role}</Mono>
+                          {emp.chairNum && (
+                            <Mono style={{
+                              fontSize:9,color:C.muted,
+                              background:C.s3,border:`1px solid ${C.bdr}`,
+                              padding:"2px 8px",display:"inline-block",
+                            }}>Puesto {emp.chairNum}</Mono>
+                          )}
                           <Mono style={{
                             fontSize:9,
                             color:emp.pin?C.green:C.muted,
@@ -2885,18 +2894,20 @@ const EmployeesView = () => {
                         background:C.s2,border:`1px solid ${C.bdr}`,
                         display:"flex",gap:32,alignItems:"flex-start",flexWrap:"wrap",
                       }}>
-                        <ChairQRCode empId={emp.id} empName={emp.name} size={180} />
+                        <ChairQRCode empId={emp.id} empName={emp.name} chairNum={emp.chairNum} size={180} />
                         <div style={{flex:1,minWidth:180,paddingTop:8}}>
-                          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>URL codificada</Mono>
+                          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>URL codificada · Puesto {emp.chairNum||"—"}</Mono>
                           <div style={{
                             fontFamily:"'JetBrains Mono',monospace",fontSize:10,
                             color:C.gold,background:C.s1,border:`1px solid ${C.bdr}`,
                             padding:"10px 14px",wordBreak:"break-all",lineHeight:1.6,
                           }}>
-                            {window.location.origin}/CheckIn.html#chair-{emp.id}
+                            {emp.chairNum
+                              ? `${window.location.origin}/CheckIn.html#puesto-${emp.chairNum}`
+                              : `${window.location.origin}/CheckIn.html#chair-${emp.id}`}
                           </div>
                           <Mono style={{color:C.muted,fontSize:9,display:"block",lineHeight:1.6,marginTop:12}}>
-                            Este QR nunca cambia. Imprímelo y colócalo en el espejo de la silla.
+                            El QR está atado al puesto {emp.chairNum||"(sin número)"}. Si cambia el trabajador, el mismo QR funciona con el nuevo empleado asignado a este puesto.
                           </Mono>
                         </div>
                       </div>
@@ -3985,7 +3996,7 @@ const SettingsView = ({ onNav }) => {
         <Card style={{maxWidth:"none"}}>
           <Mono style={{color:C.gold,display:"block",marginBottom:4}}>QR de puestos</Mono>
           <div style={{fontSize:13,color:C.muted,marginBottom:20,lineHeight:1.5}}>
-            Un QR por silla. Imprime y pega en el espejo — nunca cambian.
+            Un QR por puesto. Imprime y pega en el espejo — el QR está atado al número de puesto, no al empleado. Si cambia el trabajador, el mismo QR sigue funcionando.
           </div>
           <div style={{display:"flex",flexWrap:"wrap",gap:32}}>
             {(admin.employees||[]).filter(e=>e.active!==false).map(emp=>(
@@ -3994,9 +4005,15 @@ const SettingsView = ({ onNav }) => {
                 padding:"24px 20px",display:"flex",flexDirection:"column",
                 alignItems:"center",gap:16,minWidth:200,
               }}>
+                {emp.chairNum && (
+                  <Mono style={{fontSize:9,color:C.gold,background:"rgba(194,158,102,0.1)",
+                    border:`1px solid ${C.gold}30`,padding:"2px 10px"}}>
+                    PUESTO {emp.chairNum}
+                  </Mono>
+                )}
                 <Mono style={{color:C.muted,fontSize:9}}>{emp.role}</Mono>
                 <div style={{fontFamily:"'Marcellus',serif",fontSize:20,color:C.text}}>{emp.name}</div>
-                <ChairQRCode empId={emp.id} empName={emp.name} size={160} />
+                <ChairQRCode empId={emp.id} empName={emp.name} chairNum={emp.chairNum} size={160} />
               </div>
             ))}
           </div>
