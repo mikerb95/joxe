@@ -1974,33 +1974,43 @@ const BlockSlotsView = () => {
                     </div>
                     {/* Day cells */}
                     {weekDates.map(d=>{
-                      const blocked = isBlocked(d,t);
+                      const blocks = visibleBlocks(d,t);
+                      const blocked = blocks.length>0;
+                      const blockColor = blocked
+                        ? (blocks[0].employeeId ? empColor(blocks[0].employeeId) : C.red)
+                        : C.red;
                       const isHov = hovered&&hovered.date===d&&hovered.time===t;
                       const isToday = d===todayD;
+                      const blockTitle = blocked
+                        ? blocks.map(b=>{
+                            const emp = employees.find(e=>e.id===b.employeeId);
+                            return `${emp?emp.name:"Todos"}: ${b.reason||"No disponible"}`;
+                          }).join(" · ")
+                        : "Haz clic para bloquear";
                       return (
                         <button key={d} onClick={()=>toggleSlot(d,t)}
                           onMouseEnter={()=>setHovered({date:d,time:t})}
                           onMouseLeave={()=>setHovered(null)}
-                          title={blocked?"Haz clic para desbloquear":"Haz clic para bloquear"}
+                          title={blockTitle}
                           style={{
-                            background:blocked?"rgba(196,102,102,0.18)":
+                            background:blocked?blockColor+"22":
                                        isHov?"rgba(194,158,102,0.08)":
                                        isToday?"rgba(194,158,102,0.03)":"transparent",
                             border:"none",
                             borderBottom:`1px solid ${C.bdr}`,
                             borderRight:`1px solid ${C.bdr}`,
                             cursor:"pointer",
-                            height:32,
                             display:"flex",alignItems:"center",justifyContent:"center",
+                            gap:2,
                             transition:"background 0.1s",
-                            position:"relative",
                           }}>
-                          {blocked && (
-                            <div style={{
-                              width:6,height:6,borderRadius:"50%",
-                              background:C.red,opacity:0.8,
+                          {blocked && blocks.map((b,bi)=>(
+                            <div key={bi} style={{
+                              width:7,height:7,borderRadius:"50%",
+                              background:b.employeeId?empColor(b.employeeId):C.red,
+                              opacity:0.9,flexShrink:0,
                             }}/>
-                          )}
+                          ))}
                           {!blocked && isBookingTime && !isHov && (
                             <div style={{
                               width:3,height:3,borderRadius:"50%",
@@ -2008,7 +2018,7 @@ const BlockSlotsView = () => {
                             }}/>
                           )}
                           {isHov && !blocked && (
-                            <span style={{fontSize:14,color:C.muted,lineHeight:1}}>+</span>
+                            <span style={{fontSize:12,color:C.muted,lineHeight:1}}>+</span>
                           )}
                         </button>
                       );
@@ -2020,16 +2030,18 @@ const BlockSlotsView = () => {
           </div>
 
           {/* Legend */}
-          <div style={{padding:"12px 20px",display:"flex",gap:20,borderTop:`1px solid ${C.bdr}`}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:C.red,opacity:0.8}}/>
-              <Mono style={{color:C.muted,fontSize:8}}>Bloqueado</Mono>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <div style={{padding:"12px 20px",display:"flex",gap:16,flexWrap:"wrap",borderTop:`1px solid ${C.bdr}`,alignItems:"center"}}>
+            {employees.map((e,i)=>(
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:5}}>
+                <div style={{width:7,height:7,borderRadius:"50%",background:EMP_COLORS[i%EMP_COLORS.length],opacity:0.9}}/>
+                <Mono style={{color:C.muted,fontSize:8}}>{e.name}</Mono>
+              </div>
+            ))}
+            <div style={{display:"flex",alignItems:"center",gap:5}}>
               <div style={{width:4,height:4,borderRadius:"50%",background:C.gold,opacity:0.5}}/>
               <Mono style={{color:C.muted,fontSize:8}}>Hora de reserva</Mono>
             </div>
-            <Mono style={{color:C.muted,fontSize:8,marginLeft:"auto"}}>Haz clic en celda para bloquear/desbloquear</Mono>
+            <Mono style={{color:C.muted,fontSize:8,marginLeft:"auto"}}>Clic para bloquear/desbloquear</Mono>
           </div>
         </Card>
 
