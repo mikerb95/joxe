@@ -457,11 +457,25 @@ const BookingPortal = () => {
   const [step, setStep] = React.useState(initial.step);
   const [form, setForm] = React.useState(initial.form);
   const [ticket, setTicket] = React.useState(null);
+  const [secsLeft, setSecsLeft] = React.useState(null);
 
   // Auto-save form/step to sessionStorage on every change (so refresh keeps the draft)
   React.useEffect(() => {
     try { sessionStorage.setItem(BOOKING_DRAFT_KEY, JSON.stringify({ form, step })); } catch {}
   }, [form, step]);
+
+  // 15-min countdown once ticket is created
+  const CLIENT_DEADLINE_MS = 15 * 60 * 1000;
+  React.useEffect(() => {
+    if (!ticket) return;
+    const tick = () => {
+      const remaining = Math.max(0, CLIENT_DEADLINE_MS - (Date.now() - ticket.createdAt));
+      setSecsLeft(Math.floor(remaining / 1000));
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [ticket]);
 
   const services = catalog.services;
   const employees = catalog.employees;
@@ -963,9 +977,37 @@ const BookingPortal = () => {
               fontFamily: "'Marcellus', serif", fontSize: 44, fontWeight: 400,
               margin: "16px 0 8px", letterSpacing: "-0.01em", lineHeight: 1.1,
             }}>Casi listo, <em style={{ color: "#C29E66" }}>{ticket.name.split(" ")[0]}</em>.</h1>
-            <p style={{ fontSize: 14, color: "rgba(12,12,12,0.55)", margin: "0 0 32px", lineHeight: 1.6 }}>
+            <p style={{ fontSize: 14, color: "rgba(12,12,12,0.55)", margin: "0 0 20px", lineHeight: 1.6 }}>
               Tu cita está guardada pero <strong>pendiente de confirmar</strong>.
             </p>
+
+            {/* Countdown warning */}
+            {secsLeft !== null && (
+              <div style={{
+                padding: "14px 18px", marginBottom: 24,
+                background: secsLeft > 0 ? "rgba(196,102,102,0.07)" : "rgba(196,102,102,0.15)",
+                border: `1px solid rgba(196,102,102,${secsLeft > 0 ? 0.35 : 0.6})`,
+                display: "flex", alignItems: "center", gap: 14,
+              }}>
+                <div style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 26, fontWeight: 700, letterSpacing: "0.05em",
+                  color: secsLeft > 0 ? "#C46666" : "#C46666", flexShrink: 0,
+                  minWidth: 64, textAlign: "center",
+                }}>
+                  {secsLeft > 0
+                    ? `${String(Math.floor(secsLeft / 60)).padStart(2,"0")}:${String(secsLeft % 60).padStart(2,"0")}`
+                    : "00:00"
+                  }
+                </div>
+                <div style={{ fontFamily: "'Outfit', sans-serif", fontSize: 13, lineHeight: 1.5, color: "#0C0C0C" }}>
+                  {secsLeft > 0
+                    ? <>Tienes <strong>{Math.floor(secsLeft / 60)} min {secsLeft % 60} seg</strong> para enviar el comprobante. Pasado este tiempo, la reserva será cancelada automáticamente.</>
+                    : <><strong>Tiempo agotado.</strong> Esta reserva ya no puede confirmarse. Si aún deseas tu cita, vuelve a agendar.</>
+                  }
+                </div>
+              </div>
+            )}
 
             {/* Resumen */}
             <div style={{
