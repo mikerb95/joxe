@@ -2415,9 +2415,14 @@ const CheckInPortal = () => {
   const [store, setStore] = useStore();
   const catalog = useCatalog();
 
-  const hash   = window.location.hash.replace('#', '');
-  const empId  = hash.startsWith('chair-') ? hash.replace('chair-', '') : null;
-  const employee = empId ? (catalog.employees.find(e => e.id === empId) || null) : null;
+  const hash      = window.location.hash.replace('#', '');
+  const chairNum  = hash.startsWith('puesto-') ? Number(hash.replace('puesto-', '')) : null;
+  const empId     = hash.startsWith('chair-') ? hash.replace('chair-', '') : null;
+  const employee  = chairNum
+    ? (catalog.employees.find(e => e.chairNum === chairNum && e.active !== false) || null)
+    : empId
+      ? (catalog.employees.find(e => e.id === empId) || null)
+      : null;
 
   const isAdmin = !!sessionStorage.getItem("joxe_admin_session");
 

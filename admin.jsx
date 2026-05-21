@@ -2708,7 +2708,7 @@ const EmployeesView = () => {
 
   const startEdit = (e) => {
     setEditId(e.id);
-    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})}});
+    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})},chairNum:e.chairNum||""});
   };
 
   const saveEdit = (id) => {
@@ -2915,7 +2915,7 @@ const EmployeesView = () => {
                   </div>
                 ) : (
                   <div style={{padding:"18px 20px",background:C.s2}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,maxWidth:680,marginBottom:14}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 80px",gap:12,maxWidth:740,marginBottom:14}}>
                       <FieldInput label="Nombre" value={editForm.name}
                         onChange={e=>setEditForm({...editForm,name:e.target.value})} />
                       <FieldSelect label="Rol" value={editForm.role}
@@ -2929,6 +2929,13 @@ const EmployeesView = () => {
                         <div style={{fontSize:10,color:C.muted,marginTop:4}}>
                           {editForm.pin ? `${editForm.pin.length} dígitos configurados` : "Sin PIN · no puede iniciar sesión"}
                         </div>
+                      </div>
+                      <div>
+                        <FieldInput label="Puesto #" type="number" min="1"
+                          value={editForm.chairNum||""}
+                          placeholder="1"
+                          onChange={e=>setEditForm({...editForm,chairNum:Number(e.target.value)||""})} />
+                        <div style={{fontSize:10,color:C.muted,marginTop:4}}>N.° de silla</div>
                       </div>
                     </div>
                     <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios</Mono>
