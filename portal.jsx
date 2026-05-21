@@ -1756,7 +1756,7 @@ const CuentaPortal = () => {
                 }}
               />
               {error && (
-                <div style={{ marginTop: 10, fontSize: 12, color: "#C46666" }}>{error}</div>
+                <div id="cuenta-cedula-err" role="alert" style={{ marginTop: 10, fontSize: 12, color: "#C46666" }}>{error}</div>
               )}
               <button
                 onClick={login}
@@ -2841,15 +2841,17 @@ const CheckInClientView = ({ store, setStore, employee, headerRight }) => {
               Ingresa tu cédula para confirmar tu asistencia al servicio de hoy.
             </p>
             <div style={{ background: "#141212", border: "1px solid rgba(245,241,234,0.1)", padding: 32 }}>
-              <label style={{ display: "block", fontFamily: "'JetBrains Mono', monospace",
+              <label htmlFor="checkin-cedula" style={{ display: "block", fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 9, letterSpacing: "0.18em", textTransform: "uppercase",
                 color: "#C29E66", marginBottom: 10 }}>Cédula de ciudadanía</label>
-              <input
+              <input id="checkin-cedula" name="cedula"
                 type="tel"
                 value={cedula}
                 onChange={e => { setCedula(e.target.value.replace(/\D/g, '').slice(0, 12)); setNotFound(false); }}
                 onKeyDown={e => e.key === 'Enter' && confirmVisit()}
                 placeholder="1234567890"
+                aria-invalid={notFound}
+                aria-describedby={notFound ? "checkin-cedula-err" : undefined}
                 autoFocus
                 style={{ width: "100%", background: "#0C0C0C",
                   border: `1px solid ${notFound ? "#C46666" : "rgba(245,241,234,0.18)"}`,
@@ -2858,9 +2860,10 @@ const CheckInClientView = ({ store, setStore, employee, headerRight }) => {
                   letterSpacing: "0.1em", marginBottom: notFound ? 10 : 20 }}
               />
               {notFound && (
-                <div style={{ color: "#C46666", fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase",
-                  marginBottom: 20, lineHeight: 1.5 }}>
+                <div id="checkin-cedula-err" role="alert"
+                  style={{ color: "#C46666", fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase",
+                    marginBottom: 20, lineHeight: 1.5 }}>
                   No encontramos una cita para hoy con esa cédula
                   {employee ? ` en la silla de ${employee.name}` : ""}.
                 </div>
@@ -3057,13 +3060,16 @@ const AgendaPortal = () => {
 
             {selId && (
               <div style={{ marginBottom: 24 }}>
-                <PMono style={{ color: "#C29E66", display: "block", marginBottom: 8 }}>PIN</PMono>
-                <input
+                <label htmlFor="agenda-pin">
+                  <PMono style={{ color: "#C29E66", display: "block", marginBottom: 8 }}>PIN</PMono>
+                </label>
+                <input id="agenda-pin" name="pin" autoComplete="off"
                   type="password" inputMode="numeric" maxLength={6}
                   value={pin}
                   onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setErr(""); }}
                   onKeyDown={e => e.key === "Enter" && pin && login()}
-                  placeholder="· · · ·"
+                  aria-label="PIN de empleado"
+                  placeholder="Ingresa tu PIN"
                   style={{
                     width: "100%", padding: "18px", textAlign: "center",
                     fontFamily: "'JetBrains Mono', monospace", fontSize: 28,
