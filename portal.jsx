@@ -2253,8 +2253,222 @@ const CuentaPortal = () => {
 // ============================================================
 // PAGE 0 — HOME
 // ============================================================
+// ── Portal auth gate ─────────────────────────────────────────
+const PORTAL_SES_ADMIN = "joxe_admin_session";
+const PORTAL_SES_EMP   = "joxe_agenda_session";
+
+const isPortalAuthed = () =>
+  !!sessionStorage.getItem(PORTAL_SES_ADMIN) ||
+  !!sessionStorage.getItem(PORTAL_SES_EMP);
+
+const PortalLoginGate = ({ onAuth }) => {
+  const [tab, setTab]       = React.useState("admin"); // "admin" | "empleado"
+  const [pw, setPw]         = React.useState("");
+  const [empList, setEmpList] = React.useState([]);
+  const [selId, setSelId]   = React.useState("");
+  const [pin, setPin]       = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [err, setErr]       = React.useState("");
+
+  React.useEffect(() => {
+    fetch("/api/catalog")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.employees) setEmpList(d.employees.filter(e => e.active !== false)); })
+      .catch(() => {});
+  }, []);
+
+  const loginAdmin = async () => {
+    if (!pw) return;
+    setLoading(true); setErr("");
+    try {
+      const res  = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) { setErr("Contraseña incorrecta."); setPw(""); setLoading(false); return; }
+      sessionStorage.setItem(PORTAL_SES_ADMIN, pw);
+      onAuth();
+    } catch { setErr("Error de conexión."); }
+    setLoading(false);
+  };
+
+  const loginEmp = async () => {
+    if (!selId || !pin) return;
+    setLoading(true); setErr("");
+    try {
+      const res  = await fetch("/api/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", empId: selId, pin }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErr(data.error || "PIN incorrecto."); setPin(""); setLoading(false); return; }
+      sessionStorage.setItem(PORTAL_SES_EMP, JSON.stringify(data.employee));
+      onAuth();
+    } catch { setErr("Error de conexión."); }
+    setLoading(false);
+  };
+
+  const tabStyle = (active) => ({
+    flex: 1, padding: "10px 0", background: "none", border: "none",
+    borderBottom: active ? "2px solid #C29E66" : "2px solid transparent",
+    color: active ? "#C29E66" : "rgba(245,241,234,0.45)",
+    fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
+    letterSpacing: "0.2em", textTransform: "uppercase", cursor: "pointer",
+    transition: "color 0.2s",
+  });
+
+  return (
+    <PortalShell tone="noir" header={
+      <PortalHeader subtitle="Sistema de turnos" title="JOXE · Portal"
+        right={
+          <a href="Asesores de Imagen.html" style={{
+            color: "#F5F1EA", textDecoration: "none", fontSize: 12,
+            letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
+          }}>Sitio web ↗</a>
+        }
+      />
+    }>
+      <main style={{
+        flex: 1, display: "flex", alignItems: "center",
+        justifyContent: "center", padding: "48px 20px",
+      }}>
+        <div style={{ width: "100%", maxWidth: 420 }}>
+          <PMono style={{ color: "#C29E66" }}>Acceso restringido</PMono>
+          <h1 style={{
+            fontFamily: "'Marcellus', serif", fontSize: "clamp(32px, 6vw, 48px)",
+            fontWeight: 400, margin: "16px 0 8px", letterSpacing: "-0.01em", lineHeight: 1.1,
+          }}>Portal de equipo.</h1>
+          <p style={{ fontSize: 14, opacity: 0.55, lineHeight: 1.6, marginBottom: 40 }}>
+            Ingresa con tu cuenta de administrador o empleado para continuar.
+          </p>
+
+          <div style={{
+            background: "#141212", border: "1px solid rgba(245,241,234,0.1)", padding: 32,
+          }}>
+            {/* Tabs */}
+            <div style={{ display: "flex", marginBottom: 28, borderBottom: "1px solid rgba(245,241,234,0.08)" }}>
+              <button style={tabStyle(tab === "admin")} onClick={() => { setTab("admin"); setErr(""); }}>
+                Administrador
+              </button>
+              <button style={tabStyle(tab === "empleado")} onClick={() => { setTab("empleado"); setErr(""); }}>
+                Empleado
+              </button>
+            </div>
+
+            {tab === "admin" && (
+              <div>
+                <label htmlFor="portal-pw">
+                  <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 10 }}>
+                    Contraseña de administrador
+                  </PMono>
+                </label>
+                <input id="portal-pw" type="password" value={pw}
+                  onChange={e => { setPw(e.target.value); setErr(""); }}
+                  onKeyDown={e => e.key === "Enter" && loginAdmin()}
+                  placeholder="••••••••"
+                  style={{
+                    width: "100%", padding: "14px 16px", marginBottom: 20,
+                    background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
+                    color: "#F5F1EA", fontFamily: "'JetBrains Mono', monospace", fontSize: 15,
+                  }}
+                />
+                <button onClick={loginAdmin} disabled={!pw || loading} style={{
+                  width: "100%", padding: "14px 0",
+                  background: pw && !loading ? "#C29E66" : "rgba(194,158,102,0.25)",
+                  color: pw && !loading ? "#0C0C0C" : "rgba(194,158,102,0.5)",
+                  border: "none", cursor: pw && !loading ? "pointer" : "default",
+                  fontFamily: "'Outfit', sans-serif", fontSize: 13,
+                  letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 500,
+                  transition: "background 0.2s",
+                }}>
+                  {loading ? "Verificando…" : "Entrar"}
+                </button>
+              </div>
+            )}
+
+            {tab === "empleado" && (
+              <div>
+                <label htmlFor="portal-emp">
+                  <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 10 }}>
+                    Selecciona tu nombre
+                  </PMono>
+                </label>
+                <select id="portal-emp" value={selId}
+                  onChange={e => { setSelId(e.target.value); setErr(""); }}
+                  style={{
+                    width: "100%", padding: "14px 16px", marginBottom: 16,
+                    background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
+                    color: selId ? "#F5F1EA" : "rgba(245,241,234,0.4)",
+                    fontFamily: "'Outfit', sans-serif", fontSize: 14,
+                  }}>
+                  <option value="">— Seleccionar —</option>
+                  {empList.map(e => (
+                    <option key={e.id} value={e.id}>{e.name}</option>
+                  ))}
+                </select>
+                <label htmlFor="portal-pin">
+                  <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 10 }}>
+                    PIN
+                  </PMono>
+                </label>
+                <input id="portal-pin" type="password" value={pin}
+                  onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setErr(""); }}
+                  onKeyDown={e => e.key === "Enter" && selId && pin && loginEmp()}
+                  placeholder="••••"
+                  inputMode="numeric" maxLength={8}
+                  style={{
+                    width: "100%", padding: "14px 16px", marginBottom: 20,
+                    background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
+                    color: "#F5F1EA", fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 20, letterSpacing: "0.3em",
+                  }}
+                />
+                <button onClick={loginEmp} disabled={!selId || !pin || loading} style={{
+                  width: "100%", padding: "14px 0",
+                  background: selId && pin && !loading ? "#C29E66" : "rgba(194,158,102,0.25)",
+                  color: selId && pin && !loading ? "#0C0C0C" : "rgba(194,158,102,0.5)",
+                  border: "none", cursor: selId && pin && !loading ? "pointer" : "default",
+                  fontFamily: "'Outfit', sans-serif", fontSize: 13,
+                  letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 500,
+                  transition: "background 0.2s",
+                }}>
+                  {loading ? "Verificando…" : "Entrar"}
+                </button>
+              </div>
+            )}
+
+            {err && (
+              <p role="alert" style={{
+                marginTop: 16, fontSize: 13, color: "#C46666",
+                fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.05em",
+              }}>{err}</p>
+            )}
+          </div>
+        </div>
+      </main>
+    </PortalShell>
+  );
+};
+
 const HomePortal = () => {
   const [store] = useStore();
+  const [authed, setAuthed] = React.useState(isPortalAuthed);
+
+  const doLogout = () => {
+    sessionStorage.removeItem(PORTAL_SES_ADMIN);
+    sessionStorage.removeItem(PORTAL_SES_EMP);
+    setAuthed(false);
+  };
+
+  if (!authed) return <PortalLoginGate onAuth={() => setAuthed(true)} />;
+
+  const empSession = (() => { try { return JSON.parse(sessionStorage.getItem(PORTAL_SES_EMP)); } catch { return null; } })();
+  const isAdmin    = !!sessionStorage.getItem(PORTAL_SES_ADMIN);
+  const label      = isAdmin ? "Admin" : (empSession?.name ?? "Empleado");
+
   return (
     <PortalShell tone="noir" header={
       <PortalHeader
@@ -2270,11 +2484,21 @@ const HomePortal = () => {
               color: "#F5F1EA", textDecoration: "none", fontSize: 12,
               letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.75,
             }}>Check-In</a>
-            <a href="Admin.html" style={{
-              color: "#C29E66", textDecoration: "none", fontSize: 11,
-              letterSpacing: "0.15em", textTransform: "uppercase",
-              padding: "8px 14px", border: "1px solid rgba(194,158,102,0.4)",
-            }}>Admin ⊛</a>
+            {isAdmin && (
+              <a href="Admin.html" style={{
+                color: "#C29E66", textDecoration: "none", fontSize: 11,
+                letterSpacing: "0.15em", textTransform: "uppercase",
+                padding: "8px 14px", border: "1px solid rgba(194,158,102,0.4)",
+              }}>Admin ⊛</a>
+            )}
+            <button onClick={doLogout} style={{
+              background: "none", border: "1px solid rgba(245,241,234,0.2)",
+              color: "rgba(245,241,234,0.55)", cursor: "pointer", fontSize: 11,
+              letterSpacing: "0.12em", textTransform: "uppercase", padding: "8px 14px",
+              fontFamily: "'Outfit', sans-serif",
+            }}>
+              {label} · Salir
+            </button>
           </div>
         }
       />
