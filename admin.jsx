@@ -1780,39 +1780,65 @@ const CrmView = () => {
 };
 
 // ==================== BLOCK SLOTS ====================
+const EMP_COLORS = ["#C29E66","#66C499","#8ab0ff","#C466A0","#66B5C4","#C49066"];
+
 const BlockSlotsView = () => {
   const [appts,setAppts] = useAppts();
+  const [admin] = useAdmin();
   const [weekOffset,setWeekOffset] = React.useState(0);
   const [reason,setReason] = React.useState("");
-  const [hovered,setHovered] = React.useState(null); // {date,time}
+  const [hovered,setHovered] = React.useState(null);
   const [selectedDate,setSelectedDate] = React.useState(todayStr());
+  const [empId,setEmpId] = React.useState("all");
 
   const ALL_TIMES = ["9:00","9:30","10:00","10:30","11:00","11:30",
     "12:00","12:30","13:00","13:30","14:00","14:30",
     "15:00","15:30","16:00","16:30","17:00","17:30","18:00"];
 
+  const employees = (admin.employees||[]).filter(e=>e.active);
   const weekDates = getWeekDates(weekOffset);
   const todayD = todayStr();
   const blockedSlots = appts.blockedSlots || [];
 
-  const isBlocked = (date,time) => blockedSlots.some(b=>b.date===date&&b.time===time);
+  const empColor = (id) => {
+    const idx = employees.findIndex(e=>e.id===id);
+    return idx>=0 ? EMP_COLORS[idx % EMP_COLORS.length] : C.red;
+  };
+
+  const visibleBlocks = (date,time) => {
+    const matches = blockedSlots.filter(b=>b.date===date&&b.time===time);
+    if (empId==="all") return matches;
+    return matches.filter(b=>!b.employeeId||b.employeeId===empId);
+  };
+
+  const isBlocked = (date,time) => visibleBlocks(date,time).length > 0;
 
   const toggleSlot = (date,time) => {
-    if (isBlocked(date,time)) {
-      setAppts(s=>({...s, blockedSlots:(s.blockedSlots||[]).filter(b=>!(b.date===date&&b.time===time))}));
+    const existing = blockedSlots.find(b=>
+      b.date===date && b.time===time &&
+      (empId==="all" ? (!b.employeeId) : b.employeeId===empId)
+    );
+    if (existing) {
+      setAppts(s=>({...s, blockedSlots:(s.blockedSlots||[]).filter(b=>b.id!==existing.id)}));
     } else {
-      setAppts(s=>({...s, blockedSlots:[...(s.blockedSlots||[]),{
-        id:genId(), date, time, reason:reason||"No disponible",
-      }]}));
+      const newSlot = {id:genId(), date, time, reason:reason||"No disponible"};
+      if (empId!=="all") newSlot.employeeId = empId;
+      setAppts(s=>({...s, blockedSlots:[...(s.blockedSlots||[]),newSlot]}));
     }
   };
 
   const clearDay = (date) => {
     if (!confirm(`¿Desbloquear todas las horas del ${fmtDateShort(date)}?`)) return;
-    setAppts(s=>({...s, blockedSlots:(s.blockedSlots||[]).filter(b=>b.date!==date)}));
+    setAppts(s=>({...s, blockedSlots:(s.blockedSlots||[]).filter(b=>
+      !(b.date===date && (empId==="all" ? true : (!b.employeeId||b.employeeId===empId)))
+    )}));
   };
 
-  const blockedForDay = (date) => blockedSlots.filter(b=>b.date===date);
+  const blockedForDay = (date) => {
+    const all = blockedSlots.filter(b=>b.date===date);
+    if (empId==="all") return all;
+    return all.filter(b=>!b.employeeId||b.employeeId===empId);
+  };
   const selectedBlocked = blockedForDay(selectedDate);
 
   const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
@@ -1855,15 +1881,27 @@ const BlockSlotsView = () => {
             }}>→</button>
           </div>
 
-          {/* Reason input */}
-          <div style={{padding:"12px 20px",borderBottom:`1px solid ${C.bdr}`,display:"flex",gap:12,alignItems:"center"}}>
+          {/* Employee + Reason inputs */}
+          <div style={{padding:"12px 20px",borderBottom:`1px solid ${C.bdr}`,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+            <Mono style={{color:C.muted,fontSize:8,whiteSpace:"nowrap"}}>Empleado</Mono>
+            <select value={empId} onChange={e=>setEmpId(e.target.value)} style={{
+              background:C.s2,border:`1px solid ${empId==="all"?C.bdr:empColor(empId)+"80"}`,
+              color:empId==="all"?C.muted:empColor(empId),
+              padding:"6px 10px",fontFamily:"'Outfit',sans-serif",fontSize:12,
+              cursor:"pointer",outline:"none",minWidth:120,
+            }}>
+              <option value="all">Todos</option>
+              {employees.map(e=>(
+                <option key={e.id} value={e.id}>{e.name}</option>
+              ))}
+            </select>
             <Mono style={{color:C.muted,fontSize:8,whiteSpace:"nowrap"}}>Motivo</Mono>
             <input value={reason} onChange={e=>setReason(e.target.value)}
               placeholder="Almuerzo, descanso… (opcional)"
               style={{
                 flex:1,background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,
                 padding:"6px 10px",fontFamily:"'Outfit',sans-serif",fontSize:12,
-                outline:"none",
+                outline:"none",minWidth:160,
               }} />
           </div>
 
@@ -1872,6 +1910,7 @@ const BlockSlotsView = () => {
             <div style={{
               display:"grid",
               gridTemplateColumns:`52px repeat(${weekDates.length},1fr)`,
+              gridAutoRows:"32px",
               minWidth:520,
             }}>
               {/* Header row: day names */}
@@ -3113,6 +3152,156 @@ const ServicesView = () => {
 };
 
 // ==================== SETTINGS ====================
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = atob(base64);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+const NotificationsCard = () => {
+  const supported = "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+  const [permission, setPermission] = React.useState(() => supported ? Notification.permission : "unsupported");
+  const [subscribed, setSubscribed] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [msg, setMsg] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!supported) return;
+    navigator.serviceWorker.ready.then(reg =>
+      reg.pushManager.getSubscription().then(sub => setSubscribed(!!sub))
+    );
+  }, []);
+
+  const flashMsg = (type, text) => {
+    setMsg({ type, text });
+    setTimeout(() => setMsg(null), 5000);
+  };
+
+  const subscribe = async () => {
+    setLoading(true);
+    try {
+      const keyRes = await fetch("/api/push");
+      const { publicKey } = await keyRes.json();
+      if (!publicKey) { flashMsg("error", "VAPID no configurado en el servidor."); return; }
+
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+      setPermission("granted");
+
+      const res = await fetch("/api/push", {
+        method: "POST",
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: sub.toJSON() }),
+      });
+      if (!res.ok) throw new Error("No se pudo guardar la suscripción.");
+      setSubscribed(true);
+      flashMsg("success", "Notificaciones activadas en este dispositivo.");
+    } catch (e) {
+      flashMsg("error", e.message || "Error al activar notificaciones.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const unsubscribe = async () => {
+    setLoading(true);
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/push", {
+          method: "DELETE",
+          headers: { ...adminHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      setSubscribed(false);
+      flashMsg("success", "Notificaciones desactivadas.");
+    } catch (e) {
+      flashMsg("error", e.message || "Error al desactivar.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+
+  return (
+    <Card>
+      <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Notificaciones push</Mono>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+        {!supported && (
+          <div style={{fontSize:13,color:C.muted}}>
+            Este navegador no soporta notificaciones push.
+          </div>
+        )}
+
+        {supported && isIos && !isStandalone && (
+          <div style={{
+            padding:"12px 14px",fontSize:13,lineHeight:1.5,
+            background:"rgba(194,158,102,0.08)",border:`1px solid ${C.gold}30`,color:C.muted,
+          }}>
+            En iPhone debes <strong style={{color:C.text}}>agregar esta página al Home Screen</strong> y
+            abrirla desde ahí antes de activar notificaciones.<br/>
+            Safari → Compartir → "Agregar a inicio"
+          </div>
+        )}
+
+        {supported && permission === "denied" && (
+          <div style={{
+            padding:"12px 14px",fontSize:13,lineHeight:1.5,
+            background:"rgba(196,102,102,0.08)",border:`1px solid ${C.red}40`,color:C.muted,
+          }}>
+            Los permisos de notificación están <strong style={{color:C.red}}>bloqueados</strong> en este
+            navegador. Ve a Ajustes → Safari → Notificaciones para habilitarlos.
+          </div>
+        )}
+
+        {supported && permission !== "denied" && (
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+            <div>
+              <div style={{fontSize:14}}>Recibir aviso al llegar un nuevo turno</div>
+              <div style={{fontSize:12,color:C.muted,marginTop:4}}>
+                Solo afecta este dispositivo. Puedes activarlo en varios teléfonos.
+              </div>
+            </div>
+            <button
+              onClick={subscribed ? unsubscribe : subscribe}
+              disabled={loading || (isIos && !isStandalone)}
+              style={{
+                padding:"8px 18px",flexShrink:0,
+                background:subscribed?"rgba(102,196,153,0.1)":C.s3,
+                border:`1px solid ${subscribed?C.green+"40":C.bdr}`,
+                color:subscribed?C.green:C.muted,
+                cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",
+                opacity:(loading||(isIos&&!isStandalone))?0.5:1,
+              }}>
+              {loading ? "..." : subscribed ? "Activo" : "Inactivo"}
+            </button>
+          </div>
+        )}
+
+        {msg && (
+          <div style={{
+            padding:"10px 14px",fontSize:13,
+            background:msg.type==="error"?"rgba(196,102,102,0.1)":"rgba(102,196,153,0.1)",
+            border:`1px solid ${msg.type==="error"?C.red+"40":C.green+"40"}`,
+            color:msg.type==="error"?C.red:C.green,
+          }}>{msg.text}</div>
+        )}
+      </div>
+    </Card>
+  );
+};
+
 const SettingsView = () => {
   const [admin,setAdmin] = useAdmin();
   const [,setAppts] = useAppts();
@@ -3390,6 +3579,9 @@ const SettingsView = () => {
             </div>
           </div>
         </Card>
+
+        {/* Push notifications */}
+        <NotificationsCard />
 
         {/* Change password */}
         <Card>

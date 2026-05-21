@@ -1,4 +1,22 @@
 import { initTables, kvGet, kvSet } from "./db.js";
+import webpush from "web-push";
+
+async function sendPushNotifications(appt) {
+  const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
+  webpush.setVapidDetails(
+    VAPID_SUBJECT ?? "mailto:admin@joxe.co",
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY
+  );
+  const subs = await kvGet("push_subscriptions") ?? [];
+  if (!subs.length) return;
+  const payload = JSON.stringify({
+    title: "Nuevo agendamiento",
+    body: `${appt.name ?? "Cliente"} · ${appt.service ?? ""} · ${appt.date ?? ""} ${appt.time ?? ""}`,
+  });
+  await Promise.allSettled(subs.map(sub => webpush.sendNotification(sub, payload)));
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +49,8 @@ export default async function handler(req, res) {
       ...store,
       appointments: [...store.appointments, appt],
     });
+
+    sendPushNotifications(appt).catch(() => {});
 
     return res.status(200).json({ ok: true });
   } catch (err) {

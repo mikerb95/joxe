@@ -111,7 +111,13 @@ const PortalShell = ({ children, tone = "noir", header }) => (
   </div>
 );
 
-const PortalHeader = ({ title, subtitle, right, tone = "noir" }) => (
+const PortalHeader = ({ title, subtitle, right, tone = "noir" }) => {
+  const hasRole = !!(
+    sessionStorage.getItem("joxe_admin_session") ||
+    sessionStorage.getItem("joxe_agenda_session")
+  );
+  const logoHref = hasRole ? "Portal.html" : "Asesores de Imagen.html";
+  return (
   <header style={{
     padding: "24px 40px",
     borderBottom: tone === "noir" ? "1px solid rgba(245,241,234,0.1)" : "1px solid rgba(12,12,12,0.1)",
@@ -119,7 +125,7 @@ const PortalHeader = ({ title, subtitle, right, tone = "noir" }) => (
     flexWrap: "wrap", gap: 16,
   }}>
     <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-      <a href="Portal.html" style={{
+      <a href={logoHref} style={{
         fontFamily: "'Marcellus', serif", fontSize: 22,
         letterSpacing: "0.3em", textDecoration: "none", color: "inherit",
       }}>JOXE</a>
@@ -136,7 +142,8 @@ const PortalHeader = ({ title, subtitle, right, tone = "noir" }) => (
     </div>
     <div>{right}</div>
   </header>
-);
+  );
+};
 
 // ============================================================
 // Dialog (confirm/alert replacement) — branded, accessible, focus-trap.

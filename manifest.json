@@ -1,0 +1,8 @@
+{
+  "name": "JOXE Admin",
+  "short_name": "JOXE",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#0C0C0C",
+  "theme_color": "#0C0C0C"
+}
