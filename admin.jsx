@@ -2897,22 +2897,28 @@ const EmployeesView = () => {
                         background:C.s2,border:`1px solid ${C.bdr}`,
                         display:"flex",gap:32,alignItems:"flex-start",flexWrap:"wrap",
                       }}>
-                        <ChairQRCode empId={emp.id} empName={emp.name} chairNum={emp.chairNum} size={180} />
-                        <div style={{flex:1,minWidth:180,paddingTop:8}}>
-                          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>URL codificada · Puesto {emp.chairNum||"—"}</Mono>
-                          <div style={{
-                            fontFamily:"'JetBrains Mono',monospace",fontSize:10,
-                            color:C.gold,background:C.s1,border:`1px solid ${C.bdr}`,
-                            padding:"10px 14px",wordBreak:"break-all",lineHeight:1.6,
-                          }}>
-                            {emp.chairNum
-                              ? `${window.location.origin}/CheckIn.html#puesto-${emp.chairNum}`
-                              : `${window.location.origin}/CheckIn.html#chair-${emp.id}`}
-                          </div>
-                          <Mono style={{color:C.muted,fontSize:9,display:"block",lineHeight:1.6,marginTop:12}}>
-                            El QR está atado al puesto {emp.chairNum||"(sin número)"}. Si cambia el trabajador, el mismo QR funciona con el nuevo empleado asignado a este puesto.
-                          </Mono>
-                        </div>
+                        {empPuesto
+                          ? <>
+                              <ChairQRCode empName={emp.name} chairNum={Number(empPuesto)} size={180} />
+                              <div style={{flex:1,minWidth:180,paddingTop:8}}>
+                                <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>URL codificada · Puesto {empPuesto}</Mono>
+                                <div style={{
+                                  fontFamily:"'JetBrains Mono',monospace",fontSize:10,
+                                  color:C.gold,background:C.s1,border:`1px solid ${C.bdr}`,
+                                  padding:"10px 14px",wordBreak:"break-all",lineHeight:1.6,
+                                }}>
+                                  {window.location.origin}/CheckIn.html#puesto-{empPuesto}
+                                </div>
+                                <Mono style={{color:C.muted,fontSize:9,display:"block",lineHeight:1.6,marginTop:12}}>
+                                  El QR está atado al puesto {empPuesto}. Si cambia el trabajador, el mismo QR sigue funcionando.
+                                </Mono>
+                              </div>
+                            </>
+                          : <div style={{color:C.muted,fontSize:13}}>
+                              Este empleado no está asignado a ningún puesto.{" "}
+                              <span style={{fontSize:11}}>Ve a <strong style={{color:C.text}}>Configuración → QR de puestos</strong> para asignarlo.</span>
+                            </div>
+                        }
                       </div>
                     )}
                   </div>
@@ -4668,9 +4674,15 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
 
 // ==================== ROOT ====================
 const AdminPortal = () => {
-  const [authed,setAuthed]   = React.useState(isAuthed);
-  const [empSes,setEmpSes]   = React.useState(getEmpSession);
-  const [view,setView]       = React.useState("dashboard");
+  const [authed,setAuthed]     = React.useState(isAuthed);
+  const [empSes,setEmpSes]     = React.useState(getEmpSession);
+  const [view,setView]         = React.useState("dashboard");
+  const [navParam,setNavParam] = React.useState(null);
+
+  const nav = React.useCallback((v, param=null) => {
+    setView(v);
+    setNavParam(param);
+  }, []);
 
   const isAdmin = authed;
   const isEmp   = !authed && !!empSes;
@@ -4690,13 +4702,13 @@ const AdminPortal = () => {
   // --- Employee portal ---
   if (isEmp) {
     const EmpViewComponent = {
-      dashboard:      (p)=><EmpDashboardView      {...p} emp={empSes} onNav={setView}/>,
+      dashboard:      (p)=><EmpDashboardView      {...p} emp={empSes} onNav={nav}/>,
       agenda:         (p)=><EmpAgendaView          {...p} emp={empSes}/>,
       confirmaciones: (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="confirmaciones"/>,
       todas:          (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="todas"/>,
-    }[view] || ((p)=><EmpDashboardView {...p} emp={empSes} onNav={setView}/>);
+    }[view] || ((p)=><EmpDashboardView {...p} emp={empSes} onNav={nav}/>);
     return (
-      <EmpShell emp={empSes} onLogout={logout} activeView={view} onNav={setView}>
+      <EmpShell emp={empSes} onLogout={logout} activeView={view} onNav={nav}>
         <EmpViewComponent />
       </EmpShell>
     );
@@ -4704,21 +4716,22 @@ const AdminPortal = () => {
 
   // --- Admin portal ---
   const ViewComponent = {
-    dashboard:    DashboardView,
-    agenda:       AgendaView,
-    appointments: AppointmentsView,
-    clients:      CrmView,
-    blockslots:   BlockSlotsView,
-    revenue:      RevenueView,
-    employees:    EmployeesView,
-    services:     ServicesView,
-    settings:     SettingsView,
-    help:         HelpView,
+    dashboard:           DashboardView,
+    agenda:              AgendaView,
+    appointments:        AppointmentsView,
+    clients:             CrmView,
+    blockslots:          BlockSlotsView,
+    revenue:             RevenueView,
+    employees:           EmployeesView,
+    services:            ServicesView,
+    settings:            SettingsView,
+    "stylist-settings": StylistSettingsView,
+    help:                HelpView,
   }[view] || DashboardView;
 
   return (
-    <AdminShell activeView={view} onNav={setView} onLogout={logout}>
-      <ViewComponent onNav={setView} />
+    <AdminShell activeView={view=="stylist-settings"?"settings":view} onNav={nav} onLogout={logout}>
+      <ViewComponent onNav={nav} empId={navParam} />
     </AdminShell>
   );
 };
