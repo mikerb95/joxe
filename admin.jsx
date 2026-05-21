@@ -2809,6 +2809,7 @@ const EmployeesView = () => {
             const isEdit = editId===emp.id;
             const earned = revByEmp[emp.name]||0;
             const empServices = services.filter(s=>(emp.services||[]).includes(s.id));
+            const empPuesto = Object.entries(admin.chairAssignments||{}).find(([,id])=>id===emp.id)?.[0]||null;
             return (
               <div key={emp.id} style={{
                 border:`1px solid ${C.bdr}`,
@@ -2830,12 +2831,12 @@ const EmployeesView = () => {
                             background:"rgba(194,158,102,0.1)",border:`1px solid ${C.gold}30`,
                             padding:"2px 8px",display:"inline-block",
                           }}>{emp.role}</Mono>
-                          {emp.chairNum && (
+                          {empPuesto && (
                             <Mono style={{
                               fontSize:9,color:C.muted,
                               background:C.s3,border:`1px solid ${C.bdr}`,
                               padding:"2px 8px",display:"inline-block",
-                            }}>Puesto {emp.chairNum}</Mono>
+                            }}>Puesto {empPuesto}</Mono>
                           )}
                           <Mono style={{
                             fontSize:9,
