@@ -74,7 +74,9 @@ const useAdmin = () => {
       if (!res.ok) return;
       const data = await res.json();
       localStorage.setItem(ADMIN_KEY, JSON.stringify(data));
-      setAWithRef(prev => ({ ...prev, ...data }));
+      const ref = stateRef.current;
+      const base = (ref && typeof ref !== "function") ? ref : loadAdminCache();
+      setAWithRef({ ...base, ...data });
     } catch {}
   }, [setAWithRef]);
 
