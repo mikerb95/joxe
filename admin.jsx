@@ -221,6 +221,24 @@ const genId    = () => Math.random().toString(36).slice(2, 10);
 const TIMES    = ["9:00","10:30","12:00","14:00","15:30","17:00"];
 const METHODS  = ["Efectivo","Transferencia","Datáfono","Nequi"];
 const ROLES    = ["Estilista","Colorista","Manicurista","Pedicurista","Barbero","Maquillador/a","Masajista","Recepcionista","Otro"];
+const DAYS_WORK = [
+  { key:"lun", label:"Lun" },
+  { key:"mar", label:"Mar" },
+  { key:"mie", label:"Mié" },
+  { key:"jue", label:"Jue" },
+  { key:"vie", label:"Vie" },
+  { key:"sab", label:"Sáb" },
+  { key:"dom", label:"Dom" },
+];
+const DEFAULT_WORK_HOURS = () => ({
+  lun:{ active:true,  start:"09:00", end:"18:00" },
+  mar:{ active:true,  start:"09:00", end:"18:00" },
+  mie:{ active:true,  start:"09:00", end:"18:00" },
+  jue:{ active:true,  start:"09:00", end:"18:00" },
+  vie:{ active:true,  start:"09:00", end:"18:00" },
+  sab:{ active:false, start:"09:00", end:"14:00" },
+  dom:{ active:false, start:"09:00", end:"14:00" },
+});
 const PAY_COLORS = { Efectivo:"#C29E66", Transferencia:"#8ab0ff", Datáfono:"#C46666", Nequi:"#66C499", Multa:"#e07070" };
 
 const fmtCOP = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("es-CO");
