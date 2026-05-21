@@ -724,6 +724,9 @@ const BookingPortal = () => {
                 const availSlots = availableDates.reduce((acc, d) =>
                   acc + slotsForDate(d).filter(t => !isSlotTaken(d, t, e.name, selectedDur)).length, 0
                 );
+                const todayFreeSlots = isClosedDay(todayStr())
+                  ? 0
+                  : slotsForDate(todayStr()).filter(t => !isSlotTaken(todayStr(), t, e.name, selectedDur)).length;
                 return (
                   <button key={e.id}
                     onClick={() => setForm({ ...form, stylist: e.name, stylistId: e.id, date: "", time: "" })}
@@ -750,15 +753,15 @@ const BookingPortal = () => {
                       }}>
                         {availSlots > 0 ? `${availSlots} turnos libres` : "Sin disponibilidad"}
                       </div>
-                      {todayApts > 0 && (
-                        <div style={{
-                          fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
-                          color: sel ? "rgba(245,241,234,0.4)" : "rgba(12,12,12,0.35)",
-                          letterSpacing: "0.06em", marginTop: 3,
-                        }}>
-                          {todayApts} hoy
-                        </div>
-                      )}
+                      <div style={{
+                        fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+                        color: sel
+                          ? "rgba(245,241,234,0.5)"
+                          : todayFreeSlots > 0 ? "#1a6e40" : "rgba(12,12,12,0.35)",
+                        letterSpacing: "0.06em", marginTop: 3,
+                      }}>
+                        {todayFreeSlots > 0 ? `${todayFreeSlots} disponibles hoy` : "Sin turnos hoy"}
+                      </div>
                     </div>
                   </button>
                 );
