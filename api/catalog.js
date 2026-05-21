@@ -45,7 +45,10 @@ export default async function handler(req, res) {
         ...(workHours ? { workHours } : {}),
       }));
 
-    return res.status(200).json({ services, employees });
+    const chairsCount = admin?.chairsCount ?? 3;
+    const chairAssignments = admin?.chairAssignments ?? {};
+
+    return res.status(200).json({ services, employees, chairsCount, chairAssignments });
   } catch (err) {
     console.error("[catalog]", err.message);
     return res.status(500).json({ error: err.message });

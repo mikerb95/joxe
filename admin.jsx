@@ -48,6 +48,8 @@ const DEFAULT_ADMIN = () => ({
   noShowIds: [],
   noShowFine: { enabled: false, defaultAmount: 0, byDay: {} },
   archivedEmployees: [],
+  chairsCount: 3,
+  chairAssignments: {},
 });
 
 const loadAdminCache = () => {
