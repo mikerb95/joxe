@@ -2937,6 +2937,7 @@ const ServicesView = () => {
 // ==================== SETTINGS ====================
 const SettingsView = () => {
   const [admin,setAdmin] = useAdmin();
+  const [,setAppts] = useAppts();
   const [pwForm,setPwForm] = React.useState({current:"",newPw:"",confirm:""});
   const [pwMsg,setPwMsg] = React.useState(null);
   const [newStylist,setNewStylist] = React.useState("");
@@ -3249,9 +3250,9 @@ const SettingsView = () => {
               if (confirm("¿Borrar TODOS los ingresos registrados? Esta acción no se puede deshacer."))
                 setAdmin(a=>({...a,revenue:[]}));
             }}>Borrar todos los ingresos</Btn>
-            <Btn variant="danger" onClick={()=>{
+            <Btn variant="danger" onClick={async ()=>{
               if (confirm("¿Borrar TODAS las citas y turnos? Esta acción no se puede deshacer.")) {
-                localStorage.removeItem("joxe_turnos_v1");
+                await setAppts({ appointments:[], active:[], completed:[], blockedSlots:[] });
                 window.location.reload();
               }
             }}>Borrar todas las citas y turnos</Btn>
