@@ -2924,7 +2924,7 @@ const EmployeesView = () => {
                   </div>
                 ) : (
                   <div style={{padding:"18px 20px",background:C.s2}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 80px",gap:12,maxWidth:740,marginBottom:14}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,maxWidth:680,marginBottom:14}}>
                       <FieldInput label="Nombre" value={editForm.name}
                         onChange={e=>setEditForm({...editForm,name:e.target.value})} />
                       <FieldSelect label="Rol" value={editForm.role}
@@ -2938,13 +2938,6 @@ const EmployeesView = () => {
                         <div style={{fontSize:10,color:C.muted,marginTop:4}}>
                           {editForm.pin ? `${editForm.pin.length} dígitos configurados` : "Sin PIN · no puede iniciar sesión"}
                         </div>
-                      </div>
-                      <div>
-                        <FieldInput label="Puesto #" type="number" min="1"
-                          value={editForm.chairNum||""}
-                          placeholder="1"
-                          onChange={e=>setEditForm({...editForm,chairNum:Number(e.target.value)||""})} />
-                        <div style={{fontSize:10,color:C.muted,marginTop:4}}>N.° de silla</div>
                       </div>
                     </div>
                     <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios</Mono>
@@ -4027,26 +4020,83 @@ const SettingsView = ({ onNav }) => {
         <Card style={{maxWidth:"none"}}>
           <Mono style={{color:C.gold,display:"block",marginBottom:4}}>QR de puestos</Mono>
           <div style={{fontSize:13,color:C.muted,marginBottom:20,lineHeight:1.5}}>
-            Un QR por puesto. Imprime y pega en el espejo — el QR está atado al número de puesto, no al empleado. Si cambia el trabajador, el mismo QR sigue funcionando.
+            Define cuántos puestos tiene el salón y asigna un empleado a cada uno. El QR está atado al puesto — si cambia el trabajador, imprime de nuevo o reasigna sin cambiar el código.
           </div>
-          <div style={{display:"flex",flexWrap:"wrap",gap:32}}>
-            {(admin.employees||[]).filter(e=>e.active!==false).map(emp=>(
-              <div key={emp.id} style={{
-                background:C.s1,border:`1px solid ${C.bdr}`,
-                padding:"24px 20px",display:"flex",flexDirection:"column",
-                alignItems:"center",gap:16,minWidth:200,
-              }}>
-                {emp.chairNum && (
+
+          {/* Número de puestos */}
+          <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
+            <Mono style={{fontSize:10,color:C.muted}}>Puestos disponibles</Mono>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <button
+                onClick={()=>setAdmin(a=>({...a,chairsCount:Math.max(1,(a.chairsCount||1)-1)}))}
+                style={{width:32,height:32,background:C.s3,border:`1px solid ${C.bdr}`,
+                  color:C.text,cursor:"pointer",fontSize:16,fontFamily:"monospace"}}>−</button>
+              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:20,color:C.gold,minWidth:24,textAlign:"center"}}>
+                {admin.chairsCount||1}
+              </span>
+              <button
+                onClick={()=>setAdmin(a=>({...a,chairsCount:Math.min(20,(a.chairsCount||1)+1)}))}
+                style={{width:32,height:32,background:C.s3,border:`1px solid ${C.bdr}`,
+                  color:C.text,cursor:"pointer",fontSize:16,fontFamily:"monospace"}}>+</button>
+            </div>
+          </div>
+
+          {/* Grid de puestos */}
+          <div style={{display:"flex",flexWrap:"wrap",gap:24}}>
+            {Array.from({length:admin.chairsCount||1},(_,i)=>{
+              const num = i+1;
+              const assignedId = (admin.chairAssignments||{})[num] || "";
+              const assignedEmp = assignedId ? (admin.employees||[]).find(e=>e.id===assignedId) : null;
+              const activeEmps = (admin.employees||[]).filter(e=>e.active!==false);
+              return (
+                <div key={num} style={{
+                  background:C.s1,border:`1px solid ${assignedEmp?C.gold+"40":C.bdr}`,
+                  padding:"20px 18px",display:"flex",flexDirection:"column",
+                  alignItems:"center",gap:14,minWidth:190,
+                }}>
                   <Mono style={{fontSize:9,color:C.gold,background:"rgba(194,158,102,0.1)",
-                    border:`1px solid ${C.gold}30`,padding:"2px 10px"}}>
-                    PUESTO {emp.chairNum}
+                    border:`1px solid ${C.gold}30`,padding:"2px 12px",letterSpacing:"0.15em"}}>
+                    PUESTO {num}
                   </Mono>
-                )}
-                <Mono style={{color:C.muted,fontSize:9}}>{emp.role}</Mono>
-                <div style={{fontFamily:"'Marcellus',serif",fontSize:20,color:C.text}}>{emp.name}</div>
-                <ChairQRCode empId={emp.id} empName={emp.name} chairNum={emp.chairNum} size={160} />
-              </div>
-            ))}
+
+                  {/* Selector de empleado */}
+                  <select
+                    value={assignedId}
+                    onChange={e=>setAdmin(a=>({...a,
+                      chairAssignments:{...(a.chairAssignments||{}),[num]:e.target.value||null}
+                    }))}
+                    style={{
+                      width:"100%",background:C.s2,border:`1px solid ${C.bdr}`,
+                      color:assignedEmp?C.text:C.muted,
+                      fontFamily:"'Outfit',sans-serif",fontSize:13,
+                      padding:"7px 10px",cursor:"pointer",
+                    }}>
+                    <option value="">— Sin asignar —</option>
+                    {activeEmps.map(e=>(
+                      <option key={e.id} value={e.id}>{e.name} · {e.role}</option>
+                    ))}
+                  </select>
+
+                  {/* QR */}
+                  {assignedEmp
+                    ? <>
+                        <div style={{fontFamily:"'Marcellus',serif",fontSize:16,color:C.text,textAlign:"center"}}>
+                          {assignedEmp.name}
+                        </div>
+                        <ChairQRCode empName={assignedEmp.name} chairNum={num} size={150} />
+                      </>
+                    : <div style={{
+                        width:150,height:150,background:C.s2,border:`1px dashed ${C.bdr}`,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                      }}>
+                        <Mono style={{fontSize:9,color:C.muted,textAlign:"center",lineHeight:1.8}}>
+                          Asigna un<br/>empleado
+                        </Mono>
+                      </div>
+                  }
+                </div>
+              );
+            })}
           </div>
         </Card>
 
