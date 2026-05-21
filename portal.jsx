@@ -323,6 +323,9 @@ const QRCode = ({ value, size = 220, fg = "#0C0C0C", bg = "#F5F1EA" }) => {
 // PAGE 1 — AGENDAR CITA
 // ============================================================
 
+const PENDING_EXPIRE_MS = 60 * 60 * 1000; // 1 hora
+const isPendingExpired = (a) => a.status === "pending" && (Date.now() - (a.createdAt || 0)) > PENDING_EXPIRE_MS;
+
 // Helpers — hora Colombia (COT = UTC-5)
 const nowCOT = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
 const todayStr = () => {
@@ -507,7 +510,7 @@ const BookingPortal = () => {
     if (newEnd > closesAtMin(date)) return true;
 
     const aptsOnDay = (store.appointments || []).filter(
-      a => a.date === date && !["cancelled"].includes(a.status)
+      a => a.date === date && !["cancelled"].includes(a.status) && !isPendingExpired(a)
     );
 
     const conflictsFor = (stylist) => aptsOnDay
@@ -536,7 +539,7 @@ const BookingPortal = () => {
       const counts = eligibleEmployees.map(e => ({
         name: e.name,
         count: (store.appointments || []).filter(
-          a => a.date === form.date && a.stylist === e.name && !["cancelled"].includes(a.status)
+          a => a.date === form.date && a.stylist === e.name && !["cancelled"].includes(a.status) && !isPendingExpired(a)
         ).length,
       }));
       const free = counts.filter(e => !isSlotTaken(form.date, form.time, e.name));

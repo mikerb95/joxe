@@ -246,12 +246,15 @@ const fmtDateShort = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString
 const fmtDateMed = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"});
 const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
 
+const PENDING_EXPIRE_MS = 60 * 60 * 1000; // 1 hora
+
 const getAllAppts = (store, cancelledIds=[], noShowIds=[]) => {
   const activeIds = new Set(store.active.map(a=>a.id));
   const completedIds = new Set(store.completed.map(a=>a.id));
   const resolveStatus = (a, fallback) => {
     if (noShowIds.includes(a.id)) return "no-show";
     if (cancelledIds.includes(a.id)) return "cancelled";
+    if (fallback === "pending" && (Date.now() - (a.createdAt||0)) > PENDING_EXPIRE_MS) return "expired";
     return fallback;
   };
   const result = [];
@@ -453,6 +456,7 @@ const Badge = ({status}) => {
     completed:   {label:"Completada", bg:"rgba(102,196,153,0.08)",color:C.green},
     cancelled:   {label:"Cancelada",  bg:"rgba(196,102,102,0.12)",color:C.red},
     "no-show":   {label:"Incumplida", bg:"rgba(196,102,102,0.18)",color:"#e07070"},
+    expired:     {label:"Expirada",   bg:"rgba(196,102,102,0.08)",color:"rgba(196,102,102,0.7)"},
   };
   const m = map[status]||map.scheduled;
   return (
@@ -970,16 +974,16 @@ const AgendaView = () => {
   const DAY_SUB   = (d) => new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
 
   const statusColor = (s) =>
-    s==="cancelled"?"#C46666":s==="completed"?"#66C499":
+    s==="cancelled"||s==="expired"?"#C46666":s==="completed"?"#66C499":
     s==="in-service"?"#66C499":s==="waiting"?"#8ab0ff":"#C29E66";
 
   const statusBg = (s) =>
-    s==="cancelled"?"rgba(196,102,102,0.07)":s==="completed"?"rgba(102,196,153,0.07)":
+    s==="cancelled"||s==="expired"?"rgba(196,102,102,0.07)":s==="completed"?"rgba(102,196,153,0.07)":
     s==="in-service"?"rgba(102,196,153,0.12)":s==="waiting"?"rgba(138,176,255,0.09)":
     "rgba(194,158,102,0.09)";
 
   const statusLabel = (s) =>
-    s==="in-service"?"En silla":s==="waiting"?"En cola":
+    s==="in-service"?"En silla":s==="waiting"?"En cola":s==="expired"?"Expirada":
     s==="completed"?"Completada":s==="cancelled"?"Cancelada":"Agendada";
 
   return (
