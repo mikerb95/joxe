@@ -517,8 +517,12 @@ const BookingPortal = () => {
       });
 
     if (stylistName === "Sin preferencia") {
-      return eligibleEmployees.every(e => conflictsFor(e.name));
+      return eligibleEmployees.every(e =>
+        conflictsFor(e.name) || !empWorksOnSlot(e, date, time, dur)
+      );
     }
+    const emp = employees.find(e => e.name === stylistName);
+    if (emp && !empWorksOnSlot(emp, date, time, dur)) return true;
     return conflictsFor(stylistName);
   };
 
