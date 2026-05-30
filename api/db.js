@@ -197,5 +197,5 @@ export function applyCors(req, res, methods) {
 // control chars, caps length. Mitigates stored XSS at the write boundary.
 export function sanitizeStr(v, max = 200) {
   if (v == null) return v;
-  return String(v).replace(/[\x00-\x1F\x7F]/g, "").slice(0, max);
+  return String(v).replace(/[<>]/g, "").replace(/[\x00-\x1F\x7F]/g, "").slice(0, max);
 }

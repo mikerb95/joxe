@@ -1,72 +1,66 @@
-import { initTables, kvGet, kvSet, verifyAdminAuth } from "./db.js";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+import { initTables, kvGet, kvSet, verifyStaffAuth, applyCors } from "./db.js";
 
 const DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [] });
 
+// Fields the public booking page legitimately needs to compute availability.
+// Everything else (name, phone, cedula, notes...) is PII and must be stripped
+// for unauthenticated readers.
+function publicAppt(a) {
+  return {
+    id: a.id,
+    date: a.date,
+    time: a.time,
+    stylist: a.stylist,
+    service: a.service,
+    serviceDur: a.serviceDur,
+    status: a.status,
+  };
+}
+
 export default async function handler(req, res) {
-  Object.entries(CORS).forEach(([k, v]) => res.setHeader(k, v));
+  applyCors(req, res, "GET, POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
     await initTables();
 
     if (req.method === "GET") {
-      const stored = await kvGet("turno_store");
-      return res.status(200).json({ ...DEFAULT(), ...(stored || {}) });
+      const stored = { ...DEFAULT(), ...((await kvGet("turno_store")) || {}) };
+      const auth = await verifyStaffAuth(req);
+      if (auth) return res.status(200).json(stored);
+      // Public: only occupancy data, no client PII
+      return res.status(200).json({
+        appointments: (stored.appointments || []).map(publicAppt),
+        active: [],
+        completed: [],
+        blockedSlots: stored.blockedSlots || [],
+      });
     }
 
     if (req.method === "POST") {
+      // All writes require staff auth (admin or employee token). No anonymous path.
+      if (!(await verifyStaffAuth(req))) return res.status(401).json({ error: "Unauthorized" });
+
       const body = req.body;
-
-      // Require auth for full store replace (admin/employee with admin token)
-      // Fall through to append-only path for unauthenticated employee check-in writes
-      const authed = await verifyAdminAuth(req);
-
-      // Body shape validation: all array fields must be arrays if present
+      if (!body || typeof body !== "object") return res.status(400).json({ error: "Invalid body" });
       for (const field of ["appointments", "active", "completed", "blockedSlots"]) {
         if (body[field] !== undefined && !Array.isArray(body[field])) {
           return res.status(400).json({ error: `${field} must be an array` });
         }
       }
 
-      if (authed) {
-        // Authenticated: full store replace
-        await kvSet("turno_store", body);
-        return res.status(200).json({ ok: true });
-      }
-
-      // Unauthenticated: merge-only — never shrink active or completed
-      const current = await kvGet("turno_store") ?? DEFAULT();
-      const merged = {
-        appointments: body.appointments ?? current.appointments,
-        blockedSlots: body.blockedSlots ?? current.blockedSlots,
-        // Protect completed and active: only grow them, never shrink below server state
-        active: mergeById(current.active, body.active),
-        completed: mergeById(current.completed, body.completed),
-      };
-      await kvSet("turno_store", merged);
+      await kvSet("turno_store", {
+        appointments: body.appointments ?? [],
+        active: body.active ?? [],
+        completed: body.completed ?? [],
+        blockedSlots: body.blockedSlots ?? [],
+      });
       return res.status(200).json({ ok: true });
     }
 
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
     console.error("[store]", err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Internal error" });
   }
-}
-
-// Returns the union of server items and incoming items, keyed by id.
-// Incoming changes to existing records win; server-only records are kept.
-function mergeById(serverArr, incomingArr) {
-  if (!Array.isArray(incomingArr)) return serverArr;
-  const map = new Map((serverArr || []).map(item => [item.id, item]));
-  for (const item of incomingArr) {
-    map.set(item.id, item);
-  }
-  return Array.from(map.values());
 }
