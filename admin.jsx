@@ -755,8 +755,7 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
           {empList.length===0 ? (
             <div style={{padding:"20px 0",textAlign:"center"}}>
               <div style={{fontSize:13,color:C.muted,lineHeight:1.6}}>
-                No hay empleados con PIN configurado.<br/>
-                El administrador debe asignar PINs desde el panel de empleados.
+                Cargando empleados…
               </div>
             </div>
           ) : (
@@ -804,9 +803,9 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
                 </div>
               )}
 
-              <Btn onClick={attemptEmp} disabled={!selEmpId||!pin}
+              <Btn onClick={attemptEmp} disabled={!selEmpId||!pin||loading}
                 style={{width:"100%",marginTop:20,padding:"14px"}}>
-                Ingresar →
+                {loading?"Verificando...":"Ingresar →"}
               </Btn>
             </>
           )}
