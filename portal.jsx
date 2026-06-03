@@ -3578,6 +3578,73 @@ const AgendaPortal = () => {
           </div>
         )}
       </main>
+
+      {/* PIN prompt overlay — shown when session was auto-restored from Portal.html */}
+      {pinPrompt && (
+        <div role="dialog" aria-modal="true" style={{
+          position: "fixed", inset: 0, zIndex: 9000,
+          background: "rgba(12,12,12,0.82)", backdropFilter: "blur(6px)",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+        }}
+          onClick={e => { if (e.target === e.currentTarget) { setPinPrompt(null); setPinInput(""); } }}
+        >
+          <div style={{
+            background: "#141212", color: "#F5F1EA",
+            border: "1px solid rgba(245,241,234,0.12)",
+            padding: 32, maxWidth: 360, width: "100%",
+          }}>
+            <PMono style={{ color: "#C29E66", display: "block", marginBottom: 10 }}>Confirmar identidad</PMono>
+            <div style={{ fontFamily: "'Marcellus', serif", fontSize: 22, marginBottom: 6 }}>
+              {pinPrompt.name}
+            </div>
+            <div style={{ fontSize: 13, opacity: 0.55, marginBottom: 24 }}>
+              {pinPrompt.service} · {pinPrompt.date} {pinPrompt.time}
+            </div>
+            <label htmlFor="agenda-pin-confirm">
+              <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 8 }}>
+                Tu PIN para aprobar
+              </PMono>
+            </label>
+            <input id="agenda-pin-confirm" type="password" inputMode="numeric" maxLength={6}
+              autoFocus
+              value={pinInput}
+              onChange={e => { setPinInput(e.target.value.replace(/\D/g, "")); setConfirmErr(""); }}
+              onKeyDown={e => e.key === "Enter" && pinInput && confirmAppt(pinPrompt, pinInput)}
+              placeholder="••••"
+              style={{
+                width: "100%", padding: "16px", marginBottom: 16,
+                background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
+                color: "#F5F1EA", fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 28, letterSpacing: "0.4em", textAlign: "center",
+                boxSizing: "border-box",
+              }}
+            />
+            {confirmErr && (
+              <div style={{ marginBottom: 12, fontSize: 12, color: "#C46666" }}>{confirmErr}</div>
+            )}
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => { setPinPrompt(null); setPinInput(""); setConfirmErr(""); }} style={{
+                flex: 1, padding: "14px", background: "transparent",
+                border: "1px solid rgba(245,241,234,0.2)", color: "rgba(245,241,234,0.7)",
+                cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+                fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase",
+              }}>Cancelar</button>
+              <button onClick={() => pinInput && confirmAppt(pinPrompt, pinInput)}
+                disabled={!pinInput || !!confirming}
+                style={{
+                  flex: 2, padding: "14px",
+                  background: pinInput ? "#C29E66" : "rgba(194,158,102,0.2)",
+                  color: pinInput ? "#0C0C0C" : "rgba(194,158,102,0.4)",
+                  border: "none", cursor: pinInput ? "pointer" : "not-allowed",
+                  fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  letterSpacing: "0.15em", textTransform: "uppercase",
+                }}>
+                {confirming ? "Confirmando…" : "✓ Aprobar cita"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PortalShell>
   );
 };
