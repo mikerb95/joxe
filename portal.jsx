@@ -2504,6 +2504,13 @@ const HomePortal = () => {
               color: "#F5F1EA", textDecoration: "none", fontSize: 12,
               letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.75,
             }}>Check-In</a>
+            {empSession && !isAdmin && (
+              <a href="Agenda.html" style={{
+                color: "#C29E66", textDecoration: "none", fontSize: 11,
+                letterSpacing: "0.15em", textTransform: "uppercase",
+                padding: "8px 14px", border: "1px solid rgba(194,158,102,0.4)",
+              }}>Mi Agenda ◈</a>
+            )}
             {isAdmin && (
               <a href="Admin.html" style={{
                 color: "#C29E66", textDecoration: "none", fontSize: 11,
