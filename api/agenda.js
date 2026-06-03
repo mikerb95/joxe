@@ -52,6 +52,48 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true });
     }
 
+    if (action === "summary") {
+      const store = await kvGet("turno_store");
+      const today = new Date().toISOString().slice(0, 10);
+
+      const slim = a => ({
+        id: a.id, name: a.name, service: a.service, serviceDur: a.serviceDur,
+        time: a.time, date: a.date, phone: a.phone, status: a.status,
+        confirmedAt: a.confirmedAt, completedAt: a.completedAt,
+      });
+
+      const myAppts = (store?.appointments || [])
+        .filter(a => a.stylist === emp.name && a.date === today)
+        .map(slim);
+
+      const activeToday = (store?.active || [])
+        .filter(a => a.stylist === emp.name && a.date === today)
+        .map(slim);
+
+      const completedToday = (store?.completed || [])
+        .filter(a => a.stylist === emp.name && a.date === today)
+        .map(slim);
+
+      const revenueToday = (admin?.revenue || []).filter(
+        r => !r.deleted && r.stylist === emp.name && r.date === today
+      );
+      const totalHoy = revenueToday.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+      return res.status(200).json({
+        ok: true,
+        today,
+        pending: myAppts.filter(a => a.status === "pending"),
+        scheduled: myAppts.filter(a => a.status === "scheduled" || a.status === "confirmed"),
+        active: activeToday,
+        completed: completedToday,
+        totalHoy,
+        revenueEntries: revenueToday.map(r => ({
+          service: r.service, amount: r.amount, method: r.method, client: r.client,
+        })),
+        workHours: emp.workHours || null,
+      });
+    }
+
     return res.status(400).json({ error: "Acción desconocida" });
   } catch (err) {
     console.error("[agenda]", err.message);
