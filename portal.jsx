@@ -3305,9 +3305,11 @@ const WABlob = () => {
 };
 
 // ============================================================
-// AGENDA — Confirmación de citas por empleado
+// AGENDA — Confirmación de citas + Resumen por empleado
 // ============================================================
 const AGENDA_SES = "joxe_agenda_session"; // { id, name, role }
+const DAYS_ES = { dom: "Domingo", lun: "Lunes", mar: "Martes", mie: "Miércoles", jue: "Jueves", vie: "Viernes", sab: "Sábado" };
+const fmtCOP = n => "$" + Math.round(n || 0).toLocaleString("es-CO");
 
 const AgendaPortal = () => {
   const [store, setStore] = useStore();
@@ -3327,8 +3329,15 @@ const AgendaPortal = () => {
   const [confirming, setConfirming] = React.useState(null);
   const [confirmed, setConfirmed] = React.useState(null);
   // PIN prompt shown when session was auto-restored (pin not in memory)
-  const [pinPrompt, setPinPrompt] = React.useState(null); // appt waiting for PIN
+  const [pinPrompt, setPinPrompt] = React.useState(null);
   const [pinInput, setPinInput]   = React.useState("");
+  // Tabs + resumen
+  const [view, setView] = React.useState("agenda");
+  const [summaryData, setSummaryData] = React.useState(null);
+  const [loadingSummary, setLoadingSummary] = React.useState(false);
+  const [summaryErr, setSummaryErr] = React.useState("");
+  const [summaryNeedPin, setSummaryNeedPin] = React.useState(false);
+  const [summaryPinInput, setSummaryPinInput] = React.useState("");
 
   React.useEffect(() => {
     // Pre-select employee from previous session if available
@@ -3406,7 +3415,41 @@ const AgendaPortal = () => {
   const logout = () => {
     sessionStorage.removeItem(AGENDA_SES);
     setSession(null); setPin(""); setSelId(""); setErr(""); setConfirmErr("");
+    setView("agenda"); setSummaryData(null);
   };
+
+  const fetchSummary = React.useCallback(async (pinOverride) => {
+    const usedPin = pinOverride ?? pin;
+    if (!usedPin) { setSummaryNeedPin(true); return; }
+    setLoadingSummary(true); setSummaryErr("");
+    try {
+      const res = await fetch("/api/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "summary", empId: session.id, pin: usedPin }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSummaryErr(data.error || "Error al cargar el resumen");
+      } else {
+        setSummaryData(data);
+        if (!pin) { setPin(usedPin); setSummaryNeedPin(false); setSummaryPinInput(""); }
+      }
+    } catch { setSummaryErr("Error de conexión"); }
+    setLoadingSummary(false);
+  }, [pin, session]);
+
+  // Load summary when tab is opened
+  React.useEffect(() => {
+    if (view === "resumen" && session) fetchSummary();
+  }, [view]);
+
+  // Auto-refresh summary every 30s while on that tab
+  React.useEffect(() => {
+    if (view !== "resumen" || !session || !pin) return;
+    const t = setInterval(() => fetchSummary(), 30000);
+    return () => clearInterval(t);
+  }, [view, session, pin]);
 
   const fmtDate = (d) => {
     if (!d) return "—";
@@ -3414,13 +3457,31 @@ const AgendaPortal = () => {
     catch { return d; }
   };
 
-  // Citas pendientes del empleado logueado
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Citas pendientes del empleado logueado (todas las fechas — para confirmar)
   const myPending = React.useMemo(() => {
     if (!session) return [];
     return (store.appointments || []).filter(
       a => a.stylist === session.name && a.status === "pending"
     ).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
   }, [store.appointments, session]);
+
+  // Datos en vivo para la vista Resumen (desde el store que se actualiza cada 5s)
+  const myTodayScheduled = React.useMemo(() => {
+    if (!session) return [];
+    return (store.appointments || []).filter(
+      a => a.stylist === session.name && a.date === today &&
+           (a.status === "scheduled" || a.status === "confirmed")
+    ).sort((a, b) => a.time.localeCompare(b.time));
+  }, [store.appointments, session, today]);
+
+  const myTodayPending = React.useMemo(() => {
+    if (!session) return [];
+    return (store.appointments || []).filter(
+      a => a.stylist === session.name && a.date === today && a.status === "pending"
+    ).sort((a, b) => a.time.localeCompare(b.time));
+  }, [store.appointments, session, today]);
 
   // ── LOGIN ──
   if (!session) {
@@ -3502,6 +3563,318 @@ const AgendaPortal = () => {
     );
   }
 
+  // ── TAB BAR ──
+  const tabBar = (
+    <div style={{
+      display: "flex", borderBottom: "1px solid rgba(245,241,234,0.1)",
+      maxWidth: 520, margin: "0 auto", width: "100%", boxSizing: "border-box",
+      padding: "0 24px",
+    }}>
+      {[["agenda", "Mi Agenda"], ["resumen", "Resumen"]].map(([v, label]) => (
+        <button key={v} onClick={() => setView(v)} style={{
+          padding: "14px 20px", background: "transparent", border: "none",
+          borderBottom: `2px solid ${view === v ? "#C29E66" : "transparent"}`,
+          color: view === v ? "#C29E66" : "rgba(245,241,234,0.4)",
+          cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+          fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+          marginBottom: -1, transition: "color 0.2s",
+        }}>{label}</button>
+      ))}
+    </div>
+  );
+
+  // ── RESUMEN VIEW ──
+  if (view === "resumen") {
+    const sd = summaryData;
+
+    // Revenue breakdown by method
+    const byMethod = {};
+    (sd?.revenueEntries || []).forEach(r => {
+      byMethod[r.method] = (byMethod[r.method] || 0) + r.amount;
+    });
+
+    // Work hours
+    const wh = sd?.workHours;
+    const dayOrder = ["lun", "mar", "mie", "jue", "vie", "sab", "dom"];
+
+    const ApptRowSimple = ({ a, badge, badgeColor }) => (
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12,
+        padding: "12px 16px", marginBottom: 6,
+        background: "rgba(245,241,234,0.04)",
+        border: "1px solid rgba(245,241,234,0.08)",
+      }}>
+        <PMono style={{ fontSize: 12, color: "#F5F1EA", minWidth: 42 }}>{a.time}</PMono>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontFamily: "'Outfit', sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name || "—"}</div>
+          <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.4)", display: "block", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.service}</PMono>
+        </div>
+        {badge && (
+          <PMono style={{ fontSize: 9, color: badgeColor || "#C29E66", padding: "3px 8px", border: `1px solid ${badgeColor || "#C29E66"}`, flexShrink: 0 }}>
+            {badge}
+          </PMono>
+        )}
+      </div>
+    );
+
+    const SectionHead = ({ label, count }) => (
+      <PMono style={{ color: "#C29E66", display: "block", marginBottom: 10, marginTop: 28 }}>
+        {label}{count !== undefined ? ` · ${count}` : ""}
+      </PMono>
+    );
+
+    const empty = (msg) => (
+      <div style={{ padding: "16px", border: "1px solid rgba(245,241,234,0.06)", textAlign: "center" }}>
+        <PMono style={{ color: "rgba(245,241,234,0.25)", fontSize: 10 }}>{msg}</PMono>
+      </div>
+    );
+
+    return (
+      <PortalShell tone="noir" header={
+        <PortalHeader
+          tone="noir"
+          subtitle={session.role + " · Resumen"}
+          title={session.name}
+          right={
+            <button onClick={logout} style={{
+              background: "transparent", border: "none", color: "rgba(245,241,234,0.5)",
+              cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: 12,
+              letterSpacing: "0.15em", textTransform: "uppercase",
+            }}>Salir</button>
+          }
+        />
+      }>
+        {tabBar}
+
+        <main style={{ flex: 1, padding: "8px 24px 40px", maxWidth: 520, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+
+          {/* PIN needed for session restored without pin */}
+          {summaryNeedPin && (
+            <div style={{ marginTop: 32, padding: 24, border: "1px solid rgba(194,158,102,0.2)", background: "rgba(194,158,102,0.04)" }}>
+              <PMono style={{ color: "#C29E66", display: "block", marginBottom: 12 }}>Confirma tu PIN para ver el resumen</PMono>
+              <input type="password" inputMode="numeric" maxLength={6} autoFocus
+                value={summaryPinInput}
+                onChange={e => setSummaryPinInput(e.target.value.replace(/\D/g, ""))}
+                onKeyDown={e => e.key === "Enter" && summaryPinInput && fetchSummary(summaryPinInput)}
+                placeholder="••••"
+                style={{
+                  width: "100%", padding: "16px", marginBottom: 12,
+                  background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
+                  color: "#F5F1EA", fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 28, letterSpacing: "0.4em", textAlign: "center", boxSizing: "border-box",
+                }}
+              />
+              <button onClick={() => summaryPinInput && fetchSummary(summaryPinInput)}
+                disabled={!summaryPinInput || loadingSummary}
+                style={{
+                  width: "100%", padding: "14px",
+                  background: summaryPinInput ? "#C29E66" : "rgba(194,158,102,0.2)",
+                  color: summaryPinInput ? "#0C0C0C" : "rgba(194,158,102,0.4)",
+                  border: "none", cursor: summaryPinInput ? "pointer" : "not-allowed",
+                  fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                  letterSpacing: "0.15em", textTransform: "uppercase",
+                }}>
+                {loadingSummary ? "Cargando…" : "Ver resumen →"}
+              </button>
+            </div>
+          )}
+
+          {!summaryNeedPin && summaryErr && (
+            <div style={{ marginTop: 24, padding: "12px 16px", background: "rgba(196,102,102,0.1)", border: "1px solid rgba(196,102,102,0.3)", color: "#C46666", fontSize: 13 }}>
+              {summaryErr}
+              <button onClick={() => fetchSummary()} style={{ marginLeft: 12, background: "transparent", border: "none", color: "#C29E66", cursor: "pointer", fontSize: 12, fontFamily: "'Outfit', sans-serif", letterSpacing: "0.1em" }}>Reintentar</button>
+            </div>
+          )}
+
+          {!summaryNeedPin && loadingSummary && !sd && (
+            <div style={{ textAlign: "center", padding: "56px 0" }}>
+              <PMono style={{ color: "rgba(245,241,234,0.3)", fontSize: 10 }}>Cargando resumen…</PMono>
+            </div>
+          )}
+
+          {!summaryNeedPin && (
+            <>
+              {/* ── TOTAL DEL DÍA ── */}
+              <SectionHead label="Total del día" />
+              <div style={{ padding: "20px 20px 16px", background: "rgba(194,158,102,0.06)", border: "1px solid rgba(194,158,102,0.2)", marginBottom: 4 }}>
+                <div style={{ fontFamily: "'Marcellus', serif", fontSize: 32, marginBottom: 12 }}>
+                  {fmtCOP(sd?.totalHoy || 0)}
+                </div>
+                {Object.keys(byMethod).length > 0 ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {Object.entries(byMethod).map(([m, amt]) => (
+                      <div key={m} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.4)" }}>{m}</PMono>
+                        <PMono style={{ fontSize: 11, color: "#F5F1EA" }}>{fmtCOP(amt)}</PMono>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.3)" }}>Sin ingresos registrados hoy</PMono>
+                )}
+              </div>
+              {/* refresh hint */}
+              <div style={{ textAlign: "right", marginBottom: 4 }}>
+                <button onClick={() => fetchSummary()} style={{ background: "transparent", border: "none", color: "rgba(245,241,234,0.25)", cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: 10, letterSpacing: "0.1em" }}>
+                  ↺ Actualizar
+                </button>
+              </div>
+
+              {/* ── CONFIRMADOS HOY ── */}
+              <SectionHead label="Confirmados hoy" count={myTodayScheduled.length} />
+              {myTodayScheduled.length === 0
+                ? empty("Sin turnos confirmados para hoy")
+                : myTodayScheduled.map(a => (
+                  <ApptRowSimple key={a.id} a={a}
+                    badge={a.status === "confirmed" ? "Check-in" : "Confirmado"}
+                    badgeColor={a.status === "confirmed" ? "#66C499" : "#C29E66"}
+                  />
+                ))
+              }
+
+              {/* ── POR CONFIRMAR CONSIGNACIÓN ── */}
+              <SectionHead label="Por confirmar consignación" count={myTodayPending.length} />
+              {myTodayPending.length === 0
+                ? empty("Sin solicitudes pendientes para hoy")
+                : myTodayPending.map(a => {
+                  const isDone = confirmed === a.id;
+                  const isLoading = confirming === a.id;
+                  return (
+                    <div key={a.id} style={{
+                      padding: "14px 16px", marginBottom: 6,
+                      background: isDone ? "rgba(102,196,153,0.07)" : "rgba(245,241,234,0.04)",
+                      border: `1px solid ${isDone ? "rgba(102,196,153,0.3)" : "rgba(245,241,234,0.1)"}`,
+                      transition: "all 0.3s",
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isDone ? 0 : 10 }}>
+                        <PMono style={{ fontSize: 12, color: "#F5F1EA", minWidth: 42 }}>{a.time}</PMono>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontFamily: "'Outfit', sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name || "—"}</div>
+                          <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.4)", display: "block", marginTop: 2 }}>{a.service}</PMono>
+                        </div>
+                        {isDone && <PMono style={{ fontSize: 9, color: "#66C499", padding: "3px 8px", border: "1px solid rgba(102,196,153,0.4)", flexShrink: 0 }}>✓ Confirmado</PMono>}
+                      </div>
+                      {!isDone && (
+                        <button onClick={() => confirmAppt(a)} disabled={isLoading}
+                          style={{
+                            width: "100%", padding: "10px",
+                            background: "#C29E66", color: "#0C0C0C",
+                            border: "none", cursor: isLoading ? "not-allowed" : "pointer",
+                            fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                            letterSpacing: "0.15em", textTransform: "uppercase",
+                            opacity: isLoading ? 0.6 : 1,
+                          }}>
+                          {isLoading ? "Confirmando…" : "✓ Confirmar cita"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              }
+
+              {/* ── COMPLETADOS ── */}
+              {(() => {
+                const completedList = [...(sd?.active || []), ...(sd?.completed || [])];
+                return (
+                  <>
+                    <SectionHead label="Completados hoy" count={completedList.length} />
+                    {completedList.length === 0
+                      ? empty("Sin servicios completados hoy")
+                      : completedList.sort((a, b) => (a.time || "").localeCompare(b.time || "")).map(a => (
+                        <ApptRowSimple key={a.id} a={a} badge="✓ Listo" badgeColor="rgba(102,196,153,0.8)" />
+                      ))
+                    }
+                  </>
+                );
+              })()}
+
+              {/* ── HORARIOS DISPONIBLES ── */}
+              <SectionHead label="Configuración de turnos" />
+              {wh ? (
+                <div style={{ border: "1px solid rgba(245,241,234,0.08)" }}>
+                  {dayOrder.map(d => {
+                    const h = wh[d];
+                    if (!h) return null;
+                    return (
+                      <div key={d} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "11px 16px", borderBottom: "1px solid rgba(245,241,234,0.05)",
+                      }}>
+                        <PMono style={{ fontSize: 10, color: "rgba(245,241,234,0.45)" }}>{DAYS_ES[d]}</PMono>
+                        <PMono style={{ fontSize: 11 }}>{h.open} — {h.close}</PMono>
+                      </div>
+                    );
+                  }).filter(Boolean)}
+                </div>
+              ) : (
+                empty("Sin horario configurado · Contacta al administrador")
+              )}
+            </>
+          )}
+        </main>
+
+        {/* PIN prompt overlay — shown when session was auto-restored from Portal.html */}
+        {pinPrompt && (
+          <div role="dialog" aria-modal="true" style={{
+            position: "fixed", inset: 0, zIndex: 9000,
+            background: "rgba(12,12,12,0.82)", backdropFilter: "blur(6px)",
+            display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+          }}
+            onClick={e => { if (e.target === e.currentTarget) { setPinPrompt(null); setPinInput(""); } }}
+          >
+            <div style={{
+              background: "#141212", color: "#F5F1EA",
+              border: "1px solid rgba(245,241,234,0.12)",
+              padding: 32, maxWidth: 360, width: "100%",
+            }}>
+              <PMono style={{ color: "#C29E66", display: "block", marginBottom: 10 }}>Confirmar identidad</PMono>
+              <div style={{ fontFamily: "'Marcellus', serif", fontSize: 22, marginBottom: 6 }}>{pinPrompt.name}</div>
+              <div style={{ fontSize: 13, opacity: 0.55, marginBottom: 24 }}>
+                {pinPrompt.service} · {pinPrompt.date} {pinPrompt.time}
+              </div>
+              <label htmlFor="agenda-pin-confirm">
+                <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 8 }}>Tu PIN para aprobar</PMono>
+              </label>
+              <input id="agenda-pin-confirm" type="password" inputMode="numeric" maxLength={6}
+                autoFocus value={pinInput}
+                onChange={e => { setPinInput(e.target.value.replace(/\D/g, "")); setConfirmErr(""); }}
+                onKeyDown={e => e.key === "Enter" && pinInput && confirmAppt(pinPrompt, pinInput)}
+                placeholder="••••"
+                style={{
+                  width: "100%", padding: "16px", marginBottom: 16,
+                  background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
+                  color: "#F5F1EA", fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 28, letterSpacing: "0.4em", textAlign: "center", boxSizing: "border-box",
+                }}
+              />
+              {confirmErr && <div style={{ marginBottom: 12, fontSize: 12, color: "#C46666" }}>{confirmErr}</div>}
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => { setPinPrompt(null); setPinInput(""); setConfirmErr(""); }} style={{
+                  flex: 1, padding: "14px", background: "transparent",
+                  border: "1px solid rgba(245,241,234,0.2)", color: "rgba(245,241,234,0.7)",
+                  cursor: "pointer", fontFamily: "'Outfit', sans-serif",
+                  fontSize: 12, letterSpacing: "0.15em", textTransform: "uppercase",
+                }}>Cancelar</button>
+                <button onClick={() => pinInput && confirmAppt(pinPrompt, pinInput)}
+                  disabled={!pinInput || !!confirming}
+                  style={{
+                    flex: 2, padding: "14px",
+                    background: pinInput ? "#C29E66" : "rgba(194,158,102,0.2)",
+                    color: pinInput ? "#0C0C0C" : "rgba(194,158,102,0.4)",
+                    border: "none", cursor: pinInput ? "pointer" : "not-allowed",
+                    fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                    letterSpacing: "0.15em", textTransform: "uppercase",
+                  }}>
+                  {confirming ? "Confirmando…" : "✓ Aprobar cita"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </PortalShell>
+    );
+  }
+
   // ── AGENDA ──
   return (
     <PortalShell tone="noir" header={
@@ -3518,8 +3891,10 @@ const AgendaPortal = () => {
         }
       />
     }>
-      <main style={{ flex: 1, padding: "32px 24px", maxWidth: 520, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
-        <PMono style={{ color: "#C29E66", display: "block", marginBottom: 20 }}>
+      {tabBar}
+
+      <main style={{ flex: 1, padding: "8px 24px 40px", maxWidth: 520, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
+        <PMono style={{ color: "#C29E66", display: "block", marginBottom: 20, marginTop: 20 }}>
           Solicitudes pendientes · {myPending.length}
         </PMono>
 
