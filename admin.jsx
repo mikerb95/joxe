@@ -4641,7 +4641,6 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
 
 // ---- Employee Shell ----
 const EMP_VIEWS = [
-  {id:"dashboard",     label:"Mi Resumen",     icon:"◈"},
   {id:"agenda",        label:"Mi Agenda",       icon:"▦"},
   {id:"confirmaciones",label:"Confirmar citas", icon:"◉"},
   {id:"todas",         label:"Mis Citas",       icon:"≡"},
@@ -4749,7 +4748,7 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
 const AdminPortal = () => {
   const [authed,setAuthed]     = React.useState(isAuthed);
   const [empSes,setEmpSes]     = React.useState(getEmpSession);
-  const [view,setView]         = React.useState("dashboard");
+  const [view,setView]         = React.useState(() => (!isAuthed() && !!getEmpSession()) ? "agenda" : "dashboard");
   const [navParam,setNavParam] = React.useState(null);
 
   const nav = React.useCallback((v, param=null) => {
@@ -4775,11 +4774,10 @@ const AdminPortal = () => {
   // --- Employee portal ---
   if (isEmp) {
     const EmpViewComponent = {
-      dashboard:      (p)=><EmpDashboardView      {...p} emp={empSes} onNav={nav}/>,
       agenda:         (p)=><EmpAgendaView          {...p} emp={empSes}/>,
       confirmaciones: (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="confirmaciones"/>,
       todas:          (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="todas"/>,
-    }[view] || ((p)=><EmpDashboardView {...p} emp={empSes} onNav={nav}/>);
+    }[view] || ((p)=><EmpAgendaView {...p} emp={empSes}/>);
     return (
       <EmpShell emp={empSes} onLogout={logout} activeView={view} onNav={nav}>
         <EmpViewComponent />
