@@ -4393,17 +4393,45 @@ const EmpDashboardView = ({emp, onNav}) => {
 };
 
 const EmpAgendaView = ({emp}) => {
-  const [appts] = useAppts();
-  const [admin] = useAdmin();
+  const [appts, setAppts] = useAppts();
+  const [admin]           = useAdmin();
   const todayD  = todayStr();
-  const tomorrowD = (() => { const d=new Date(todayD+"T12:00"); d.setDate(d.getDate()+1); return d.toISOString().split("T")[0]; })();
-  const dates   = [todayD, tomorrowD];
+  const addDay  = (base, n) => { const d=new Date(base+"T12:00"); d.setDate(d.getDate()+n); return d.toISOString().split("T")[0]; };
+  const dates   = [todayD, addDay(todayD,1), addDay(todayD,2)];
 
-  const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
-  const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
+  const [activeDay,  setActiveDay]  = React.useState(0);
+  const [expandedId, setExpandedId] = React.useState(null);
 
-  const DAY_LABEL = (d) => d===todayD ? "Hoy" : "Mañana";
-  const DAY_SUB   = (d) => new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
+  const allAppts  = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
+  const myAppts   = allAppts.filter(a=>a.stylist===emp.name);
+
+  const needsConfirm = (a) =>
+    !a.confirmedBy && !["cancelled","completed","no-show"].includes(a.computedStatus);
+
+  const pendingCount = myAppts.filter(needsConfirm).length;
+
+  const todayAll = myAppts.filter(a=>a.date===todayD);
+  const statsData = [
+    ["Citas hoy",     todayAll.filter(a=>!["cancelled","completed"].includes(a.computedStatus)).length, null],
+    ["Por confirmar", pendingCount, pendingCount>0?C.gold:null],
+    ["Completadas",   todayAll.filter(a=>a.computedStatus==="completed").length, C.green],
+  ];
+
+  const confirmAppt = (apptId, isPending) => {
+    const patch = (list) => list.map(a =>
+      a.id===apptId
+        ? {...a, status: isPending?"scheduled":a.status, confirmedBy:emp.name, confirmedAt:Date.now()}
+        : a
+    );
+    setAppts(s=>({...s, appointments:patch(s.appointments), active:patch(s.active)}));
+  };
+
+  const DAY_TAB_LABEL = (d, i) =>
+    i===0 ? "Hoy" : i===1 ? "Mañana" :
+    new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric"});
+
+  const DAY_HEADER_SUB = (d) =>
+    new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
 
   const statusColor = (s) =>
     s==="cancelled"?"#C46666":s==="completed"?"#66C499":
@@ -4413,92 +4441,173 @@ const EmpAgendaView = ({emp}) => {
     s==="in-service"?"En silla":s==="waiting"?"En cola":
     s==="completed"?"Completada":s==="cancelled"?"Cancelada":"Agendada";
 
+  const date     = dates[activeDay];
+  const isToday  = date===todayD;
+  const dayAppts = myAppts.filter(a=>a.date===date);
+
+  const byTime = {};
+  TIMES.forEach(t=>{ byTime[t]=[]; });
+  dayAppts.forEach(a=>{ if(byTime[a.time]) byTime[a.time].push(a); else byTime[a.time]=[a]; });
+  const slots = Object.keys(byTime).sort();
+
+  const activeCount = dayAppts.filter(a=>a.computedStatus!=="cancelled").length;
+
   return (
     <div>
-      <PageHeader title="Mi Agenda" subtitle="Hoy · Mañana" />
-      <div style={{padding:"24px 32px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-          {dates.map(date=>{
-            const isToday  = date===todayD;
-            const dayAppts = myAppts.filter(a=>a.date===date);
+      <PageHeader title="Mi Agenda" subtitle={DAY_TAB_LABEL(date,activeDay)+" · "+DAY_HEADER_SUB(date)} />
 
-            const byTime = {};
-            TIMES.forEach(t=>{ byTime[t]=[]; });
-            dayAppts.forEach(a=>{ if(byTime[a.time]) byTime[a.time].push(a); else byTime[a.time]=[a]; });
-            const slots = Object.keys(byTime).sort();
+      {/* Mini stats bar */}
+      <div style={{display:"flex",gap:24,padding:"0 32px",borderBottom:`1px solid ${C.bdr}`}}>
+        {statsData.map(([label,val,color])=>(
+          <div key={label} style={{padding:"12px 0",display:"flex",gap:8,alignItems:"baseline"}}>
+            <span style={{fontFamily:"'Marcellus',serif",fontSize:22,color:color||C.text}}>{val}</span>
+            <Mono style={{color:C.muted,fontSize:9}}>{label}</Mono>
+          </div>
+        ))}
+      </div>
+
+      {/* Pending banner */}
+      {pendingCount>0 && (
+        <div style={{
+          margin:"16px 32px 0",padding:"11px 18px",
+          background:"rgba(194,158,102,0.07)",border:"1px solid rgba(194,158,102,0.35)",
+          display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,
+        }}>
+          <Mono style={{color:C.gold,fontSize:10}}>
+            ⚑ {pendingCount} cita{pendingCount>1?"s":""} por confirmar
+          </Mono>
+          <button onClick={()=>setActiveDay(dates.findIndex(d=>myAppts.some(a=>a.date===d&&needsConfirm(a)))||0)}
+            style={{
+              background:"transparent",border:`1px solid ${C.gold}50`,color:C.gold,
+              padding:"5px 14px",cursor:"pointer",fontFamily:"'Outfit',sans-serif",
+              fontSize:11,letterSpacing:"0.08em",
+            }}>Ver →</button>
+        </div>
+      )}
+
+      {/* Day tabs */}
+      <div style={{display:"flex",gap:4,padding:"16px 32px 0"}}>
+        {dates.map((d,i)=>{
+          const cnt = myAppts.filter(a=>a.date===d&&a.computedStatus!=="cancelled").length;
+          const hasPending = myAppts.some(a=>a.date===d&&needsConfirm(a));
+          return (
+            <button key={d} onClick={()=>setActiveDay(i)} style={{
+              padding:"8px 18px",
+              background:i===activeDay?C.gold:"transparent",
+              color:i===activeDay?"#0C0C0C":hasPending?C.gold:C.muted,
+              border:`1px solid ${i===activeDay?C.gold:hasPending?C.gold+"50":C.bdr}`,
+              cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontSize:12,
+              display:"flex",alignItems:"center",gap:8,
+            }}>
+              {DAY_TAB_LABEL(d,i)}
+              {cnt>0 && (
+                <span style={{
+                  fontFamily:"'JetBrains Mono',monospace",fontSize:9,
+                  background:i===activeDay?"rgba(12,12,12,0.2)":"rgba(194,158,102,0.15)",
+                  padding:"1px 6px",
+                }}>{cnt}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Day grid */}
+      <div style={{padding:"16px 32px 32px"}}>
+        <div style={{border:`1px solid ${isToday?C.gold:C.bdr}`,background:C.s1}}>
+          {/* Day header */}
+          <div style={{
+            padding:"16px 20px",borderBottom:`1px solid ${C.bdr}`,
+            background:isToday?"rgba(194,158,102,0.08)":C.s2,
+            display:"flex",alignItems:"center",gap:12,
+          }}>
+            <div style={{fontFamily:"'Marcellus',serif",fontSize:24,color:isToday?C.gold:C.text}}>
+              {DAY_TAB_LABEL(date,activeDay)}
+            </div>
+            <Mono style={{color:C.muted,fontSize:9,flex:1}}>{DAY_HEADER_SUB(date)}</Mono>
+            <span style={{
+              fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.gold,
+              background:"rgba(194,158,102,0.1)",padding:"3px 10px",border:`1px solid ${C.gold}30`,
+            }}>{activeCount} cita{activeCount!==1?"s":""}</span>
+          </div>
+
+          {/* Time rows */}
+          {slots.map(time=>{
+            const slotAppts = byTime[time]||[];
+            const [h,m]     = time.split(":").map(Number);
+            const slotMin   = h*60+(m||0);
+            const nowMin    = new Date().getHours()*60+new Date().getMinutes();
+            const isPast    = isToday && slotMin < nowMin-30;
 
             return (
-              <div key={date} style={{border:`1px solid ${isToday?C.gold:C.bdr}`,background:C.s1}}>
-                {/* Day header */}
+              <div key={time} style={{
+                display:"grid",gridTemplateColumns:"64px 1fr",
+                borderBottom:`1px solid ${C.bdr}`,
+                opacity:isPast?0.4:1,
+              }}>
                 <div style={{
-                  padding:"16px 20px",borderBottom:`1px solid ${C.bdr}`,
-                  background:isToday?"rgba(194,158,102,0.08)":C.s2,
-                  display:"flex",alignItems:"center",gap:12,
+                  padding:"14px 0 14px 16px",borderRight:`1px solid ${C.bdr}`,
+                  display:"flex",alignItems:"flex-start",
                 }}>
-                  <div style={{fontFamily:"'Marcellus',serif",fontSize:26,color:isToday?C.gold:C.text}}>
-                    {DAY_LABEL(date)}
-                  </div>
-                  <Mono style={{color:C.muted,fontSize:9,flex:1}}>{DAY_SUB(date)}</Mono>
-                  <span style={{
-                    fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.gold,
-                    background:"rgba(194,158,102,0.1)",padding:"3px 10px",border:`1px solid ${C.gold}30`,
-                  }}>{dayAppts.filter(a=>a.computedStatus!=="cancelled").length} cita{dayAppts.filter(a=>a.computedStatus!=="cancelled").length!==1?"s":""}</span>
+                  <Mono style={{color:isPast?C.muted2:C.gold,fontSize:11}}>{time}</Mono>
                 </div>
 
-                {/* Time rows */}
-                {slots.map(time=>{
-                  const slotAppts = byTime[time]||[];
-                  const [h,m]     = time.split(":").map(Number);
-                  const slotMin   = h*60+(m||0);
-                  const nowMin    = new Date().getHours()*60+new Date().getMinutes();
-                  const isPast    = isToday && slotMin < nowMin-30;
-
-                  return (
-                    <div key={time} style={{
-                      display:"grid",gridTemplateColumns:"64px 1fr",
-                      borderBottom:`1px solid ${C.bdr}`,
-                      opacity:isPast?0.4:1,
-                    }}>
-                      <div style={{
-                        padding:"14px 0 14px 16px",borderRight:`1px solid ${C.bdr}`,
-                        display:"flex",alignItems:"flex-start",
-                      }}>
-                        <Mono style={{color:isPast?C.muted2:C.gold,fontSize:11}}>{time}</Mono>
-                      </div>
-
-                      <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:5}}>
-                        {slotAppts.map(a=>(
-                          <div key={a.id} style={{
-                            padding:"8px 10px",
-                            background:a.confirmedBy?"rgba(102,196,153,0.1)":"rgba(194,158,102,0.08)",
-                            borderLeft:`3px solid ${a.confirmedBy?C.green:statusColor(a.computedStatus)}`,
-                          }}>
-                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-                              <div>
-                                <div style={{
-                                  fontSize:13,color:a.computedStatus==="cancelled"?C.muted:C.text,
-                                  textDecoration:a.computedStatus==="cancelled"?"line-through":"none",
-                                }}>{a.name}</div>
-                                <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.service}</div>
-                              </div>
-                              <div style={{textAlign:"right",flexShrink:0}}>
-                                <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
-                                  {statusLabel(a.computedStatus)}
-                                </Mono>
-                                {a.confirmedBy && (
-                                  <Mono style={{fontSize:8,color:C.green,display:"block",marginTop:2}}>✓ confirmada</Mono>
-                                )}
-                              </div>
+                <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:5}}>
+                  {slotAppts.map(a=>{
+                    const isPending = needsConfirm(a);
+                    const isExpanded = expandedId===a.id;
+                    return (
+                      <div key={a.id} style={{
+                        padding:"8px 10px",
+                        background:a.confirmedBy?"rgba(102,196,153,0.1)":isPending?"rgba(194,158,102,0.08)":"rgba(245,241,234,0.04)",
+                        borderLeft:`3px solid ${a.confirmedBy?C.green:statusColor(a.computedStatus)}`,
+                        cursor:a.phone?"pointer":"default",
+                      }} onClick={()=>a.phone&&setExpandedId(id=>id===a.id?null:a.id)}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                          <div style={{flex:1,minWidth:0}}>
+                            <div style={{
+                              fontSize:13,color:a.computedStatus==="cancelled"?C.muted:C.text,
+                              textDecoration:a.computedStatus==="cancelled"?"line-through":"none",
+                            }}>{a.name}</div>
+                            <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.service}</div>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                            {isPending && (
+                              <button onClick={e=>{e.stopPropagation();confirmAppt(a.id,a.computedStatus==="pending");}} style={{
+                                padding:"4px 10px",background:"rgba(102,196,153,0.12)",
+                                border:`1px solid ${C.green}40`,color:C.green,
+                                cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                                fontSize:9,letterSpacing:"0.06em",
+                              }}>✓</button>
+                            )}
+                            <div style={{textAlign:"right"}}>
+                              <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
+                                {statusLabel(a.computedStatus)}
+                              </Mono>
+                              {a.confirmedBy && (
+                                <Mono style={{fontSize:8,color:C.green,display:"block",marginTop:2}}>✓ confirmada</Mono>
+                              )}
                             </div>
                           </div>
-                        ))}
-                        {slotAppts.length===0 && (
-                          <div style={{fontSize:10,color:C.muted2,padding:"4px 0"}}>Libre</div>
+                        </div>
+                        {/* Expandable phone */}
+                        {isExpanded && a.phone && (
+                          <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.bdr}`}}>
+                            <a href={`https://wa.me/57${a.phone.replace(/\D/g,"")}`}
+                              target="_blank" rel="noopener"
+                              onClick={e=>e.stopPropagation()}
+                              style={{fontSize:12,color:C.gold,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:6}}>
+                              {a.phone} ↗
+                            </a>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                  {slotAppts.length===0 && (
+                    <div style={{fontSize:10,color:C.muted2,padding:"4px 0"}}>Libre</div>
+                  )}
+                </div>
               </div>
             );
           })}
