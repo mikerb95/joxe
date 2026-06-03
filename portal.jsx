@@ -1098,6 +1098,11 @@ const BookingPortal = () => {
                 <p style={{ margin: "12px 0 0", fontSize: 12, color: "rgba(12,12,12,0.4)", textAlign: "center" }}>
                   Se abrirá WhatsApp con el mensaje listo — solo adjunta el comprobante y envía.
                 </p>
+                <p style={{ margin: "10px 0 0", fontSize: 12, color: "rgba(12,12,12,0.45)", textAlign: "center", lineHeight: 1.6 }}>
+                  ¿No puedes abrir el botón? Envía el comprobante directamente a{" "}
+                  <strong style={{ color: "#0C0C0C", letterSpacing: "0.03em" }}>{waAdminFormatted}</strong>
+                  {" "}por WhatsApp.
+                </p>
               </>
             )}
 
