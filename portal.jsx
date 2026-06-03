@@ -444,9 +444,22 @@ const EMPTY_BOOKING_FORM = {
   name: "", phone: "", cedula: "",
 };
 
+const ADMIN_KEY_BOOKING = "joxe_admin_v1";
+const loadBookingAdmin = () => {
+  try { return JSON.parse(localStorage.getItem(ADMIN_KEY_BOOKING)) || {}; } catch { return {}; }
+};
+
 const BookingPortal = () => {
   const [store, setStore] = useStore();
   const catalog = useCatalog();
+  const waAdminRaw = loadBookingAdmin().whatsappAdminNumber || "573124499862";
+  const waAdminFormatted = (() => {
+    const d = waAdminRaw.replace(/\D/g, "");
+    if (d.startsWith("57") && d.length === 12) {
+      return `+57 ${d.slice(2,5)} ${d.slice(5,8)} ${d.slice(8)}`;
+    }
+    return `+${d}`;
+  })();
   // Restore draft from sessionStorage (cleared on submit)
   const initial = React.useMemo(() => {
     try {
@@ -1064,7 +1077,7 @@ const BookingPortal = () => {
 
                 {/* Botón WhatsApp */}
                 <a
-                  href={`https://wa.me/573124499862?text=${encodeURIComponent(
+                  href={`https://wa.me/${waAdminRaw}?text=${encodeURIComponent(
                     `Hola, quiero confirmar mi cita 🗓️\n\nNombre: ${ticket.name}\nServicio: ${ticket.service}\nFecha: ${ticket.date} a las ${ticket.time}\nEstilista: ${ticket.stylist}\nCódigo: ${ticket.code}\n\nAdjunto comprobante de abono de $10.000.`
                   )}`}
                   target="_blank"
