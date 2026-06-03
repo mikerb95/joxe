@@ -632,11 +632,10 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
   const [pinErr,setPinErr]         = React.useState("");
 
   React.useEffect(() => {
-    // Load employees from localStorage cache (set by admin on this device)
-    try {
-      const cached = JSON.parse(localStorage.getItem(ADMIN_KEY));
-      if (cached?.employees) setEmpList(cached.employees.filter(e=>e.active&&e.pin));
-    } catch {}
+    fetch("/api/catalog")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.employees) setEmpList(d.employees.filter(e => e.active && e.pin)); })
+      .catch(() => {});
   }, []);
 
   const attemptAdmin = async () => {
@@ -650,13 +649,22 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
     } catch { setErr("Error de conexión."); setLoading(false); }
   };
 
-  const attemptEmp = () => {
+  const attemptEmp = async () => {
     setPinErr("");
-    const emp = empList.find(e=>e.id===selEmpId);
-    if (!emp) { setPinErr("Selecciona un empleado."); return; }
-    if (emp.pin !== pin) { setPinErr("PIN incorrecto. Intenta de nuevo."); setPin(""); return; }
-    doEmpLogin({ id:emp.id, name:emp.name, role:emp.role });
-    onEmpSuccess({ id:emp.id, name:emp.name, role:emp.role });
+    if (!selEmpId || !pin) { setPinErr("Selecciona un empleado e ingresa tu PIN."); return; }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/agenda", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", empId: selEmpId, pin }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPinErr(data.error || "PIN incorrecto. Intenta de nuevo."); setPin(""); setLoading(false); return; }
+      doEmpLogin({ id: data.employee.id, name: data.employee.name, role: data.employee.role });
+      onEmpSuccess({ id: data.employee.id, name: data.employee.name, role: data.employee.role });
+    } catch { setPinErr("Error de conexión."); }
+    setLoading(false);
   };
 
   const logoBlock = (
