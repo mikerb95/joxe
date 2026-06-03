@@ -3293,7 +3293,13 @@ const AGENDA_SES = "joxe_agenda_session"; // { id, name, role }
 
 const AgendaPortal = () => {
   const [store, setStore] = useStore();
-  const [session, setSession] = React.useState(null); // always require login — pin is not persisted
+  // Auto-restore session from sessionStorage (same key used by Portal.html login)
+  const [session, setSession] = React.useState(() => {
+    try {
+      const s = JSON.parse(sessionStorage.getItem(AGENDA_SES));
+      return s?.id ? s : null;
+    } catch { return null; }
+  });
   const [empList, setEmpList] = React.useState([]);
   const [selId, setSelId] = React.useState("");
   const [pin, setPin] = React.useState("");
@@ -3302,6 +3308,9 @@ const AgendaPortal = () => {
   const [loading, setLoading] = React.useState(false);
   const [confirming, setConfirming] = React.useState(null);
   const [confirmed, setConfirmed] = React.useState(null);
+  // PIN prompt shown when session was auto-restored (pin not in memory)
+  const [pinPrompt, setPinPrompt] = React.useState(null); // appt waiting for PIN
+  const [pinInput, setPinInput]   = React.useState("");
 
   React.useEffect(() => {
     // Pre-select employee from previous session if available
@@ -3336,17 +3345,26 @@ const AgendaPortal = () => {
     setLoading(false);
   };
 
-  const confirmAppt = async (appt) => {
+  const confirmAppt = async (appt, pinOverride) => {
+    const usedPin = pinOverride ?? pin;
+    if (!usedPin) {
+      // Pin not in memory (session restored from Portal.html) — ask for it
+      setPinPrompt(appt);
+      setPinInput("");
+      return;
+    }
     setConfirming(appt.id);
     setConfirmErr("");
+    setPinPrompt(null);
     try {
       const res = await fetch("/api/agenda", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "confirm", empId: session.id, pin, apptId: appt.id }),
+        body: JSON.stringify({ action: "confirm", empId: session.id, pin: usedPin, apptId: appt.id }),
       });
       const data = await res.json();
       if (res.ok) {
+        if (!pin) setPin(usedPin); // cache PIN for subsequent confirms this session
         setStore(s => ({
           ...s,
           appointments: s.appointments.map(a =>
@@ -3359,6 +3377,7 @@ const AgendaPortal = () => {
         setTimeout(() => setConfirmed(null), 3000);
       } else {
         setConfirmErr(data.error || "Error al confirmar la cita.");
+        if (data.error?.toLowerCase().includes("pin")) setPin(""); // clear cached bad pin
       }
     } catch {
       setConfirmErr("Error de conexión. Intenta de nuevo.");
