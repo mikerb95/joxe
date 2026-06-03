@@ -3309,7 +3309,7 @@ const WABlob = () => {
 // ============================================================
 const AGENDA_SES = "joxe_agenda_session"; // { id, name, role }
 const DAYS_ES = { dom: "Domingo", lun: "Lunes", mar: "Martes", mie: "Miércoles", jue: "Jueves", vie: "Viernes", sab: "Sábado" };
-const fmtCOP = n => "$" + Math.round(n || 0).toLocaleString("es-CO");
+const fmtCOPAmt = n => "$" + Math.round(n || 0).toLocaleString("es-CO");
 
 const AgendaPortal = () => {
   const [store, setStore] = useStore();
