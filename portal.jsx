@@ -609,6 +609,12 @@ const BookingPortal = () => {
     || (step === 3 && !!form.date && !!form.time)
     || (step === 4 && step4Valid);
 
+  const hasRole = !!(
+    sessionStorage.getItem("joxe_admin_session") ||
+    sessionStorage.getItem("joxe_agenda_session")
+  );
+  const homeHref = hasRole ? "Portal.html" : "Asesores de Imagen.html";
+
   return (
     <PortalShell tone="ivory" header={
       <PortalHeader
@@ -616,7 +622,7 @@ const BookingPortal = () => {
         subtitle="Portal · Paso"
         title={step < 5 ? `${step} de ${TOTAL_STEPS} — Reservar cita` : "Reserva confirmada"}
         right={
-          <a href="Portal.html" style={{
+          <a href={homeHref} style={{
             textDecoration: "none", color: "#0C0C0C",
             fontFamily: "'Outfit', sans-serif", fontSize: 12,
             letterSpacing: "0.15em", textTransform: "uppercase",
@@ -1081,6 +1087,20 @@ const BookingPortal = () => {
                 </p>
               </>
             )}
+
+            {/* Volver al inicio */}
+            <a href="Asesores de Imagen.html" style={{
+              display: "block", textAlign: "center", marginTop: 32,
+              padding: "14px 0",
+              border: "1px solid rgba(12,12,12,0.15)",
+              color: "rgba(12,12,12,0.55)", textDecoration: "none",
+              fontFamily: "'Outfit', sans-serif", fontSize: 12,
+              letterSpacing: "0.18em", textTransform: "uppercase",
+              transition: "border-color 0.2s, color 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#0C0C0C"; e.currentTarget.style.color = "#0C0C0C"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "rgba(12,12,12,0.15)"; e.currentTarget.style.color = "rgba(12,12,12,0.55)"; }}
+            >← Volver al sitio</a>
           </div>
         )}
 
@@ -1792,7 +1812,7 @@ const CuentaPortal = () => {
       <PortalShell tone="noir" header={
         <PortalHeader subtitle="Portal · Cliente" title="Mi Cuenta"
           right={
-            <a href="Portal.html" style={{
+            <a href="Asesores de Imagen.html" style={{
               color: "#F5F1EA", textDecoration: "none", fontSize: 12,
               letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
             }}>← Inicio</a>
@@ -2655,7 +2675,7 @@ const CheckInPortal = () => {
   const isAdmin = !!sessionStorage.getItem("joxe_admin_session");
 
   const headerRight = (
-    <a href="Portal.html" style={{
+    <a href={isAdmin ? "Portal.html" : "Asesores de Imagen.html"} style={{
       color: "#F5F1EA", textDecoration: "none", fontSize: 12,
       letterSpacing: "0.15em", textTransform: "uppercase", opacity: 0.6,
     }}>← Inicio</a>
