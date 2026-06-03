@@ -1639,6 +1639,18 @@
         <p>Los códigos QR se generan en el navegador con SVG puro, sin librerías externas. Cada ticket tiene su QR único basado en el ID de la cita.</p>
         <span class="tag">Zero-dep</span>
       </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">◎</span>
+        <h3>Seguridad de la API</h3>
+        <p>Rate limiting por IP en el endpoint de reservas, validación estricta de campos, CORS configurado y funciones crypto en la capa de base de datos.</p>
+        <span class="tag green">Hardened</span>
+      </div>
+      <div class="feature-card">
+        <span class="feature-card-icon">⊙</span>
+        <h3>Auth gate del portal</h3>
+        <p>El portal de clientes exige autenticación antes de mostrar cualquier dato. Admins y empleados acceden con contraseña o PIN respectivamente.</p>
+        <span class="tag gold">Seguro</span>
+      </div>
     </div>
 
     <div class="divider"></div>
@@ -1664,6 +1676,18 @@
       <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
         <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">POST /api/auth</span>
         <span style="color: var(--muted);">Autenticación admin y empleados por PIN</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
+        <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">POST /api/book</span>
+        <span style="color: var(--muted);">Crea una cita con validación de campos, rate limiting y notificación push al admin</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
+        <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">POST /api/agenda</span>
+        <span style="color: var(--muted);">Login de empleado por PIN y confirmación de cita asignada</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 140px 1fr; gap: 16px; font-size: 12px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--bdr); align-items: center;">
+        <span style="font-family: 'JetBrains Mono', monospace; color: var(--bronze); font-size: 10px; letter-spacing: 0.08em;">GET /api/push</span>
+        <span style="color: var(--muted);">Gestión de suscripciones de notificaciones push (Web Push / VAPID)</span>
       </div>
     </div>
   </section>
