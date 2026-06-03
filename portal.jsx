@@ -2559,18 +2559,24 @@ const HomePortal = () => {
               desc: "Consulta tus citas, el estado en sala y tus puntos de lealtad.",
               href: "Cuenta.html", cta: "Ver mi cuenta",
             },
+            ...(empSession ? [{
+              n: "03", title: "Mi Agenda", subtitle: "Empleado",
+              desc: "Revisa las solicitudes de citas asignadas a ti y confírmalas al recibir el comprobante.",
+              href: "Agenda.html", cta: "Ver solicitudes →",
+              accent: true,
+            }] : []),
             {
-              n: "03", title: "Escanear QR", subtitle: "Recepción",
+              n: empSession ? "04" : "03", title: "Escanear QR", subtitle: "Recepción",
               desc: "Valida el ticket y activa el turno al llegar al salón.",
               href: "Scan.html", cta: "Abrir escáner",
             },
             {
-              n: "04", title: "Pantalla de sala", subtitle: "Lobby",
+              n: empSession ? "05" : "04", title: "Pantalla de sala", subtitle: "Lobby",
               desc: "Muestra la cola en vivo — proyecta en pantalla grande.",
               href: "Lobby.html", cta: "Ver sala",
             },
             {
-              n: "05", title: "Check-In", subtitle: "Cliente · Silla",
+              n: empSession ? "06" : "05", title: "Check-In", subtitle: "Cliente · Silla",
               desc: "Escanea el QR de tu silla para confirmar asistencia o cerrar el servicio.",
               href: "CheckIn.html", cta: "Ir a Check-In",
             },
@@ -2579,7 +2585,7 @@ const HomePortal = () => {
               padding: "32px 28px", textDecoration: "none",
               background: c.primary ? "#C29E66" : "#141212",
               color: c.primary ? "#0C0C0C" : "#F5F1EA",
-              border: c.primary ? "none" : "1px solid rgba(245,241,234,0.15)",
+              border: c.primary ? "none" : c.accent ? "1px solid rgba(194,158,102,0.5)" : "1px solid rgba(245,241,234,0.15)",
               display: "flex", flexDirection: "column",
               minHeight: 280, transition: "transform 0.3s",
             }}

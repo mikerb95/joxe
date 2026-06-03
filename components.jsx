@@ -266,44 +266,39 @@ const Marquee = () => {
 // ——————————————————————————————————————————————
 // SERVICIOS
 // ——————————————————————————————————————————————
-const servicesData = [
-  {
-    cat: "Corte",
-    items: [
-      { name: "Corte mujer", desc: "Diagnóstico capilar + corte personalizado + styling.", price: "$85.000", dur: "60 min" },
-      { name: "Corte hombre", desc: "Corte de precisión con tijera y máquina. Lavado incluido.", price: "$45.000", dur: "40 min" },
-      { name: "Corte niños", desc: "Menores de 10 años. Paciencia garantizada.", price: "$35.000", dur: "30 min" },
-    ],
-  },
-  {
-    cat: "Color",
-    items: [
-      { name: "Balayage", desc: "Técnica de iluminación a mano alzada. Resultado natural y luminoso.", price: "desde $280.000", dur: "3 hrs" },
-      { name: "Color correction", desc: "Recuperación de color dañado o no deseado. Consulta previa.", price: "desde $320.000", dur: "4 hrs" },
-      { name: "Color raíz", desc: "Retoque de raíz con color uniforme. Tratamiento incluido.", price: "$120.000", dur: "90 min" },
-      { name: "Mechas", desc: "Mechas clásicas con papel aluminio. Matización incluida.", price: "desde $220.000", dur: "2.5 hrs" },
-    ],
-  },
-  {
-    cat: "Tratamiento",
-    items: [
-      { name: "Keratina", desc: "Alisado progresivo con keratina brasilera. Sin formol.", price: "desde $260.000", dur: "3 hrs" },
-      { name: "Botox capilar", desc: "Hidratación profunda. Cabello sedoso por 6 semanas.", price: "$140.000", dur: "90 min" },
-      { name: "Hidratación premium", desc: "Mascarilla + masaje craneal + secado.", price: "$75.000", dur: "60 min" },
-    ],
-  },
-  {
-    cat: "Asesoría",
-    items: [
-      { name: "Asesoría de imagen", desc: "Análisis de rostro, colorimetría y estilo. Incluye guía impresa.", price: "$180.000", dur: "90 min" },
-      { name: "Novias · paquete", desc: "Prueba + día del evento. Maquillaje y peinado.", price: "desde $450.000", dur: "día completo" },
-    ],
-  },
+const formatPrice = (price, note) => {
+  const formatted = "$" + Number(price).toLocaleString("es-CO");
+  return note ? `${note} ${formatted}` : formatted;
+};
+
+const formatDur = (mins) => {
+  if (!mins) return "";
+  if (mins >= 60 && mins % 60 === 0) return `${mins / 60} hrs`;
+  if (mins > 60) return `${(mins / 60).toFixed(1).replace(".0", "")} hrs`;
+  return `${mins} min`;
+};
+
+const FALLBACK_SERVICES = [
+  { id:"s1", name:"Corte mujer",        price:85000,  dur:60,  active:true },
+  { id:"s2", name:"Corte hombre",       price:45000,  dur:40,  active:true },
+  { id:"s3", name:"Balayage",           price:280000, dur:180, active:true, note:"desde" },
+  { id:"s4", name:"Color correction",   price:320000, dur:240, active:true, note:"desde" },
+  { id:"s5", name:"Color raíz",         price:120000, dur:90,  active:true },
+  { id:"s6", name:"Keratina",           price:260000, dur:180, active:true, note:"desde" },
+  { id:"s7", name:"Asesoría de imagen", price:180000, dur:90,  active:true },
+  { id:"s8", name:"Peinado novia",      price:220000, dur:120, active:true, note:"desde" },
 ];
 
 const Services = () => {
-  const [active, setActive] = React.useState("Corte");
-  const current = servicesData.find(s => s.cat === active);
+  const [services, setServices] = React.useState(FALLBACK_SERVICES);
+
+  React.useEffect(() => {
+    fetch("/api/catalog")
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(data => { if (data.services?.length) setServices(data.services); })
+      .catch(() => {});
+  }, []);
+
   return (
     <section id="servicios" style={{
       background: "var(--ivory)", color: "var(--noir)",
@@ -330,37 +325,18 @@ const Services = () => {
             La consulta inicial siempre es gratis. Te contamos qué
             necesita tu cabello antes de tocarlo.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {servicesData.map(s => (
-              <button key={s.cat} onClick={() => setActive(s.cat)} style={{
-                textAlign: "left", padding: "18px 0",
-                background: "transparent", border: "none",
-                borderTop: "1px solid rgba(20,18,18,0.1)",
-                fontFamily: "var(--sans)", fontSize: 15,
-                color: active === s.cat ? "var(--noir)" : "rgba(20,18,18,0.5)",
-                cursor: "pointer", letterSpacing: "0.02em",
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                transition: "color 0.25s",
-              }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                  <span style={{
-                    fontFamily: "'JetBrains Mono', monospace", fontSize: 10,
-                    color: "var(--bronze)",
-                  }}>0{servicesData.indexOf(s) + 1}</span>
-                  {s.cat}
-                </span>
-                <span style={{ fontSize: 18, opacity: active === s.cat ? 1 : 0.3 }}>
-                  {active === s.cat ? "—" : "+"}
-                </span>
-              </button>
-            ))}
-            <div style={{ borderTop: "1px solid rgba(20,18,18,0.1)" }} />
-          </div>
+          <p style={{
+            fontFamily: "var(--sans)", fontSize: 13, lineHeight: 1.6,
+            opacity: 0.5, maxWidth: 340,
+          }}>
+            Los precios pueden variar según largo, densidad y estado del cabello.
+            Te confirmamos el valor exacto en la consulta.
+          </p>
         </div>
         <div>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            {current.items.map((item, i) => (
-              <div key={i} style={{
+            {services.map((item, i) => (
+              <div key={item.id || i} style={{
                 display: "grid",
                 gridTemplateColumns: "1fr auto",
                 gap: 32, padding: "28px 0",
@@ -370,32 +346,23 @@ const Services = () => {
                 <div>
                   <h3 style={{
                     fontFamily: "var(--display)", fontWeight: 400,
-                    fontSize: 28, margin: "0 0 8px", letterSpacing: "-0.01em",
+                    fontSize: 28, margin: "0 0 10px", letterSpacing: "-0.01em",
                   }}>{item.name}</h3>
-                  <p style={{
-                    fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.5,
-                    opacity: 0.65, margin: "0 0 10px", maxWidth: 440,
-                  }}>{item.desc}</p>
-                  <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>
-                    {item.dur}
-                  </Mono>
+                  {item.dur > 0 && (
+                    <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>
+                      {formatDur(item.dur)}
+                    </Mono>
+                  )}
                 </div>
                 <div style={{
                   fontFamily: "var(--sans)", fontSize: 20,
                   fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
                   letterSpacing: "-0.01em",
-                }}>{item.price}</div>
+                }}>{formatPrice(item.price, item.note)}</div>
               </div>
             ))}
             <div style={{ borderTop: "1px solid rgba(20,18,18,0.08)" }} />
           </div>
-          <p style={{
-            fontFamily: "var(--sans)", fontSize: 12, lineHeight: 1.6,
-            opacity: 0.5, marginTop: 32, letterSpacing: "0.02em",
-          }}>
-            Los precios pueden variar según largo, densidad y estado del cabello.
-            Te confirmamos el valor exacto en la consulta.
-          </p>
         </div>
       </div>
     </section>
