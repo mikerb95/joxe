@@ -3698,14 +3698,14 @@ const AgendaPortal = () => {
               <SectionHead label="Total del día" />
               <div style={{ padding: "20px 20px 16px", background: "rgba(194,158,102,0.06)", border: "1px solid rgba(194,158,102,0.2)", marginBottom: 4 }}>
                 <div style={{ fontFamily: "'Marcellus', serif", fontSize: 32, marginBottom: 12 }}>
-                  {fmtCOP(sd?.totalHoy || 0)}
+                  {fmtCOPAmt(sd?.totalHoy || 0)}
                 </div>
                 {Object.keys(byMethod).length > 0 ? (
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                     {Object.entries(byMethod).map(([m, amt]) => (
                       <div key={m} style={{ display: "flex", gap: 6, alignItems: "center" }}>
                         <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.4)" }}>{m}</PMono>
-                        <PMono style={{ fontSize: 11, color: "#F5F1EA" }}>{fmtCOP(amt)}</PMono>
+                        <PMono style={{ fontSize: 11, color: "#F5F1EA" }}>{fmtCOPAmt(amt)}</PMono>
                       </div>
                     ))}
                   </div>
