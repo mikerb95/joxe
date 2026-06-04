@@ -67,7 +67,6 @@ function App() {
       <Services />
       <Gallery />
       <Testimonials />
-      <Philosophy />
       <BookingSection onReserveClick={goToBooking} />
       <LocationMap />
       <Footer />
