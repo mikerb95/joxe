@@ -642,11 +642,13 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
   const [pin,setPin]               = React.useState("");
   const [pinErr,setPinErr]         = React.useState("");
 
+  const [loadingEmps, setLoadingEmps] = React.useState(true);
   React.useEffect(() => {
     fetch("/api/catalog")
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.employees) setEmpList(d.employees.filter(e => e.active && e.pin)); })
-      .catch(() => {});
+      .then(d => { if (d?.employees) setEmpList(d.employees); })
+      .catch(() => {})
+      .finally(() => setLoadingEmps(false));
   }, []);
 
   const attemptAdmin = async () => {
@@ -769,7 +771,7 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
           {empList.length===0 ? (
             <div style={{padding:"20px 0",textAlign:"center"}}>
               <div style={{fontSize:13,color:C.muted,lineHeight:1.6}}>
-                Cargando empleados…
+                {loadingEmps ? "Cargando empleados…" : "No hay empleados configurados."}
               </div>
             </div>
           ) : (
