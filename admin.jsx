@@ -1314,8 +1314,10 @@ const AppointmentsView = () => {
                     }}>
                       <div style={{display:"flex",flexDirection:"column",gap:10}}>
                         {[
+                          ["Nombre",a.name],
+                          ["Teléfono",a.phone],
+                          ["Cédula",a.cedula],
                           ["Ticket",a.code],
-                          ["WhatsApp",a.phone],
                           ["Estilista",a.stylist],
                           ["Servicio",a.service],
                           ["Fecha",a.date?" "+fmtDateMed(a.date):"—"],
