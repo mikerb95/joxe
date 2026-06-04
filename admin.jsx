@@ -4416,7 +4416,7 @@ const EmpDashboardView = ({emp, onNav}) => {
   );
 };
 
-const EmpAgendaView = ({emp}) => {
+const EmpAgendaView = ({emp, onNav}) => {
   const [appts, setAppts] = useAppts();
   const [admin]           = useAdmin();
   const todayD  = todayStr();
@@ -4500,7 +4500,7 @@ const EmpAgendaView = ({emp}) => {
           <Mono style={{color:C.gold,fontSize:10}}>
             ⚑ {pendingCount} cita{pendingCount>1?"s":""} por confirmar
           </Mono>
-          <button onClick={()=>setActiveDay(dates.findIndex(d=>myAppts.some(a=>a.date===d&&needsConfirm(a)))||0)}
+          <button onClick={()=>onNav&&onNav("confirmaciones")}
             style={{
               background:"transparent",border:`1px solid ${C.gold}50`,color:C.gold,
               padding:"5px 14px",cursor:"pointer",fontFamily:"'Outfit',sans-serif",
@@ -4912,10 +4912,10 @@ const AdminPortal = () => {
   // --- Employee portal ---
   if (isEmp) {
     const EmpViewComponent = {
-      agenda:         (p)=><EmpAgendaView          {...p} emp={empSes}/>,
+      agenda:         (p)=><EmpAgendaView          {...p} emp={empSes} onNav={nav}/>,
       confirmaciones: (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="confirmaciones"/>,
       todas:          (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="todas"/>,
-    }[view] || ((p)=><EmpAgendaView {...p} emp={empSes}/>);
+    }[view] || ((p)=><EmpAgendaView {...p} emp={empSes} onNav={nav}/>);
     return (
       <EmpShell emp={empSes} onLogout={logout} activeView={view} onNav={nav}>
         <EmpViewComponent />
