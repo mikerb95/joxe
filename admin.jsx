@@ -1352,6 +1352,12 @@ const AppointmentsView = () => {
                             </Btn>
                           </>
                         )}
+                        {a.computedStatus==="expired" && (
+                          <Btn small onClick={()=>confirmAppt(a.id)}
+                            style={{background:C.gold,color:"#0C0C0C",border:"none"}}>
+                            ↺ Reactivar cita
+                          </Btn>
+                        )}
                         {a.computedStatus!=="pending" && a.computedStatus!=="cancelled" && a.computedStatus!=="completed" && a.computedStatus!=="no-show" && (
                           <Btn variant="danger" small onClick={()=>cancelAppt(a.id)}>
                             ✕ Cancelar cita
