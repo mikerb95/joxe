@@ -77,7 +77,6 @@ const Nav = ({ onReserveClick, scrolled }) => {
             ["Servicios", "#servicios"],
             ["Galería", "#galeria"],
             ["Ubicación", "#ubicacion"],
-            ["Contacto", "#contacto"],
           ].map(([label, href]) => (
             <a key={href} href={href} style={{
               color: "var(--ivory)", textDecoration: "none",
@@ -122,7 +121,6 @@ const Nav = ({ onReserveClick, scrolled }) => {
             ["Servicios", "#servicios"],
             ["Galería", "#galeria"],
             ["Ubicación", "#ubicacion"],
-            ["Contacto", "#contacto"],
           ].map(([label, href]) => (
             <a key={href} href={href} onClick={() => setOpen(false)} style={{
               color: "var(--ivory)", textDecoration: "none",
@@ -533,186 +531,6 @@ const Gallery = () => {
 // ——————————————————————————————————————————————
 // TESTIMONIOS
 // ——————————————————————————————————————————————
-const testimonials = [
-  {
-    quote: "Entré con el pelo destruido después de una mala decoloración. Salí con el color que había visto solo en Pinterest. Joxe no me vendió humo, me dijo qué se podía hacer y qué no.",
-    name: "Valentina M.",
-    service: "Color correction",
-  },
-  {
-    quote: "Llevo tres años yendo. Nunca me he sentido apurada, nunca me han cambiado de estilista sin avisar. Eso en Soacha es difícil de encontrar.",
-    name: "Carolina R.",
-    service: "Clienta frecuente",
-  },
-  {
-    quote: "Me hicieron el peinado para mi matrimonio. Prueba dos semanas antes, el día llegaron puntuales al lugar. Cero estrés.",
-    name: "Daniela P.",
-    service: "Novias",
-  },
-  {
-    quote: "La primera vez que alguien me pregunta qué quiero y me escucha de verdad. Vale cada peso.",
-    name: "Andrés L.",
-    service: "Corte hombre + asesoría",
-  },
-];
-
-const Testimonials = () => {
-  const [idx, setIdx] = React.useState(0);
-  React.useEffect(() => {
-    const t = setInterval(() => setIdx(i => (i + 1) % testimonials.length), 6000);
-    return () => clearInterval(t);
-  }, []);
-  const t = testimonials[idx];
-  return (
-    <section style={{
-      background: "var(--ivory)", color: "var(--noir)",
-      padding: "140px 64px", position: "relative",
-    }} className="section">
-      <div style={{
-        maxWidth: 1100, margin: "0 auto", textAlign: "center",
-      }}>
-        <Mono style={{ color: "var(--bronze)" }}>03 — Testimonios</Mono>
-        <div style={{
-          fontFamily: "var(--display)", fontSize: 120, lineHeight: 0.5,
-          color: "var(--bronze)", opacity: 0.4, marginTop: 40, height: 40,
-        }}>"</div>
-        <blockquote key={idx} style={{
-          fontFamily: "var(--display)", fontWeight: 400,
-          fontSize: "clamp(24px, 2.6vw, 36px)", lineHeight: 1.35,
-          margin: "0 auto 40px", maxWidth: 880, letterSpacing: "-0.005em",
-          animation: "fadeIn 0.6s ease",
-        }}>
-          {t.quote}
-        </blockquote>
-        <div style={{
-          display: "inline-flex", alignItems: "center", gap: 16,
-          paddingTop: 24, borderTop: "1px solid rgba(20,18,18,0.15)",
-        }}>
-          <div style={{ fontFamily: "var(--sans)", fontSize: 14, letterSpacing: "0.05em" }}>
-            {t.name}
-          </div>
-          <div style={{ width: 4, height: 4, borderRadius: "50%", background: "var(--bronze)" }} />
-          <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>{t.service}</Mono>
-        </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 48, justifyContent: "center" }}>
-          {testimonials.map((_, i) => (
-            <button key={i} onClick={() => setIdx(i)} style={{
-              width: i === idx ? 32 : 8, height: 2,
-              background: i === idx ? "var(--bronze)" : "rgba(20,18,18,0.2)",
-              border: "none", cursor: "pointer", transition: "all 0.3s", padding: 0,
-            }} />
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-};
-
-// ——————————————————————————————————————————————
-// FILOSOFÍA / EXPERIENCIA
-// ——————————————————————————————————————————————
-// ——————————————————————————————————————————————
-// RESERVA (MODAL + SECCIÓN)
-// ——————————————————————————————————————————————
-const BookingSection = ({ onReserveClick }) => (
-  <section id="contacto" style={{
-    background: "var(--ivory)", color: "var(--noir)",
-    padding: "140px 64px",
-  }} className="section">
-    <div style={{
-      maxWidth: 1400, margin: "0 auto",
-      display: "grid", gridTemplateColumns: "1fr 1fr", gap: 64,
-    }} className="booking-grid">
-      <div>
-        <Mono style={{ color: "var(--bronze)" }}>05 — Reserva</Mono>
-        <h2 style={{
-          fontFamily: "var(--display)", fontWeight: 400,
-          fontSize: "clamp(48px, 5.5vw, 80px)", lineHeight: 1.02,
-          margin: "24px 0 32px", letterSpacing: "-0.015em",
-        }}>
-          Agenda.<br />
-          <em style={{ color: "var(--bronze)" }}>Llega.</em><br />
-          Confía.
-        </h2>
-        <p style={{
-          fontFamily: "var(--sans)", fontSize: 17, lineHeight: 1.6,
-          opacity: 0.75, maxWidth: 440, marginBottom: 40,
-        }}>
-          Reserva en línea en menos de un minuto. Si prefieres hablar
-          primero, escríbenos por WhatsApp — respondemos en menos de 30 minutos
-          en horario laboral.
-        </p>
-        <button onClick={onReserveClick} style={{
-          background: "var(--noir)", color: "var(--ivory)", border: "none",
-          padding: "20px 32px", fontFamily: "var(--sans)",
-          fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase",
-          cursor: "pointer", marginBottom: 16, display: "block", width: "fit-content",
-        }}>
-          Reservar en línea →
-        </button>
-        <a href="https://wa.me/573124499862" target="_blank" rel="noopener" style={{
-          display: "inline-flex", gap: 10, alignItems: "center",
-          color: "var(--noir)", textDecoration: "none",
-          fontFamily: "var(--sans)", fontSize: 14, letterSpacing: "0.05em",
-          padding: "12px 0", borderBottom: "1px solid var(--noir)",
-        }}>
-          WhatsApp · +57 312 449 9862
-        </a>
-      </div>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-        <div style={{ padding: "32px 0", borderTop: "1px solid rgba(20,18,18,0.15)" }}>
-          <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>Ubicación</Mono>
-          <h3 style={{
-            fontFamily: "var(--display)", fontSize: 24, fontWeight: 400,
-            margin: "14px 0 8px",
-          }}>San Mateo, Soacha</h3>
-          <p style={{
-            fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.6,
-            opacity: 0.7, margin: 0,
-          }}>
-            Dirección exacta al confirmar tu cita · Parqueadero incluido
-          </p>
-        </div>
-
-        <div style={{ padding: "32px 0", borderTop: "1px solid rgba(20,18,18,0.15)" }}>
-          <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>Horario</Mono>
-          <div style={{
-            marginTop: 14, display: "flex", flexDirection: "column", gap: 6,
-          }}>
-            {[
-              ["Mar — Vie", "9:00 — 19:00"],
-              ["Sábado", "8:00 — 18:00"],
-              ["Dom — Lun", "Cerrado"],
-            ].map(([d, h]) => (
-              <div key={d} style={{
-                display: "flex", justifyContent: "space-between",
-                fontFamily: "var(--sans)", fontSize: 15,
-              }}>
-                <span>{d}</span>
-                <span style={{ fontVariantNumeric: "tabular-nums", opacity: 0.7 }}>{h}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div style={{
-          padding: "24px", background: "var(--noir)", color: "var(--ivory)",
-        }}>
-          <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>Antes de venir</Mono>
-          <p style={{
-            fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.6,
-            opacity: 0.85, margin: "12px 0 0",
-          }}>
-            Llega con el cabello en su estado habitual — no necesitamos
-            que lo laves antes. Si es color correction, envíanos fotos
-            previas por WhatsApp.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-);
 
 
 // ——————————————————————————————————————————————
@@ -793,7 +611,7 @@ const Footer = () => (
       <div>
         <Mono style={{ color: "var(--bronze)", display: "block", marginBottom: 18 }}>Navegación</Mono>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[["Servicios", "#servicios"], ["Galería", "#galeria"], ["Reservar", "#contacto"]].map(([l, h]) => (
+          {[["Servicios", "#servicios"], ["Galería", "#galeria"]].map(([l, h]) => (
             <a key={h} href={h} style={{
               color: "var(--ivory)", textDecoration: "none",
               fontFamily: "var(--sans)", fontSize: 14, opacity: 0.75,
