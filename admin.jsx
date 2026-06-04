@@ -4573,12 +4573,14 @@ const EmpAgendaView = ({emp}) => {
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                             {isPending && (
-                              <button onClick={e=>{e.stopPropagation();confirmAppt(a.id,a.computedStatus==="pending");}} style={{
-                                padding:"4px 10px",background:"rgba(102,196,153,0.12)",
-                                border:`1px solid ${C.green}40`,color:C.green,
+                              <button onClick={e=>{e.stopPropagation();confirmAppt(a.id,["pending","expired"].includes(a.computedStatus));}} style={{
+                                padding:"4px 10px",
+                                background:a.computedStatus==="expired"?"rgba(194,158,102,0.12)":"rgba(102,196,153,0.12)",
+                                border:`1px solid ${a.computedStatus==="expired"?C.gold:C.green}40`,
+                                color:a.computedStatus==="expired"?C.gold:C.green,
                                 cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
                                 fontSize:9,letterSpacing:"0.06em",
-                              }}>✓</button>
+                              }}>{a.computedStatus==="expired"?"↺":"✓"}</button>
                             )}
                             <div style={{textAlign:"right"}}>
                               <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
@@ -4628,6 +4630,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
 
   const needsConfirm = (a) =>
     a.computedStatus==="pending" ||
+    a.computedStatus==="expired" ||
     (a.computedStatus==="scheduled" && !a.confirmedBy);
 
   const filtered = myAppts.filter(a=>{
@@ -4721,12 +4724,14 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
                 <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
                   {needsConfirm(a) && (
                     <>
-                      <button onClick={()=>confirmAppt(a.id, a.computedStatus==="pending")} style={{
-                        padding:"7px 16px",background:"rgba(102,196,153,0.1)",
-                        border:`1px solid ${C.green}40`,color:C.green,
+                      <button onClick={()=>confirmAppt(a.id, ["pending","expired"].includes(a.computedStatus))} style={{
+                        padding:"7px 16px",
+                        background:a.computedStatus==="expired"?"rgba(194,158,102,0.1)":"rgba(102,196,153,0.1)",
+                        border:`1px solid ${a.computedStatus==="expired"?C.gold:C.green}40`,
+                        color:a.computedStatus==="expired"?C.gold:C.green,
                         cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
                         fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",
-                      }}>✓ Confirmar</button>
+                      }}>{a.computedStatus==="expired"?"↺ Reactivar":"✓ Confirmar"}</button>
                       <button onClick={()=>rejectAppt(a.id)} style={{
                         padding:"7px 12px",background:"transparent",
                         border:`1px solid ${C.red}30`,color:C.red,
@@ -4763,7 +4768,7 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
       const d = s ? {...DEFAULT_APPTS(),...s} : DEFAULT_APPTS();
       const a = JSON.parse(localStorage.getItem(ADMIN_KEY));
       const cancelled = a?.cancelledIds||[];
-      return getAllAppts(d,cancelled,[]).filter(x=>x.stylist===emp.name&&(x.computedStatus==="pending"||(x.computedStatus==="scheduled"&&!x.confirmedBy))).length;
+      return getAllAppts(d,cancelled,[]).filter(x=>x.stylist===emp.name&&(x.computedStatus==="pending"||x.computedStatus==="expired"||(x.computedStatus==="scheduled"&&!x.confirmedBy))).length;
     } catch { return 0; }
   })();
 
