@@ -24,7 +24,9 @@ const useStore = () => {
   // Fetch from Turso and update local cache
   const pull = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/store");
+      const t = sessionStorage.getItem("joxe_admin_session") || sessionStorage.getItem("joxe_emp_token") || "";
+      const headers = t ? { "Authorization": `Bearer ${t}` } : {};
+      const res = await fetch("/api/store", { headers });
       if (!res.ok) return;
       const data = await res.json();
       localStorage.setItem(STORE_KEY, JSON.stringify(data));
@@ -2344,6 +2346,7 @@ const PortalLoginGate = ({ onAuth }) => {
       const data = await res.json();
       if (!res.ok) { setErr(data.error || "PIN incorrecto."); setPin(""); setLoading(false); return; }
       sessionStorage.setItem(PORTAL_SES_EMP, JSON.stringify(data.employee));
+      if (data.token) sessionStorage.setItem("joxe_emp_token", data.token);
       onAuth();
     } catch { setErr("Error de conexión."); }
     setLoading(false);
@@ -3366,6 +3369,7 @@ const AgendaPortal = () => {
       const data = await res.json();
       if (!res.ok) { setErr(data.error || "PIN incorrecto"); setPin(""); setLoading(false); return; }
       sessionStorage.setItem(AGENDA_SES, JSON.stringify(data.employee));
+      if (data.token) sessionStorage.setItem("joxe_emp_token", data.token);
       setSession(data.employee);
       // pin stays in state for confirm calls during this session
     } catch { setErr("Error de conexión"); }

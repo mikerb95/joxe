@@ -5,19 +5,28 @@ const ADMIN_KEY = "joxe_admin_v1";
 const APPT_KEY  = "joxe_turnos_v1";
 const SES_KEY   = "joxe_admin_session"; // stores the password as session token
 
-const EMP_SES_KEY = "joxe_emp_session"; // { id, name, role } for employee sessions
+const EMP_SES_KEY   = "joxe_emp_session"; // { id, name, role } for employee sessions
+const EMP_TOKEN_KEY = "joxe_emp_token";   // signed JWT for authenticated API reads
 
 // ---- Auth helpers — admin ----
 const getToken   = () => sessionStorage.getItem(SES_KEY) ?? "";
 const isAuthed   = () => !!sessionStorage.getItem(SES_KEY);
 const doLogin    = (pw) => sessionStorage.setItem(SES_KEY, pw);
-const doLogout   = () => { sessionStorage.removeItem(SES_KEY); sessionStorage.removeItem(EMP_SES_KEY); };
+const doLogout   = () => {
+  sessionStorage.removeItem(SES_KEY);
+  sessionStorage.removeItem(EMP_SES_KEY);
+  sessionStorage.removeItem(EMP_TOKEN_KEY);
+};
 
 // ---- Auth helpers — employee ----
 const getEmpSession  = () => { try { return JSON.parse(sessionStorage.getItem(EMP_SES_KEY)); } catch { return null; } };
 const isEmpAuthed    = () => !!sessionStorage.getItem(EMP_SES_KEY);
 const doEmpLogin     = (emp) => sessionStorage.setItem(EMP_SES_KEY, JSON.stringify(emp));
 const doEmpLogout    = () => sessionStorage.removeItem(EMP_SES_KEY);
+
+// Picks admin token or employee JWT, whichever is available
+const storeToken = () =>
+  sessionStorage.getItem(SES_KEY) || sessionStorage.getItem(EMP_TOKEN_KEY) || "";
 
 const adminHeaders = () => ({
   "Content-Type": "application/json",
@@ -175,7 +184,9 @@ const useAppts = () => {
 
   const pull = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/store");
+      const t = storeToken();
+      const headers = t ? { "Authorization": `Bearer ${t}` } : {};
+      const res = await fetch("/api/store", { headers });
       if (!res.ok) return;
       const data = await res.json();
       localStorage.setItem(APPT_KEY, JSON.stringify(data));
@@ -205,7 +216,7 @@ const useAppts = () => {
     try {
       await fetch("/api/store", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${storeToken()}` },
         body: JSON.stringify(next),
       });
       try { new BroadcastChannel("joxe_turnos").postMessage({ type:"update" }); } catch {}
@@ -661,6 +672,7 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
       });
       const data = await res.json();
       if (!res.ok) { setPinErr(data.error || "PIN incorrecto. Intenta de nuevo."); setPin(""); setLoading(false); return; }
+      if (data.token) sessionStorage.setItem(EMP_TOKEN_KEY, data.token);
       doEmpLogin({ id: data.employee.id, name: data.employee.name, role: data.employee.role });
       onEmpSuccess({ id: data.employee.id, name: data.employee.name, role: data.employee.role });
     } catch { setPinErr("Error de conexión."); }

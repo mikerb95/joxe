@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet } from "./db.js";
+import { initTables, kvGet, kvSet, signEmpToken } from "./db.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -31,6 +31,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         employee: { id: emp.id, name: emp.name, role: emp.role },
+        token: signEmpToken(emp.id),
       });
     }
 
