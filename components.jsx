@@ -76,7 +76,6 @@ const Nav = ({ onReserveClick, scrolled }) => {
           {[
             ["Servicios", "#servicios"],
             ["Galería", "#galeria"],
-            ["Filosofía", "#filosofia"],
             ["Ubicación", "#ubicacion"],
             ["Contacto", "#contacto"],
           ].map(([label, href]) => (
@@ -122,7 +121,6 @@ const Nav = ({ onReserveClick, scrolled }) => {
           {[
             ["Servicios", "#servicios"],
             ["Galería", "#galeria"],
-            ["Filosofía", "#filosofia"],
             ["Ubicación", "#ubicacion"],
             ["Contacto", "#contacto"],
           ].map(([label, href]) => (
