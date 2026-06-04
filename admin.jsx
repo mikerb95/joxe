@@ -4316,6 +4316,11 @@ const HelpView = () => {
 };
 
 // ==================== EMPLOYEE VIEWS ====================
+// Single source of truth: appointment needs employee confirmation
+const empNeedsConfirm = (a) =>
+  a.computedStatus === "pending" ||
+  a.computedStatus === "expired" ||
+  (a.computedStatus === "scheduled" && !a.confirmedBy);
 
 const EmpDashboardView = ({emp, onNav}) => {
   const [appts]  = useAppts();
@@ -4453,10 +4458,7 @@ const EmpAgendaView = ({emp, onNav}) => {
   const allAppts  = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts   = allAppts.filter(a=>a.stylist===emp.name);
 
-  const needsConfirm = (a) =>
-    !a.confirmedBy && !["cancelled","completed","no-show"].includes(a.computedStatus);
-
-  const pendingCount = myAppts.filter(needsConfirm).length;
+  const pendingCount = myAppts.filter(empNeedsConfirm).length;
 
   const todayAll = myAppts.filter(a=>a.date===todayD);
   const statsData = [
@@ -4537,7 +4539,7 @@ const EmpAgendaView = ({emp, onNav}) => {
       <div style={{display:"flex",gap:4,padding:"16px 32px 0"}}>
         {dates.map((d,i)=>{
           const cnt = myAppts.filter(a=>a.date===d&&a.computedStatus!=="cancelled").length;
-          const hasPending = myAppts.some(a=>a.date===d&&needsConfirm(a));
+          const hasPending = myAppts.some(a=>a.date===d&&empNeedsConfirm(a));
           return (
             <button key={d} onClick={()=>setActiveDay(i)} style={{
               padding:"8px 18px",
@@ -4602,7 +4604,7 @@ const EmpAgendaView = ({emp, onNav}) => {
 
                 <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:5}}>
                   {slotAppts.map(a=>{
-                    const isPending = needsConfirm(a);
+                    const isPending = empNeedsConfirm(a);
                     const isExpanded = expandedId===a.id;
                     return (
                       <div key={a.id} style={{
@@ -4676,10 +4678,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
 
-  const needsConfirm = (a) =>
-    a.computedStatus==="pending" ||
-    a.computedStatus==="expired" ||
-    (a.computedStatus==="scheduled" && !a.confirmedBy);
+  const needsConfirm = empNeedsConfirm;
 
   const filtered = myAppts.filter(a=>{
     if (tab==="confirmaciones") return needsConfirm(a);
@@ -4810,15 +4809,10 @@ const EMP_VIEWS = [
 
 const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
   const [mobileOpen,setMobileOpen] = React.useState(false);
-  const pendingAppts = (() => {
-    try {
-      const s = JSON.parse(localStorage.getItem(APPT_KEY));
-      const d = s ? {...DEFAULT_APPTS(),...s} : DEFAULT_APPTS();
-      const a = JSON.parse(localStorage.getItem(ADMIN_KEY));
-      const cancelled = a?.cancelledIds||[];
-      return getAllAppts(d,cancelled,[]).filter(x=>x.stylist===emp.name&&(x.computedStatus==="pending"||x.computedStatus==="expired"||(x.computedStatus==="scheduled"&&!x.confirmedBy))).length;
-    } catch { return 0; }
-  })();
+  const [appts] = useAppts();
+  const [admin] = useAdmin();
+  const pendingAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[])
+    .filter(x => x.stylist===emp.name && empNeedsConfirm(x)).length;
 
   const navContent = (
     <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
