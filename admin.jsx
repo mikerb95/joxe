@@ -1161,6 +1161,22 @@ const AppointmentsView = () => {
     setAdmin(a=>({...a, cancelledIds:[...(a.cancelledIds||[]),id]}));
   };
 
+  const deleteAppt = (id) => {
+    if (!confirm("¿Eliminar esta cita permanentemente? No se puede deshacer.")) return;
+    setAppts(s=>({
+      ...s,
+      appointments: s.appointments.filter(a=>a.id!==id),
+      active:        s.active.filter(a=>a.id!==id),
+      completed:     s.completed.filter(a=>a.id!==id),
+    }));
+    setAdmin(a=>({
+      ...a,
+      cancelledIds: (a.cancelledIds||[]).filter(i=>i!==id),
+      noShowIds:    (a.noShowIds||[]).filter(i=>i!==id),
+    }));
+    setExpandedId(null);
+  };
+
   const DAY_KEYS = ["dom","lun","mar","mie","jue","vie","sab"];
   const markNoShow = (appt) => {
     if (!confirm(`¿Marcar a ${appt.name} como incumplida?`)) return;
@@ -1412,6 +1428,14 @@ const AppointmentsView = () => {
                             WhatsApp →
                           </a>
                         )}
+                        <div style={{marginTop:4,paddingTop:8,borderTop:`1px solid ${C.bdr}`}}>
+                          <button onClick={()=>deleteAppt(a.id)} style={{
+                            width:"100%",padding:"7px 14px",background:"transparent",
+                            border:`1px solid ${C.red}25`,color:C.red,cursor:"pointer",
+                            fontFamily:"'Outfit',sans-serif",fontSize:10,
+                            letterSpacing:"0.1em",textTransform:"uppercase",opacity:0.6,
+                          }}>⊗ Eliminar cita</button>
+                        </div>
                       </div>
                     </div>
                   )}
