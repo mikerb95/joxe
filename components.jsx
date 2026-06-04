@@ -862,7 +862,7 @@ const Footer = () => (
       <div>
         <Mono style={{ color: "var(--bronze)", display: "block", marginBottom: 18 }}>Navegación</Mono>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[["Servicios", "#servicios"], ["Galería", "#galeria"], ["Filosofía", "#filosofia"], ["Reservar", "#contacto"]].map(([l, h]) => (
+          {[["Servicios", "#servicios"], ["Galería", "#galeria"], ["Reservar", "#contacto"]].map(([l, h]) => (
             <a key={h} href={h} style={{
               color: "var(--ivory)", textDecoration: "none",
               fontFamily: "var(--sans)", fontSize: 14, opacity: 0.75,
