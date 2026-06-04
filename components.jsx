@@ -898,6 +898,6 @@ const WhatsAppBlob = () => {
 
 Object.assign(window, {
   Nav, Hero, Marquee, Services, Gallery, Testimonials,
-  Philosophy, BookingSection, LocationMap, Footer, Placeholder, Mono,
+  BookingSection, LocationMap, Footer, Placeholder, Mono,
   WhatsAppBlob,
 });
