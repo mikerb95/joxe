@@ -66,8 +66,6 @@ function App() {
       <Marquee />
       <Services />
       <Gallery />
-      <Testimonials />
-      <BookingSection onReserveClick={goToBooking} />
       <LocationMap />
       <Footer />
       <WhatsAppBlob />

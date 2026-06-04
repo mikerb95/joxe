@@ -632,7 +632,7 @@ const AdminShell = ({children,activeView,onNav,onLogout}) => {
 
 // ==================== LOGIN ====================
 const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
-  const [mode,setMode]       = React.useState(null); // null | "admin" | "employee"
+  const [mode,setMode]       = React.useState(window.JOXE_STAFF_MODE ? "employee" : null);
   const [pw,setPw]           = React.useState("");
   const [err,setErr]         = React.useState("");
   const [loading,setLoading] = React.useState(false);
@@ -684,7 +684,7 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
       <div style={{fontFamily:"'Marcellus',serif",fontSize:36,letterSpacing:"0.4em",color:C.text,marginBottom:8}}>
         JOXE
       </div>
-      <Mono style={{color:C.gold,fontSize:10}}>Portal · Acceso</Mono>
+      <Mono style={{color:C.gold,fontSize:10}}>{window.JOXE_STAFF_MODE ? "Staff · Acceso" : "Portal · Acceso"}</Mono>
     </div>
   );
 
@@ -761,7 +761,9 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
             <h2 style={{fontFamily:"'Marcellus',serif",fontWeight:400,fontSize:22,margin:0,color:C.text}}>
               Empleado/a
             </h2>
-            <button onClick={()=>{setMode(null);setPin("");setPinErr("");}} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12}}>← Volver</button>
+            {!window.JOXE_STAFF_MODE && (
+              <button onClick={()=>{setMode(null);setPin("");setPinErr("");}} style={{background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:12}}>← Volver</button>
+            )}
           </div>
 
           {empList.length===0 ? (

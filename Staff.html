@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOXE · Staff</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JOXE Staff">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #0C0C0C; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  body { font-family: 'Outfit', sans-serif; color: #F5F1EA; }
+  ::selection { background: #C29E66; color: #0C0C0C; }
+  input, select, button, textarea { font-family: inherit; box-sizing: border-box; }
+  input:focus, select:focus, button:focus, textarea:focus {
+    outline: 1px solid #C29E66; outline-offset: 2px;
+  }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 768px) {
+    .admin-content { margin-left: 0 !important; padding-top: 56px !important; overflow-x: hidden; }
+    .adm-page-header { padding: 16px 20px !important; }
+    .adm-page-header h1 { font-size: 22px !important; }
+    .adm-filters { flex-direction: column !important; }
+    .adm-filters > * { min-width: 0 !important; width: 100% !important; }
+    .adm-stat-grid { grid-template-columns: repeat(2,1fr) !important; }
+    .adm-dash-grid { grid-template-columns: 1fr !important; }
+    .adm-appt-row { grid-template-columns: 52px 1fr auto !important; }
+    .adm-appt-row .adm-hide-mobile { display: none !important; }
+    .adm-table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .adm-section-pad { padding: 16px 20px !important; }
+    .adm-two-col { grid-template-columns: 1fr !important; }
+    .adm-agenda-grid { grid-template-columns: 1fr !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>window.JOXE_STAFF_MODE = true;</script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" crossorigin="anonymous"></script>
+<script type="text/babel" src="admin.jsx"></script>
+<script type="text/babel" data-presets="react">
+  ReactDOM.createRoot(document.getElementById("root")).render(<AdminPortal />);
+</script>
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => {});
+  }
+</script>
+</body>
+</html>
