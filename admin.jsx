@@ -5434,6 +5434,7 @@ const EmpHelpView = ({onNav}) => {
 
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isAndroid = /android/i.test(navigator.userAgent);
+  const isInApp = isInAppBrowser();
 
   return (
     <div>
