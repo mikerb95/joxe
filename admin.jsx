@@ -4509,7 +4509,7 @@ const HelpView = () => {
           </Section>
         )}
 
-        {!isIos && !isAndroid && (
+        {!isInApp && !isIos && !isAndroid && (
           <Section title="Notificaciones push" badge="Escritorio" badgeColor="#8ab0ff">
             <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
               También puedes activar notificaciones en un computador con Chrome o Edge.
