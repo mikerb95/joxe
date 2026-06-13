@@ -4978,7 +4978,10 @@ const EmpBookingView = ({emp, onNav}) => {
     autoNameRef.current = "";
   };
   const timeOk  = !!form.time && !blockConflicts(form.time);
-  const canSubmit = phoneOk && !!form.serviceId && !!form.date && timeOk && !saving;
+  // El nombre es obligatorio la primera vez que se registra un celular nuevo (sin cliente conocido)
+  const nameRequired = phoneOk && !knownName;
+  const nameOk       = !nameRequired || form.name.trim().length>0;
+  const canSubmit = phoneOk && nameOk && !!form.serviceId && !!form.date && timeOk && !saving;
 
   const pickService = (s)=> setForm(f=>({...f, serviceId:s.id, time:""}));
   const pickDate    = (d)=> setForm(f=>({...f, date:d, time:""}));
@@ -4986,6 +4989,7 @@ const EmpBookingView = ({emp, onNav}) => {
   const submit = async () => {
     setErr("");
     if (!phoneOk)            { setErr("Ingresa un celular válido de 10 dígitos."); return; }
+    if (!nameOk)             { setErr("Ingresa el nombre del cliente (obligatorio para un celular nuevo)."); return; }
     if (!selectedSvc)        { setErr("Selecciona el servicio."); return; }
     if (!timeOk)             { setErr("Selecciona una hora disponible para el bloque."); return; }
     setSaving(true);
@@ -5077,8 +5081,11 @@ const EmpBookingView = ({emp, onNav}) => {
             )}
           </div>
           <div>
-            <FieldInput label="Nombre (opcional)" value={form.name}
+            <FieldInput label={nameRequired ? "Nombre *" : "Nombre (opcional)"} value={form.name}
               onChange={e=>{ autoNameRef.current=""; setF("name", e.target.value); }} placeholder="Nombre del cliente" />
+            {nameRequired && form.name.trim()==="" && (
+              <div style={{marginTop:6,fontSize:11,color:C.muted}}>Cliente nuevo · el nombre es obligatorio.</div>
+            )}
             {showKnown && (
               <div style={{marginTop:6,fontSize:11,color:C.green,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
                 <span>✓ Cliente reconocido por su celular</span>
