@@ -4423,6 +4423,7 @@ const SettingsView = ({ onNav }) => {
 const HelpView = () => {
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isAndroid = /android/i.test(navigator.userAgent);
+  const isInApp = isInAppBrowser();
 
   const Step = ({ n, text }) => (
     <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
