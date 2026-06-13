@@ -3318,6 +3318,10 @@ const deviceLabel = () => {
   return br ? os + " · " + br : os;
 };
 
+// Navegadores embebidos (Instagram, WhatsApp, Facebook, TikTok…): no permiten
+// activar push ni "Agregar a inicio". Hay que abrir la página en Safari/Chrome.
+const isInAppBrowser = () => /Instagram|FBAN|FBAV|FB_IAB|FB4A|WhatsApp|Line\/|MicroMessenger|TikTok|Snapchat/i.test(navigator.userAgent || "");
+
 const NotificationsCard = () => {
   const supported = "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
   const [permission, setPermission] = React.useState(() => supported ? Notification.permission : "unsupported");
