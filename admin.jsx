@@ -5299,6 +5299,43 @@ const EmpHelpView = ({onNav}) => {
           </div>
         </Section>
 
+        <Section title="Activar mis notificaciones" badge="Importante" badgeColor={C.green}>
+          <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
+            Cada empleado activa sus notificaciones en su propio teléfono. Solo recibirás aviso de
+            <strong style={{color:C.text}}> tus turnos</strong> — no de los de tus compañeros.
+            Hazlo una vez por dispositivo.
+          </div>
+          {isIos ? (
+            <>
+              <Step n="1" text={<>Abre <strong style={{color:C.text}}>/staff</strong> en <strong style={{color:C.text}}>Safari</strong> (no Chrome).</>} />
+              <Step n="2" text={<>Toca <strong style={{color:C.text}}>Compartir</strong> (el cuadrado con la flecha) y elige <strong style={{color:C.text}}>"Agregar a inicio"</strong>.</>} />
+              <Step n="3" text={<>Abre la app <strong style={{color:C.text}}>JOXE Staff</strong> desde el Home Screen e inicia sesión con tu PIN.</>} />
+              <Step n="4" text={<>Vuelve a esta pantalla y pulsa <strong style={{color:C.text}}>Inactivo</strong> en la tarjeta de abajo para activarlas.</>} />
+              <Step n="5" text={<>Acepta el permiso cuando el sistema lo pida.</>} />
+            </>
+          ) : isAndroid ? (
+            <>
+              <Step n="1" text={<>Abre <strong style={{color:C.text}}>/staff</strong> en <strong style={{color:C.text}}>Chrome</strong> e inicia sesión con tu PIN.</>} />
+              <Step n="2" text={<>En la tarjeta de abajo pulsa <strong style={{color:C.text}}>Inactivo</strong> para activarlas.</>} />
+              <Step n="3" text={<>Acepta el permiso cuando Chrome lo pida. Llegarán aunque la app esté cerrada.</>} />
+            </>
+          ) : (
+            <>
+              <Step n="1" text={<>Inicia sesión en <strong style={{color:C.text}}>/staff</strong> con tu PIN (Chrome o Edge).</>} />
+              <Step n="2" text={<>En la tarjeta de abajo pulsa <strong style={{color:C.text}}>Inactivo</strong> y acepta el permiso del navegador.</>} />
+            </>
+          )}
+          <div style={{
+            padding:"12px 14px",fontSize:12,color:C.muted,lineHeight:1.6,
+            background:"rgba(102,196,153,0.05)",border:`1px solid ${C.green}20`,
+          }}>
+            El interruptor afecta solo este dispositivo — puedes activarlo en tu teléfono y en una tablet.
+            Para dejar de recibirlas, pulsa <strong style={{color:C.text}}>Activo</strong> y quedará en Inactivo.
+          </div>
+        </Section>
+
+        <NotificationsCard />
+
         <Section title="Preguntas frecuentes">
           {[
             {
