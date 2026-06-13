@@ -4458,7 +4458,19 @@ const HelpView = () => {
       <PageHeader title="Ayuda" subtitle="Panel · Guías" />
       <div style={{padding:"24px 32px",display:"flex",flexDirection:"column",gap:20,maxWidth:640}}>
 
-        {(isIos || (!isIos && !isAndroid)) && (
+        {isInApp && (
+          <Section title="Notificaciones push" badge="Abrir en navegador" badgeColor={C.red}>
+            <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
+              Estás viendo el panel dentro del navegador de <strong style={{color:C.text}}>Instagram / WhatsApp</strong>,
+              que no permite activar notificaciones ni instalar la app. Ábrelo en Safari o Chrome.
+            </div>
+            <Step n="1" text={<>Toca el menú <strong style={{color:C.text}}>⋯</strong> (arriba a la derecha) y elige <strong style={{color:C.text}}>"Abrir en el navegador"</strong>.</>} />
+            <Step n="2" text={<>Ya en <strong style={{color:C.text}}>Safari</strong> (iPhone) o <strong style={{color:C.text}}>Chrome</strong> (Android), vuelve a <strong style={{color:C.text}}>/admin</strong>.</>} />
+            <Step n="3" text={<>Sigue los pasos de tu dispositivo para activar las notificaciones.</>} />
+          </Section>
+        )}
+
+        {!isInApp && (isIos || (!isIos && !isAndroid)) && (
           <Section title="Notificaciones push" badge="iPhone · iOS" badgeColor={C.gold}>
             <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
               En iPhone las notificaciones requieren que el panel esté instalado como app.
