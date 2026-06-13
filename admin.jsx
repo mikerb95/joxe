@@ -5157,12 +5157,111 @@ const EmpBookingView = ({emp, onNav}) => {
   );
 };
 
+// ---- Ayuda para el empleado ----
+const EmpHelpView = ({onNav}) => {
+  const Step = ({ n, text }) => (
+    <div style={{display:"flex",gap:14,alignItems:"flex-start"}}>
+      <div style={{
+        width:26,height:26,flexShrink:0,borderRadius:"50%",
+        background:"rgba(194,158,102,0.12)",border:`1px solid ${C.gold}40`,
+        display:"flex",alignItems:"center",justifyContent:"center",
+        fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:C.gold,
+      }}>{n}</div>
+      <div style={{fontSize:14,lineHeight:1.6,color:C.text,paddingTop:3}}>{text}</div>
+    </div>
+  );
+
+  const Section = ({ title, badge, badgeColor, children }) => (
+    <Card>
+      <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:20}}>
+        <Mono style={{color:C.gold,fontSize:13}}>{title}</Mono>
+        {badge && (
+          <span style={{
+            padding:"2px 8px",fontSize:10,fontFamily:"'JetBrains Mono',monospace",
+            background:`${badgeColor}18`,border:`1px solid ${badgeColor}40`,
+            color:badgeColor,letterSpacing:"0.08em",textTransform:"uppercase",
+          }}>{badge}</span>
+        )}
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:14}}>{children}</div>
+    </Card>
+  );
+
+  return (
+    <div>
+      <PageHeader title="Ayuda" subtitle="Staff · Guías"
+        action={onNav&&<Btn small onClick={()=>onNav("reservar")}>+ Reservar turno</Btn>} />
+      <div style={{padding:"24px 32px",display:"flex",flexDirection:"column",gap:20,maxWidth:640}}>
+
+        <Section title="Reservar un turno" badge="Nuevo" badgeColor={C.gold}>
+          <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
+            Cuando el cliente no puede usar el sitio web, tú puedes agendar el turno por tu cuenta.
+            El bloque se aparta solo en tu calendario según la duración del servicio.
+          </div>
+          <Step n="1" text={<>Abre <strong style={{color:C.text}}>Reservar turno</strong> (en el menú o con el botón <strong style={{color:C.text}}>+ Reservar turno</strong> de Mi Agenda).</>} />
+          <Step n="2" text={<>Ingresa el <strong style={{color:C.text}}>celular</strong> del cliente (obligatorio — es lo que lo identifica) y, si quieres, su nombre.</>} />
+          <Step n="3" text={<>Elige el <strong style={{color:C.text}}>servicio</strong>. La duración se toma del catálogo.</>} />
+          <Step n="4" text={<>Selecciona el <strong style={{color:C.text}}>día</strong> y toca una hora libre: el <strong style={{color:C.text}}>bloque se acomoda solo</strong> (ej. un servicio de 180 min aparta 14:00–17:00).</>} />
+          <Step n="5" text={<>Confirma con <strong style={{color:C.text}}>Reservar turno</strong>. La cita queda agendada a tu nombre, ya confirmada.</>} />
+          <div style={{
+            padding:"12px 14px",fontSize:12,color:C.muted,lineHeight:1.6,
+            background:"rgba(194,158,102,0.05)",border:`1px solid ${C.gold}20`,
+          }}>
+            La línea de tiempo respeta tus citas ya agendadas, los horarios bloqueados, la hora de cierre
+            y tu horario laboral. Los espacios que no alcanzan a caber se marcan como "No alcanza".
+          </div>
+        </Section>
+
+        <Section title="Confirmar citas" badgeColor={C.gold}>
+          <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
+            Las reservas que hacen los clientes desde el sitio web te llegan como pendientes.
+            Debes confirmarlas para apartarlas en firme.
+          </div>
+          <Step n="1" text={<>Entra a <strong style={{color:C.text}}>Confirmar citas</strong> — el número en el menú indica cuántas tienes pendientes.</>} />
+          <Step n="2" text={<>Toca <strong style={{color:C.text}}>✓ Confirmar</strong> para aceptarla, o <strong style={{color:C.text}}>✕</strong> para rechazarla.</>} />
+          <Step n="3" text={<>Una cita <strong style={{color:C.text}}>expirada</strong> (sin confirmar a tiempo) se puede reactivar con <strong style={{color:C.text}}>↺</strong>.</>} />
+          <div style={{
+            padding:"12px 14px",fontSize:12,color:C.muted,lineHeight:1.6,
+            background:"rgba(194,158,102,0.05)",border:`1px solid ${C.gold}20`,
+          }}>
+            Las que reservas tú mismo desde "Reservar turno" no necesitan confirmación: quedan listas de una vez.
+          </div>
+        </Section>
+
+        <Section title="Preguntas frecuentes">
+          {[
+            {
+              q:"¿La cita que reservo yo entra a 'Confirmar citas'?",
+              a:"No. Como la creas en mano, queda confirmada de inmediato y aparece directo en tu agenda.",
+            },
+            {
+              q:"¿Qué pasa si dos clientes quieren la misma hora?",
+              a:"No es posible: al apartar un bloque, esas horas dejan de estar disponibles para ti tanto en el sitio web como en /staff.",
+            },
+            {
+              q:"No me deja elegir una hora.",
+              a:"Si una hora se ve como 'No alcanza', el servicio no termina antes del cierre o choca con otra cita. Prueba más temprano o elige otro día.",
+            },
+          ].map(({ q, a }) => (
+            <div key={q} style={{borderBottom:`1px solid ${C.bdr}`,paddingBottom:14}}>
+              <div style={{fontSize:13,fontWeight:500,marginBottom:6}}>{q}</div>
+              <div style={{fontSize:13,color:C.muted,lineHeight:1.6}}>{a}</div>
+            </div>
+          ))}
+        </Section>
+
+      </div>
+    </div>
+  );
+};
+
 // ---- Employee Shell ----
 const EMP_VIEWS = [
   {id:"agenda",        label:"Mi Agenda",       icon:"▦"},
   {id:"reservar",      label:"Reservar turno",  icon:"＋"},
   {id:"confirmaciones",label:"Confirmar citas", icon:"◉"},
   {id:"todas",         label:"Mis Citas",       icon:"≡"},
+  {id:"ayuda",         label:"Ayuda",           icon:"?"},
 ];
 
 const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
