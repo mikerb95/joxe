@@ -1056,9 +1056,10 @@ const AgendaView = () => {
 
             // Group appointments by time slot
             const byTime = {};
-            TIMES.forEach(t=>{ byTime[t]=[]; });
+            AGENDA_HOURS.forEach(t=>{ byTime[t]=[]; });
             dayAppts.forEach(a=>{ if(byTime[a.time]) byTime[a.time].push(a); else byTime[a.time]=[a]; });
-            const slots = Object.keys(byTime).sort();
+            const toMin = (t)=>{ const [hh,mm]=t.split(":").map(Number); return hh*60+(mm||0); };
+            const slots = Object.keys(byTime).sort((a,b)=>toMin(a)-toMin(b));
 
             return (
               <div key={date} style={{border:`1px solid ${isToday?C.gold:C.bdr}`,background:C.s1}}>
@@ -1078,7 +1079,14 @@ const AgendaView = () => {
                   }}>{dayAppts.length} cita{dayAppts.length!==1?"s":""}</span>
                 </div>
 
-                {/* Time rows */}
+                {/* Time rows — scroll vertical independiente (dedo en móvil, scroll en escritorio) */}
+                <div style={{
+                  maxHeight:"60vh",
+                  overflowY:"auto",
+                  overscrollBehavior:"contain",
+                  WebkitOverflowScrolling:"touch",
+                  touchAction:"pan-y",
+                }}>
                 {slots.map(time=>{
                   const slotAppts  = byTime[time]||[];
                   const isBlocked  = blocked.some(b=>b.time===time);
