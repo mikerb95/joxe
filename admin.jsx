@@ -4899,6 +4899,9 @@ const EmpBookingView = ({emp, onNav}) => {
   const [saving, setSaving] = React.useState(false);
   const [done, setDone]     = React.useState(null);
   const [err, setErr]       = React.useState("");
+  // Celulares para los que el staff dijo "¿No es el cliente?" — no se vuelven a autocompletar
+  const [rejectedPhones, setRejectedPhones] = React.useState([]);
+  const autoNameRef = React.useRef("");   // último nombre puesto automáticamente (para poder reemplazarlo)
   const setF = (k,v)=> setForm(f=>({...f,[k]:v}));
 
   const allServices  = catalog?.services || [];
@@ -4938,6 +4941,42 @@ const EmpBookingView = ({emp, onNav}) => {
 
   const phoneDigits = (form.phone||"").replace(/\D/g,"");
   const phoneOk = phoneDigits.length===10;
+
+  // ── Directorio celular → nombre, construido con las citas existentes ──
+  const phoneNameMap = React.useMemo(()=>{
+    const m={};
+    allAppts.forEach(a=>{
+      const p=(a.phone||"").replace(/\D/g,"");
+      const nm=(a.name||"").trim();
+      if(p.length===10 && nm && nm!=="Cliente sin nombre"){
+        if(!m[p] || (a.createdAt||0) > m[p].at) m[p]={ name:nm, at:a.createdAt||0 };
+      }
+    });
+    return m;
+  },[allAppts]);
+
+  const isRejected = rejectedPhones.includes(phoneDigits);
+  const knownName  = phoneOk && !isRejected ? (phoneNameMap[phoneDigits]?.name || null) : null;
+  const showKnown  = !!knownName && form.name.trim()===knownName;
+
+  // Al completar 10 dígitos autocompleta el nombre del cliente ya conocido
+  React.useEffect(()=>{
+    if(!phoneOk) return;
+    const m = (!isRejected) ? phoneNameMap[phoneDigits] : null;
+    if(m){
+      setForm(f=> (f.name.trim()==="" || f.name===autoNameRef.current) ? {...f, name:m.name} : f);
+      autoNameRef.current = m.name;
+    } else {
+      setForm(f=> (f.name!=="" && f.name===autoNameRef.current) ? {...f, name:""} : f);
+      autoNameRef.current = "";
+    }
+  },[phoneDigits, phoneOk, isRejected, phoneNameMap]);
+
+  const dismissKnown = ()=>{
+    setRejectedPhones(p=> p.includes(phoneDigits)?p:[...p,phoneDigits]);
+    setForm(f=> f.name===knownName ? {...f, name:""} : f);
+    autoNameRef.current = "";
+  };
   const timeOk  = !!form.time && !blockConflicts(form.time);
   const canSubmit = phoneOk && !!form.serviceId && !!form.date && timeOk && !saving;
 
@@ -5037,8 +5076,19 @@ const EmpBookingView = ({emp, onNav}) => {
               <div style={{marginTop:6,fontSize:11,color:C.red}}>Debe tener 10 dígitos.</div>
             )}
           </div>
-          <FieldInput label="Nombre (opcional)" value={form.name}
-            onChange={e=>setF("name", e.target.value)} placeholder="Nombre del cliente" />
+          <div>
+            <FieldInput label="Nombre (opcional)" value={form.name}
+              onChange={e=>{ autoNameRef.current=""; setF("name", e.target.value); }} placeholder="Nombre del cliente" />
+            {showKnown && (
+              <div style={{marginTop:6,fontSize:11,color:C.green,display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                <span>✓ Cliente reconocido por su celular</span>
+                <button type="button" onClick={dismissKnown} style={{
+                  background:"transparent",border:"none",color:C.gold,cursor:"pointer",padding:0,
+                  fontFamily:"'JetBrains Mono',monospace",fontSize:11,textDecoration:"underline",
+                }}>¿No es el cliente?</button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 2 · Servicio */}
