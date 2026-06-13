@@ -4673,6 +4673,7 @@ const EmpAgendaView = ({emp, onNav}) => {
               </div>
             );
           })}
+          </div>
         </div>
       </div>
     </div>
