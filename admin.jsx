@@ -3300,19 +3300,68 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
 }
 
+// Etiqueta legible del dispositivo actual (para listar las suscripciones)
+const deviceLabel = () => {
+  const ua = navigator.userAgent || "";
+  let os = "Dispositivo";
+  if (/iphone/i.test(ua)) os = "iPhone";
+  else if (/ipad/i.test(ua)) os = "iPad";
+  else if (/android/i.test(ua)) os = "Android";
+  else if (/windows/i.test(ua)) os = "Windows";
+  else if (/mac os|macintosh/i.test(ua)) os = "Mac";
+  else if (/linux/i.test(ua)) os = "Linux";
+  let br = "";
+  if (/edg/i.test(ua)) br = "Edge";
+  else if (/chrome|crios/i.test(ua)) br = "Chrome";
+  else if (/firefox|fxios/i.test(ua)) br = "Firefox";
+  else if (/safari/i.test(ua)) br = "Safari";
+  return br ? os + " · " + br : os;
+};
+
 const NotificationsCard = () => {
   const supported = "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
   const [permission, setPermission] = React.useState(() => supported ? Notification.permission : "unsupported");
   const [subscribed, setSubscribed] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [msg, setMsg] = React.useState(null);
+  const [devices, setDevices] = React.useState([]);
+  const [thisEndpoint, setThisEndpoint] = React.useState(null);
+
+  const refreshDevices = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/push?list=mine", { headers: staffHeaders() });
+      if (res.ok) { const d = await res.json(); setDevices(d.devices || []); }
+    } catch {}
+  }, []);
 
   React.useEffect(() => {
     if (!supported) return;
     navigator.serviceWorker.ready.then(reg =>
-      reg.pushManager.getSubscription().then(sub => setSubscribed(!!sub))
+      reg.pushManager.getSubscription().then(sub => {
+        setSubscribed(!!sub);
+        setThisEndpoint(sub?.endpoint ?? null);
+      })
     );
+    refreshDevices();
   }, []);
+
+  const removeDevice = async (endpoint) => {
+    try {
+      await fetch("/api/push", {
+        method: "DELETE",
+        headers: { ...staffHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint }),
+      });
+      if (endpoint === thisEndpoint) {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+        setSubscribed(false);
+        setThisEndpoint(null);
+      }
+      refreshDevices();
+    } catch { setMsg({ type: "error", text: "No se pudo quitar el dispositivo." }); }
+  };
 
   const flashMsg = (type, text) => {
     setMsg({ type, text });
@@ -3336,11 +3385,13 @@ const NotificationsCard = () => {
       const res = await fetch("/api/push", {
         method: "POST",
         headers: { ...staffHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: sub.toJSON() }),
+        body: JSON.stringify({ subscription: sub.toJSON(), label: deviceLabel() }),
       });
       if (!res.ok) throw new Error("No se pudo guardar la suscripción.");
       setSubscribed(true);
+      setThisEndpoint(sub.endpoint);
       flashMsg("success", "Notificaciones activadas en este dispositivo.");
+      refreshDevices();
     } catch (e) {
       flashMsg("error", e.message || "Error al activar notificaciones.");
     } finally {
@@ -3362,7 +3413,9 @@ const NotificationsCard = () => {
         await sub.unsubscribe();
       }
       setSubscribed(false);
+      setThisEndpoint(null);
       flashMsg("success", "Notificaciones desactivadas.");
+      refreshDevices();
     } catch (e) {
       flashMsg("error", e.message || "Error al desactivar.");
     } finally {
@@ -3430,6 +3483,35 @@ const NotificationsCard = () => {
           </div>
         )}
 
+        {devices.length > 0 && (
+          <div style={{borderTop:`1px solid ${C.bdr}`,paddingTop:14}}>
+            <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>
+              Tus dispositivos con avisos ({devices.length})
+            </Mono>
+            <div style={{display:"flex",flexDirection:"column",gap:8}}>
+              {devices.map(d => (
+                <div key={d.endpoint} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+                  <div>
+                    <div style={{fontSize:13,color:C.text}}>
+                      {d.label || "Dispositivo"}
+                      {d.endpoint===thisEndpoint && <span style={{color:C.green,fontSize:11}}> · este</span>}
+                    </div>
+                    {d.createdAt && (
+                      <div style={{fontSize:11,color:C.muted}}>
+                        Activado {new Date(d.createdAt).toLocaleDateString("es-CO",{day:"numeric",month:"short"})}
+                      </div>
+                    )}
+                  </div>
+                  <button onClick={()=>removeDevice(d.endpoint)} style={{
+                    padding:"5px 12px",background:"transparent",border:`1px solid ${C.red}40`,color:C.red,
+                    cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:9,letterSpacing:"0.06em",textTransform:"uppercase",
+                  }}>Quitar</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {msg && (
           <div style={{
             padding:"10px 14px",fontSize:13,
@@ -3439,6 +3521,81 @@ const NotificationsCard = () => {
           }}>{msg.text}</div>
         )}
       </div>
+    </Card>
+  );
+};
+
+const AllDevicesCard = () => {
+  const [groups, setGroups] = React.useState(null);
+  const [msg, setMsg] = React.useState(null);
+
+  const load = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/push?list=all", { headers: adminHeaders() });
+      if (!res.ok) { setGroups([]); return; }
+      const { devices } = await res.json();
+      const by = {};
+      (devices || []).forEach(d => {
+        const key = d.stylist || (d.empId ? "Empleado " + d.empId : "Admin / sin asignar");
+        (by[key] = by[key] || []).push(d);
+      });
+      setGroups(Object.entries(by).map(([name, list]) => ({ name, list })));
+    } catch { setGroups([]); }
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const remove = async (endpoint) => {
+    try {
+      await fetch("/api/push", {
+        method: "DELETE",
+        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint }),
+      });
+      load();
+    } catch { setMsg("Error al quitar el dispositivo."); }
+  };
+
+  const total = groups ? groups.reduce((n, g) => n + g.list.length, 0) : 0;
+
+  return (
+    <Card>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+        <Mono style={{color:C.gold}}>Dispositivos de notificaciones · todos</Mono>
+        <button onClick={load} style={{
+          background:"transparent",border:`1px solid ${C.bdr}`,color:C.muted,cursor:"pointer",
+          fontFamily:"'JetBrains Mono',monospace",fontSize:9,padding:"4px 10px",
+        }}>↻ Refrescar</button>
+      </div>
+      {groups === null && <div style={{fontSize:13,color:C.muted}}>Cargando…</div>}
+      {groups && total === 0 && <div style={{fontSize:13,color:C.muted}}>Ningún dispositivo registrado todavía.</div>}
+      {groups && groups.map(g => (
+        <div key={g.name} style={{marginBottom:18}}>
+          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>{g.name} ({g.list.length})</Mono>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {g.list.map(d => (
+              <div key={d.endpoint} style={{
+                display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,
+                padding:"8px 12px",background:C.s2,border:`1px solid ${C.bdr}`,
+              }}>
+                <div>
+                  <div style={{fontSize:13,color:C.text}}>{d.label || "Dispositivo"}</div>
+                  {d.createdAt && (
+                    <div style={{fontSize:11,color:C.muted}}>
+                      Activado {new Date(d.createdAt).toLocaleDateString("es-CO",{day:"numeric",month:"short",year:"numeric"})}
+                    </div>
+                  )}
+                </div>
+                <button onClick={()=>remove(d.endpoint)} style={{
+                  padding:"5px 12px",background:"transparent",border:`1px solid ${C.red}40`,color:C.red,
+                  cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:9,textTransform:"uppercase",
+                }}>Quitar</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+      {msg && <div style={{marginTop:10,fontSize:12,color:C.red}}>{msg}</div>}
     </Card>
   );
 };
@@ -4085,6 +4242,9 @@ const SettingsView = ({ onNav }) => {
 
         {/* Push notifications */}
         <NotificationsCard />
+
+        {/* Dispositivos de todos los empleados (solo admin) */}
+        <AllDevicesCard />
 
         {/* Change password */}
         <Card>

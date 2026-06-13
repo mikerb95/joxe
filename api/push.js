@@ -24,16 +24,36 @@ export default async function handler(req, res) {
 
   await initTables();
 
-  // Public: browser needs the VAPID public key to create a subscription
+  // GET ?list=mine|all -> listado de dispositivos (requiere staff); sin params -> VAPID public key (publico)
   if (req.method === "GET") {
-    return res.status(200).json({ publicKey: process.env.VAPID_PUBLIC_KEY ?? null });
+    const list = req.query?.list;
+    if (!list) {
+      return res.status(200).json({ publicKey: process.env.VAPID_PUBLIC_KEY ?? null });
+    }
+    const who = await verifyStaffAuth(req);
+    if (!who) return res.status(401).json({ error: "Unauthorized" });
+    const all = await kvGet("push_subscriptions") ?? [];
+
+    if (list === "all") {
+      if (who.role !== "admin") return res.status(403).json({ error: "Forbidden" });
+      const devices = all.map(s => ({
+        endpoint: s.endpoint, label: s.label ?? null, createdAt: s.createdAt ?? null,
+        empId: s.empId ?? null, stylist: s.stylist ?? null,
+      }));
+      return res.status(200).json({ devices });
+    }
+
+    // list === "mine": empleado -> sus dispositivos; admin -> dispositivos sin empId
+    const mine = all.filter(s => who.role === "employee" ? s.empId === who.empId : !s.empId);
+    const devices = mine.map(s => ({ endpoint: s.endpoint, label: s.label ?? null, createdAt: s.createdAt ?? null }));
+    return res.status(200).json({ devices });
   }
 
   const staff = await verifyStaffAuth(req);
   if (!staff) return res.status(401).json({ error: "Unauthorized" });
 
   if (req.method === "POST") {
-    const { subscription } = req.body ?? {};
+    const { subscription, label } = req.body ?? {};
     if (!subscription?.endpoint) return res.status(400).json({ error: "Invalid subscription" });
 
     // Ata la suscripción al empleado dueño del token, para notificar solo al estilista asignado
@@ -43,7 +63,11 @@ export default async function handler(req, res) {
       const admin = await kvGet("admin_store");
       stylist = (admin?.employees || []).find(e => e.id === empId)?.name ?? null;
     }
-    const record = { ...subscription, empId, stylist };
+    const record = {
+      ...subscription, empId, stylist,
+      label: String(label ?? "").slice(0, 120) || null,
+      createdAt: Date.now(),
+    };
 
     const subs = await kvGet("push_subscriptions") ?? [];
     const deduped = subs.filter(s => s.endpoint !== subscription.endpoint);
@@ -55,7 +79,11 @@ export default async function handler(req, res) {
     const { endpoint } = req.body ?? {};
     if (!endpoint) return res.status(400).json({ error: "Missing endpoint" });
     const subs = await kvGet("push_subscriptions") ?? [];
-    await kvSet("push_subscriptions", subs.filter(s => s.endpoint !== endpoint));
+    // Un empleado solo puede quitar sus propios dispositivos; el admin puede quitar cualquiera
+    const kept = subs.filter(s =>
+      s.endpoint !== endpoint || (staff.role === "employee" && s.empId !== staff.empId)
+    );
+    await kvSet("push_subscriptions", kept);
     return res.status(200).json({ ok: true });
   }
 
