@@ -4839,9 +4839,288 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   );
 };
 
+// ---- Reservar turno (staff agenda en mano) ----
+// El empleado agenda un turno cuando el cliente no puede usar el sitio web.
+// El celular identifica al cliente; al elegir el servicio, el bloque se acomoda
+// automáticamente en el calendario según la duración.
+const EmpBookingView = ({emp, onNav}) => {
+  const [appts, setAppts] = useAppts();
+  const [admin]           = useAdmin();
+  const todayD = todayStr();
+  const addDay = (base,n)=>{ const d=new Date(base+"T12:00"); d.setDate(d.getDate()+n); return d.toISOString().split("T")[0]; };
+  const firstOpen = (()=>{ for(let i=0;i<21;i++){ const d=addDay(todayD,i); if(!isClosedDay(d)) return d; } return todayD; })();
+
+  const [catalog, setCatalog] = React.useState(null);
+  React.useEffect(()=>{
+    fetch("/api/catalog").then(r=>r.ok?r.json():null).then(d=>{ if(d) setCatalog(d); }).catch(()=>{});
+  },[]);
+
+  const [form, setForm]   = React.useState({ phone:"", name:"", serviceId:"", date:firstOpen, time:"" });
+  const [saving, setSaving] = React.useState(false);
+  const [done, setDone]     = React.useState(null);
+  const [err, setErr]       = React.useState("");
+  const setF = (k,v)=> setForm(f=>({...f,[k]:v}));
+
+  const allServices  = catalog?.services || [];
+  const myEmp        = (catalog?.employees||[]).find(e=>e.id===emp.id) || null;
+  const myServiceIds = myEmp?.services || [];
+  const myServices   = myServiceIds.length ? allServices.filter(s=>myServiceIds.includes(s.id)) : allServices;
+
+  const selectedSvc = allServices.find(s=>s.id===form.serviceId) || null;
+  const dur = selectedSvc?.dur || 60;
+
+  const openDays = React.useMemo(()=>{
+    const out=[]; for(let i=0;i<21 && out.length<10;i++){ const d=addDay(todayD,i); if(!isClosedDay(d)) out.push(d); } return out;
+  },[todayD]);
+
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
+  const dayAppts = allAppts.filter(a=> a.stylist===emp.name && a.date===form.date && !["cancelled","no-show"].includes(a.computedStatus));
+  const blocked  = (appts.blockedSlots||[]).filter(b=>b.date===form.date);
+
+  const nowMin = new Date().getHours()*60 + new Date().getMinutes();
+  const isPastSlot = (time) => form.date===todayD && timeToMin(time) < nowMin;
+
+  // ¿El bloque [inicio, inicio+dur) cabe sin chocar con otra cita / bloqueo / cierre?
+  const blockConflicts = (startTime) => {
+    const s = timeToMin(startTime), e = s+dur;
+    if (e > closesAtMin(form.date)) return true;                                    // no cierra a tiempo
+    if (myEmp && !empWorksOnSlot(myEmp, form.date, startTime, dur)) return true;    // fuera de su horario
+    if (dayAppts.some(a=>{ const as=timeToMin(a.time), ae=as+(a.serviceDur||60); return as<e && s<ae; })) return true;
+    if (blocked.some(b=>{ const bs=timeToMin(b.time); return bs>=s && bs<e; })) return true;
+    return false;
+  };
+
+  const slots    = slotsForDate(form.date);
+  const selStart = form.time ? timeToMin(form.time) : null;
+  const selEnd   = selStart!=null ? selStart+dur : null;
+  const apptAt   = (time)=>{ const cs=timeToMin(time), ce=cs+60; return dayAppts.find(a=>{ const as=timeToMin(a.time), ae=as+(a.serviceDur||60); return as<ce && cs<ae; }); };
+  const isBlockedSlot = (time)=> blocked.some(b=>b.time===time);
+
+  const phoneDigits = (form.phone||"").replace(/\D/g,"");
+  const phoneOk = phoneDigits.length===10;
+  const timeOk  = !!form.time && !blockConflicts(form.time);
+  const canSubmit = phoneOk && !!form.serviceId && !!form.date && timeOk && !saving;
+
+  const pickService = (s)=> setForm(f=>({...f, serviceId:s.id, time:""}));
+  const pickDate    = (d)=> setForm(f=>({...f, date:d, time:""}));
+
+  const submit = async () => {
+    setErr("");
+    if (!phoneOk)            { setErr("Ingresa un celular válido de 10 dígitos."); return; }
+    if (!selectedSvc)        { setErr("Selecciona el servicio."); return; }
+    if (!timeOk)             { setErr("Selecciona una hora disponible para el bloque."); return; }
+    setSaving(true);
+    const appt = {
+      id: genId(),
+      code: "JX-"+(Math.floor(Math.random()*9000)+1000),
+      service: selectedSvc.name,
+      serviceId: selectedSvc.id,
+      serviceDur: dur,
+      stylist: emp.name,
+      date: form.date,
+      time: form.time,
+      name: form.name.trim() || "Cliente sin nombre",
+      phone: phoneDigits,
+      cedula: "",
+      createdAt: Date.now(),
+      status: "scheduled",
+      confirmedBy: emp.name,     // creada en mano por el staff → ya confirmada
+      confirmedAt: Date.now(),
+      bookedBy: "staff",
+    };
+    await setAppts(s=>({ ...s, appointments:[...s.appointments, appt] }));
+    setSaving(false);
+    setDone(appt);
+  };
+
+  const resetForNew = () => { setDone(null); setForm({ phone:"", name:"", serviceId:"", date:firstOpen, time:"" }); setErr(""); };
+
+  const dayLabel = (d,i)=> i===0&&d===todayD ? "Hoy" : d===addDay(todayD,1) ? "Mañana" :
+    new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric"});
+
+  // ---- Pantalla de éxito ----
+  if (done) {
+    const endT = minToTime(timeToMin(done.time)+done.serviceDur);
+    return (
+      <div>
+        <PageHeader title="Turno reservado" subtitle="Staff · Reserva" />
+        <div style={{padding:"24px 32px"}}>
+          <Card style={{maxWidth:520,borderColor:C.green+"50"}}>
+            <div style={{textAlign:"center",marginBottom:20}}>
+              <div style={{fontSize:40,color:C.green,marginBottom:8}}>✓</div>
+              <div style={{fontFamily:"'Marcellus',serif",fontSize:22,color:C.text}}>Bloque apartado en el calendario</div>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {[
+                ["Cliente", done.name],
+                ["Celular", done.phone],
+                ["Servicio", `${done.service} · ${done.serviceDur} min`],
+                ["Fecha", new Date(done.date+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"})],
+                ["Bloque", `${done.time} – ${endT}`],
+              ].map(([k,v])=>(
+                <div key={k} style={{display:"flex",justifyContent:"space-between",gap:16,padding:"10px 0",borderBottom:`1px solid ${C.bdr}`}}>
+                  <Mono style={{color:C.muted,fontSize:9}}>{k}</Mono>
+                  <span style={{fontSize:14,color:C.text,textAlign:"right"}}>{v}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex",gap:10,marginTop:24}}>
+              <Btn onClick={resetForNew} style={{flex:1}}>+ Reservar otro</Btn>
+              <Btn variant="ghost" onClick={()=>onNav&&onNav("agenda")} style={{flex:1}}>Ver en Mi Agenda</Btn>
+            </div>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <PageHeader title="Reservar turno" subtitle="Staff · Para el cliente" />
+      <div style={{padding:"24px 32px",maxWidth:760}}>
+        <div style={{
+          marginBottom:24,padding:"12px 16px",background:"rgba(194,158,102,0.06)",
+          border:`1px solid ${C.gold}25`,fontSize:13,color:C.muted,lineHeight:1.6,
+        }}>
+          Agenda un turno cuando el cliente no puede usar el sitio web. El <b style={{color:C.text}}>celular</b> identifica
+          al cliente, y al elegir el servicio el bloque se acomoda solo en tu calendario según su duración.
+        </div>
+
+        {/* 1 · Cliente */}
+        <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>1 · Cliente</Mono>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:28}} className="adm-two-col">
+          <div>
+            <FieldInput label="Celular *" type="tel" value={form.phone}
+              onChange={e=>setF("phone", e.target.value.replace(/[^\d\s]/g,"").slice(0,13))}
+              placeholder="300 123 4567" />
+            {phoneDigits.length>0 && !phoneOk && (
+              <div style={{marginTop:6,fontSize:11,color:C.red}}>Debe tener 10 dígitos.</div>
+            )}
+          </div>
+          <FieldInput label="Nombre (opcional)" value={form.name}
+            onChange={e=>setF("name", e.target.value)} placeholder="Nombre del cliente" />
+        </div>
+
+        {/* 2 · Servicio */}
+        <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>2 · Servicio</Mono>
+        {!catalog ? (
+          <div style={{padding:"16px 0",color:C.muted,fontSize:13}}>Cargando servicios…</div>
+        ) : myServices.length===0 ? (
+          <div style={{padding:"16px 0",color:C.muted,fontSize:13}}>No tienes servicios asignados.</div>
+        ) : (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8,marginBottom:28}}>
+            {myServices.map(s=>{
+              const sel = form.serviceId===s.id;
+              return (
+                <button key={s.id} onClick={()=>pickService(s)} style={{
+                  padding:"12px 14px",textAlign:"left",cursor:"pointer",
+                  background:sel?"rgba(194,158,102,0.15)":C.s2,
+                  border:`1px solid ${sel?C.gold:C.bdr}`,color:C.text,
+                  fontFamily:"'Outfit',sans-serif",
+                }}>
+                  <div style={{fontSize:14,marginBottom:4}}>{s.name}</div>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                    <Mono style={{color:C.gold,fontSize:9}}>{s.dur} min</Mono>
+                    <span style={{fontSize:12,color:C.muted}}>{s.note?`${s.note} `:""}{fmtCOP(s.price)}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 3 · Día + 4 · Bloque */}
+        {form.serviceId && (
+          <>
+            <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>3 · Día</Mono>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:24}}>
+              {openDays.map((d,i)=>{
+                const sel = form.date===d;
+                return (
+                  <button key={d} onClick={()=>pickDate(d)} style={{
+                    padding:"8px 16px",cursor:"pointer",
+                    background:sel?C.gold:"transparent",color:sel?"#0C0C0C":C.muted,
+                    border:`1px solid ${sel?C.gold:C.bdr}`,
+                    fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.05em",
+                  }}>{dayLabel(d,i)}</button>
+                );
+              })}
+            </div>
+
+            <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>4 · Bloque en el calendario</Mono>
+            {form.time && !blockConflicts(form.time) && (
+              <div style={{
+                marginBottom:14,padding:"10px 16px",background:"rgba(102,196,153,0.1)",
+                border:`1px solid ${C.green}40`,display:"inline-flex",gap:10,alignItems:"center",
+              }}>
+                <Mono style={{color:C.green,fontSize:10}}>Bloque</Mono>
+                <span style={{fontSize:14,color:C.text}}>{form.time} – {minToTime(timeToMin(form.time)+dur)}</span>
+                <Mono style={{color:C.muted,fontSize:9}}>{dur} min</Mono>
+              </div>
+            )}
+
+            <div style={{border:`1px solid ${C.bdr}`,background:C.s1,marginBottom:24}}>
+              {slots.map(time=>{
+                const occ     = apptAt(time);
+                const blk     = isBlockedSlot(time);
+                const past    = isPastSlot(time);
+                const slotMin = timeToMin(time);
+                const inSel   = selStart!=null && slotMin>=selStart && slotMin<selEnd;
+                const selectable = !occ && !blk && !past && !blockConflicts(time);
+                const onClick = selectable ? ()=>setF("time", time) : undefined;
+                return (
+                  <div key={time} onClick={onClick} style={{
+                    display:"grid",gridTemplateColumns:"64px 1fr",
+                    borderBottom:`1px solid ${C.bdr}`,
+                    cursor:selectable?"pointer":"default",
+                    background:inSel?"rgba(194,158,102,0.16)":"transparent",
+                    opacity:past?0.4:1,
+                  }}>
+                    <div style={{padding:"12px 0 12px 16px",borderRight:`1px solid ${C.bdr}`}}>
+                      <Mono style={{color:inSel?C.gold:past?C.muted2:C.gold,fontSize:11}}>{time}</Mono>
+                    </div>
+                    <div style={{padding:"8px 14px",display:"flex",alignItems:"center",minHeight:42}}>
+                      {occ ? (
+                        <div style={{flex:1}}>
+                          <div style={{fontSize:13,color:C.text}}>{occ.name}</div>
+                          <Mono style={{color:C.muted,fontSize:9}}>Ocupado · {occ.service}</Mono>
+                        </div>
+                      ) : blk ? (
+                        <Mono style={{color:C.red,fontSize:10}}>Bloqueado</Mono>
+                      ) : inSel ? (
+                        <Mono style={{color:C.gold,fontSize:10}}>{slotMin===selStart?"● Inicio del turno":"Reservado"}</Mono>
+                      ) : selectable ? (
+                        <Mono style={{color:C.muted,fontSize:10}}>Libre · tocar para apartar</Mono>
+                      ) : (
+                        <Mono style={{color:C.muted2,fontSize:9}}>{past?"—":"No alcanza"}</Mono>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {slots.length===0 && (
+                <div style={{padding:"20px",textAlign:"center",color:C.muted,fontSize:12}}>Día cerrado.</div>
+              )}
+            </div>
+          </>
+        )}
+
+        {err && (
+          <div style={{marginBottom:16,padding:"10px 14px",background:"rgba(196,102,102,0.1)",border:`1px solid ${C.red}40`,fontSize:13,color:C.red}}>{err}</div>
+        )}
+
+        <Btn onClick={submit} disabled={!canSubmit} style={{width:"100%",padding:"14px"}}>
+          {saving ? "Reservando…" : "Reservar turno →"}
+        </Btn>
+      </div>
+    </div>
+  );
+};
+
 // ---- Employee Shell ----
 const EMP_VIEWS = [
   {id:"agenda",        label:"Mi Agenda",       icon:"▦"},
+  {id:"reservar",      label:"Reservar turno",  icon:"＋"},
   {id:"confirmaciones",label:"Confirmar citas", icon:"◉"},
   {id:"todas",         label:"Mis Citas",       icon:"≡"},
 ];
