@@ -4491,7 +4491,7 @@ const HelpView = () => {
           </Section>
         )}
 
-        {(isAndroid || (!isIos && !isAndroid)) && (
+        {!isInApp && (isAndroid || (!isIos && !isAndroid)) && (
           <Section title="Notificaciones push" badge="Android" badgeColor={C.green}>
             <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
               En Android no es necesario instalar nada — funciona directamente desde Chrome.
