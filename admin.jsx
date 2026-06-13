@@ -5255,6 +5255,9 @@ const EmpHelpView = ({onNav}) => {
     </Card>
   );
 
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isAndroid = /android/i.test(navigator.userAgent);
+
   return (
     <div>
       <PageHeader title="Ayuda" subtitle="Staff · Guías"
