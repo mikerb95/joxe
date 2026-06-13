@@ -5483,7 +5483,13 @@ const EmpHelpView = ({onNav}) => {
             <strong style={{color:C.text}}> tus turnos</strong> — no de los de tus compañeros.
             Hazlo una vez por dispositivo.
           </div>
-          {isIos ? (
+          {isInApp ? (
+            <>
+              <Step n="1" text={<>Estás en el navegador de <strong style={{color:C.text}}>Instagram / WhatsApp</strong>; aquí <strong style={{color:C.text}}>no</strong> se pueden activar.</>} />
+              <Step n="2" text={<>Toca el menú <strong style={{color:C.text}}>⋯</strong> (arriba a la derecha) y elige <strong style={{color:C.text}}>"Abrir en el navegador"</strong> (Safari/Chrome).</>} />
+              <Step n="3" text={<>Ya en Safari/Chrome, vuelve a <strong style={{color:C.text}}>/staff</strong> y sigue los pasos de tu dispositivo.</>} />
+            </>
+          ) : isIos ? (
             <>
               <Step n="1" text={<>Abre <strong style={{color:C.text}}>/staff</strong> en <strong style={{color:C.text}}>Safari</strong> (no Chrome).</>} />
               <Step n="2" text={<>Toca <strong style={{color:C.text}}>Compartir</strong> (el cuadrado con la flecha) y elige <strong style={{color:C.text}}>"Agregar a inicio"</strong>.</>} />
