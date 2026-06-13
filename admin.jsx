@@ -1148,6 +1148,7 @@ const AgendaView = () => {
                     </div>
                   );
                 })}
+                </div>
               </div>
             );
           })}
