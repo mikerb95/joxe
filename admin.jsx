@@ -4535,7 +4535,8 @@ const EmpAgendaView = ({emp, onNav}) => {
 
   return (
     <div>
-      <PageHeader title="Mi Agenda" subtitle={DAY_TAB_LABEL(date,activeDay)+" · "+DAY_HEADER_SUB(date)} />
+      <PageHeader title="Mi Agenda" subtitle={DAY_TAB_LABEL(date,activeDay)+" · "+DAY_HEADER_SUB(date)}
+        action={onNav&&<Btn small onClick={()=>onNav("reservar")}>+ Reservar turno</Btn>} />
 
       {/* Mini stats bar */}
       <div style={{display:"flex",gap:24,padding:"0 32px",borderBottom:`1px solid ${C.bdr}`}}>
