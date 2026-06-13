@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet, verifyAdminAuth } from "./db.js";
+import { initTables, kvGet, kvSet, verifyStaffAuth } from "./db.js";
 import webpush from "web-push";
 
 const CORS = {
@@ -29,15 +29,25 @@ export default async function handler(req, res) {
     return res.status(200).json({ publicKey: process.env.VAPID_PUBLIC_KEY ?? null });
   }
 
-  const authed = await verifyAdminAuth(req);
-  if (!authed) return res.status(401).json({ error: "Unauthorized" });
+  const staff = await verifyStaffAuth(req);
+  if (!staff) return res.status(401).json({ error: "Unauthorized" });
 
   if (req.method === "POST") {
     const { subscription } = req.body ?? {};
     if (!subscription?.endpoint) return res.status(400).json({ error: "Invalid subscription" });
+
+    // Ata la suscripción al empleado dueño del token, para notificar solo al estilista asignado
+    let empId = null, stylist = null;
+    if (staff.role === "employee") {
+      empId = staff.empId;
+      const admin = await kvGet("admin_store");
+      stylist = (admin?.employees || []).find(e => e.id === empId)?.name ?? null;
+    }
+    const record = { ...subscription, empId, stylist };
+
     const subs = await kvGet("push_subscriptions") ?? [];
     const deduped = subs.filter(s => s.endpoint !== subscription.endpoint);
-    await kvSet("push_subscriptions", [...deduped, subscription]);
+    await kvSet("push_subscriptions", [...deduped, record]);
     return res.status(200).json({ ok: true });
   }
 

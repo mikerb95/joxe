@@ -16,11 +16,21 @@ async function sendPushNotifications(appt) {
   );
   const subs = await kvGet("push_subscriptions") ?? [];
   if (!subs.length) return;
+
+  // Notifica solo a los dispositivos del estilista asignado a la cita
+  const admin = await kvGet("admin_store");
+  const targetId = (admin?.employees || []).find(e => e.name === appt.stylist)?.id ?? null;
+  const targets = subs.filter(s =>
+    (targetId && s.empId && s.empId === targetId) ||
+    (s.stylist && appt.stylist && s.stylist === appt.stylist)
+  );
+  if (!targets.length) return;
+
   const payload = JSON.stringify({
-    title: "Nuevo agendamiento",
+    title: "Nuevo turno reservado",
     body: `${appt.name ?? "Cliente"} · ${appt.service ?? ""} · ${appt.date ?? ""} ${appt.time ?? ""}`,
   });
-  await Promise.allSettled(subs.map(sub => webpush.sendNotification(sub, payload)));
+  await Promise.allSettled(targets.map(sub => webpush.sendNotification(sub, payload)));
 }
 
 function validateAppt(raw) {

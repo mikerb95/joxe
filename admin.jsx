@@ -33,6 +33,12 @@ const adminHeaders = () => ({
   "Authorization": `Bearer ${getToken()}`,
 });
 
+// Como adminHeaders pero también acepta el JWT de empleado — para endpoints abiertos a cualquier staff
+const staffHeaders = () => ({
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${storeToken()}`,
+});
+
 // ---- Admin store (services, revenue, settings) ----
 const DEFAULT_ADMIN = () => ({
   salonName: "JOXE",
@@ -3329,7 +3335,7 @@ const NotificationsCard = () => {
 
       const res = await fetch("/api/push", {
         method: "POST",
-        headers: { ...adminHeaders(), "Content-Type": "application/json" },
+        headers: { ...staffHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ subscription: sub.toJSON() }),
       });
       if (!res.ok) throw new Error("No se pudo guardar la suscripción.");
@@ -3350,7 +3356,7 @@ const NotificationsCard = () => {
       if (sub) {
         await fetch("/api/push", {
           method: "DELETE",
-          headers: { ...adminHeaders(), "Content-Type": "application/json" },
+          headers: { ...staffHeaders(), "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: sub.endpoint }),
         });
         await sub.unsubscribe();
@@ -4605,6 +4611,11 @@ const EmpAgendaView = ({emp, onNav}) => {
             }}>Ver →</button>
         </div>
       )}
+
+      {/* Activar avisos push en el teléfono del empleado */}
+      <div style={{padding:"16px 32px 0"}}>
+        <NotificationsCard />
+      </div>
 
       {/* Day tabs */}
       <div style={{display:"flex",gap:4,padding:"16px 32px 0"}}>
