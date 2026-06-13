@@ -4498,9 +4498,10 @@ const EmpAgendaView = ({emp, onNav}) => {
   const dayAppts = myAppts.filter(a=>a.date===date);
 
   const byTime = {};
-  TIMES.forEach(t=>{ byTime[t]=[]; });
+  AGENDA_HOURS.forEach(t=>{ byTime[t]=[]; });
   dayAppts.forEach(a=>{ if(byTime[a.time]) byTime[a.time].push(a); else byTime[a.time]=[a]; });
-  const slots = Object.keys(byTime).sort();
+  const toMin = (t)=>{ const [hh,mm]=t.split(":").map(Number); return hh*60+(mm||0); };
+  const slots = Object.keys(byTime).sort((a,b)=>toMin(a)-toMin(b));
 
   const activeCount = dayAppts.filter(a=>a.computedStatus!=="cancelled").length;
 
