@@ -4323,8 +4323,38 @@ const HelpView = () => {
           </Section>
         )}
 
+        <Section title="Reservar turnos por el staff" badge="Nuevo" badgeColor={C.gold}>
+          <div style={{fontSize:13,color:C.muted,lineHeight:1.6,marginBottom:4}}>
+            Cuando el cliente no puede usar el sitio web, cada empleado puede agendar el turno
+            por su cuenta desde <strong style={{color:C.text}}>/staff</strong>. El bloque se aparta
+            automáticamente en su calendario según la duración del servicio.
+          </div>
+          <Step n="1" text={<>El empleado entra a <strong style={{color:C.text}}>/staff</strong> e inicia sesión con su PIN.</>} />
+          <Step n="2" text={<>Abre <strong style={{color:C.text}}>Reservar turno</strong> (en el menú lateral o con el botón <strong style={{color:C.text}}>+ Reservar turno</strong> de Mi Agenda).</>} />
+          <Step n="3" text={<>Ingresa el <strong style={{color:C.text}}>celular</strong> del cliente (obligatorio — es lo que lo identifica) y, opcionalmente, su nombre.</>} />
+          <Step n="4" text={<>Elige el <strong style={{color:C.text}}>servicio</strong>; la duración se toma del catálogo.</>} />
+          <Step n="5" text={<>Selecciona el <strong style={{color:C.text}}>día</strong> y toca una hora libre: el <strong style={{color:C.text}}>bloque se acomoda solo</strong> (ej. un servicio de 180 min aparta 14:00–17:00).</>} />
+          <Step n="6" text={<>Confirma con <strong style={{color:C.text}}>Reservar turno</strong>. La cita queda agendada y confirmada a nombre de ese empleado.</>} />
+          <div style={{
+            padding:"12px 14px",fontSize:12,color:C.muted,lineHeight:1.6,
+            background:"rgba(194,158,102,0.05)",border:`1px solid ${C.gold}20`,
+          }}>
+            La línea de tiempo respeta las citas ya agendadas, los horarios bloqueados, la hora de cierre
+            y el horario laboral del empleado — los espacios que no alcanzan a caber se marcan como
+            "No alcanza" y no se pueden elegir.
+          </div>
+        </Section>
+
         <Section title="Preguntas frecuentes">
           {[
+            {
+              q:"¿Una cita reservada por el staff entra a 'Confirmar citas'?",
+              a:"No. Como la crea el empleado en mano, queda confirmada de inmediato y no aparece en la lista de pendientes por confirmar.",
+            },
+            {
+              q:"¿Cómo se distingue al cliente si no se pide la cédula en /staff?",
+              a:"Por el número de celular. El CRM agrupa por cédula y, cuando no hay, usa el teléfono — así el cliente queda correctamente identificado por su número.",
+            },
             {
               q:"¿Cuántos dispositivos pueden recibir notificaciones?",
               a:"No hay límite. Puedes activarlo en el iPhone del dueño, el Android de un empleado, una tablet en recepción — todos reciben el aviso al mismo tiempo.",
