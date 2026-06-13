@@ -4331,7 +4331,7 @@ const HelpView = () => {
           </div>
           <Step n="1" text={<>El empleado entra a <strong style={{color:C.text}}>/staff</strong> e inicia sesión con su PIN.</>} />
           <Step n="2" text={<>Abre <strong style={{color:C.text}}>Reservar turno</strong> (en el menú lateral o con el botón <strong style={{color:C.text}}>+ Reservar turno</strong> de Mi Agenda).</>} />
-          <Step n="3" text={<>Ingresa el <strong style={{color:C.text}}>celular</strong> del cliente (obligatorio — es lo que lo identifica) y, opcionalmente, su nombre.</>} />
+          <Step n="3" text={<>Ingresa el <strong style={{color:C.text}}>celular</strong> del cliente (obligatorio — es lo que lo identifica). Si ya tiene citas, su nombre aparece solo; si el celular es nuevo, el nombre es obligatorio.</>} />
           <Step n="4" text={<>Elige el <strong style={{color:C.text}}>servicio</strong>; la duración se toma del catálogo.</>} />
           <Step n="5" text={<>Selecciona el <strong style={{color:C.text}}>día</strong> y toca una hora libre: el <strong style={{color:C.text}}>bloque se acomoda solo</strong> (ej. un servicio de 180 min aparta 14:00–17:00).</>} />
           <Step n="6" text={<>Confirma con <strong style={{color:C.text}}>Reservar turno</strong>. La cita queda agendada y confirmada a nombre de ese empleado.</>} />
@@ -5256,7 +5256,7 @@ const EmpHelpView = ({onNav}) => {
             El bloque se aparta solo en tu calendario según la duración del servicio.
           </div>
           <Step n="1" text={<>Abre <strong style={{color:C.text}}>Reservar turno</strong> (en el menú o con el botón <strong style={{color:C.text}}>+ Reservar turno</strong> de Mi Agenda).</>} />
-          <Step n="2" text={<>Ingresa el <strong style={{color:C.text}}>celular</strong> del cliente (obligatorio — es lo que lo identifica) y, si quieres, su nombre.</>} />
+          <Step n="2" text={<>Ingresa el <strong style={{color:C.text}}>celular</strong> del cliente (obligatorio — es lo que lo identifica). Si ya tiene citas, su nombre aparece solo; si el celular es nuevo, el nombre es obligatorio.</>} />
           <Step n="3" text={<>Elige el <strong style={{color:C.text}}>servicio</strong>. La duración se toma del catálogo.</>} />
           <Step n="4" text={<>Selecciona el <strong style={{color:C.text}}>día</strong> y toca una hora libre: el <strong style={{color:C.text}}>bloque se acomoda solo</strong> (ej. un servicio de 180 min aparta 14:00–17:00).</>} />
           <Step n="5" text={<>Confirma con <strong style={{color:C.text}}>Reservar turno</strong>. La cita queda agendada a tu nombre, ya confirmada.</>} />
