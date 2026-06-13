@@ -5350,6 +5350,10 @@ const EmpHelpView = ({onNav}) => {
               q:"No me deja elegir una hora.",
               a:"Si una hora se ve como 'No alcanza', el servicio no termina antes del cierre o choca con otra cita. Prueba más temprano o elige otro día.",
             },
+            {
+              q:"No me llegan las notificaciones.",
+              a:"Revisa que el interruptor de 'Activar mis notificaciones' esté en Activo en ese teléfono. En iPhone debes abrir /staff desde el ícono del Home Screen, no desde Safari. Si los permisos están bloqueados, actívalos en los ajustes del navegador.",
+            },
           ].map(({ q, a }) => (
             <div key={q} style={{borderBottom:`1px solid ${C.bdr}`,paddingBottom:14}}>
               <div style={{fontSize:13,fontWeight:500,marginBottom:6}}>{q}</div>
