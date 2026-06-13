@@ -5628,6 +5628,14 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
 
   return (
     <div style={{display:"flex",height:"100vh",background:C.bg,color:C.text,fontFamily:"'Outfit',sans-serif"}}>
+      <style>{`
+        .admin-sidebar-desktop{display:flex!important;}
+        .admin-topbar-mobile{display:none!important;}
+        @media(max-width:768px){
+          .admin-sidebar-desktop{display:none!important;}
+          .admin-topbar-mobile{display:flex!important;}
+        }
+      `}</style>
       {/* Desktop sidebar */}
       <div style={{
         width:220,flexShrink:0,borderRight:`1px solid ${C.bdr}`,
