@@ -234,6 +234,34 @@ const genId    = () => Math.random().toString(36).slice(2, 10);
 const TIMES    = ["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
 // Rango horario que muestra la vista diaria vertical de la agenda (10am a 10pm)
 const AGENDA_HOURS = ["10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00","21:00","22:00"];
+
+// ---- Booking availability helpers (mirror booking portal) ----
+const timeToMin = (t) => { const [h,m]=String(t).split(":").map(Number); return h*60+(m||0); };
+const minToTime = (mins) => `${Math.floor(mins/60)}:${String(mins%60).padStart(2,"0")}`;
+// Salon business hours by JS getDay(): 0=dom … 6=sab (mar–vie 9-20, sáb 8-18, dom/lun cerrado)
+const BUSINESS_HOURS = {
+  0:null, 1:null,
+  2:["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],
+  3:["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],
+  4:["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],
+  5:["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],
+  6:["8:00","9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"],
+};
+const CLOSE_TIME_MIN = { 2:21*60, 3:21*60, 4:21*60, 5:21*60, 6:19*60 };
+const WORK_DAY_KEYS  = ["dom","lun","mar","mie","jue","vie","sab"];
+const dayOfWeekIdx = (dateStr) => new Date(dateStr+"T12:00").getDay();
+const isClosedDay  = (dateStr) => !BUSINESS_HOURS[dayOfWeekIdx(dateStr)];
+const slotsForDate = (dateStr) => BUSINESS_HOURS[dayOfWeekIdx(dateStr)] || [];
+const closesAtMin  = (dateStr) => CLOSE_TIME_MIN[dayOfWeekIdx(dateStr)] ?? 0;
+// false if the slot+duration falls outside the employee's configured work hours
+const empWorksOnSlot = (emp, date, timeStr, dur) => {
+  if (!emp?.workHours) return true; // no schedule configured — no restriction
+  const day = emp.workHours[WORK_DAY_KEYS[dayOfWeekIdx(date)]];
+  if (!day?.active) return false;
+  const s = timeToMin(timeStr), e = s + dur;
+  return s >= timeToMin(day.start) && e <= timeToMin(day.end);
+};
+
 const METHODS  = ["Efectivo","Transferencia","Datáfono","Nequi"];
 const ROLES    = ["Estilista","Colorista","Manicurista","Pedicurista","Barbero","Maquillador/a","Masajista","Recepcionista","Otro"];
 const DAYS_WORK = [
