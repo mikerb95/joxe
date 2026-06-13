@@ -4584,7 +4584,14 @@ const EmpAgendaView = ({emp, onNav}) => {
             }}>{activeCount} cita{activeCount!==1?"s":""}</span>
           </div>
 
-          {/* Time rows */}
+          {/* Time rows — scroll vertical independiente (dedo en móvil, scroll en escritorio) */}
+          <div style={{
+            maxHeight:"60vh",
+            overflowY:"auto",
+            overscrollBehavior:"contain",
+            WebkitOverflowScrolling:"touch",
+            touchAction:"pan-y",
+          }}>
           {slots.map(time=>{
             const slotAppts = byTime[time]||[];
             const [h,m]     = time.split(":").map(Number);
