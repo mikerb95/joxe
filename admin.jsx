@@ -3429,19 +3429,32 @@ const NotificationsCard = () => {
 
   const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isStandalone = window.navigator.standalone === true;
+  const inApp = isInAppBrowser();
 
   return (
     <Card>
       <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Notificaciones push</Mono>
       <div style={{display:"flex",flexDirection:"column",gap:14}}>
 
-        {!supported && (
+        {inApp && (
+          <div style={{
+            padding:"12px 14px",fontSize:13,lineHeight:1.5,
+            background:"rgba(196,102,102,0.08)",border:`1px solid ${C.red}40`,color:C.muted,
+          }}>
+            Estás en el navegador de <strong style={{color:C.text}}>Instagram / WhatsApp</strong>, que no
+            permite activar notificaciones. Abre esta misma página en Safari o Chrome:
+            toca el menú <strong style={{color:C.text}}>⋯</strong> (arriba) y elige
+            <strong style={{color:C.text}}> "Abrir en el navegador"</strong>, y activa el aviso ahí.
+          </div>
+        )}
+
+        {!inApp && !supported && (
           <div style={{fontSize:13,color:C.muted}}>
             Este navegador no soporta notificaciones push.
           </div>
         )}
 
-        {supported && isIos && !isStandalone && (
+        {!inApp && supported && isIos && !isStandalone && (
           <div style={{
             padding:"12px 14px",fontSize:13,lineHeight:1.5,
             background:"rgba(194,158,102,0.08)",border:`1px solid ${C.gold}30`,color:C.muted,
@@ -3452,7 +3465,7 @@ const NotificationsCard = () => {
           </div>
         )}
 
-        {supported && permission === "denied" && (
+        {!inApp && supported && permission === "denied" && (
           <div style={{
             padding:"12px 14px",fontSize:13,lineHeight:1.5,
             background:"rgba(196,102,102,0.08)",border:`1px solid ${C.red}40`,color:C.muted,
@@ -3462,7 +3475,7 @@ const NotificationsCard = () => {
           </div>
         )}
 
-        {supported && permission !== "denied" && (
+        {!inApp && supported && permission !== "denied" && (
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
             <div>
               <div style={{fontSize:14}}>Recibir aviso al llegar un nuevo turno</div>
