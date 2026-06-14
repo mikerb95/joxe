@@ -78,11 +78,5 @@
         }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/reminders",
-      "schedule": "* * * * *"
-    }
   ]
 }
