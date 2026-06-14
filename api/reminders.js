@@ -2,7 +2,9 @@ import { initTables, kvGet, kvSet } from "./db.js";
 import webpush from "web-push";
 
 // Avisa al estilista ~5 minutos antes de que empiece cada turno confirmado.
-// Pensado para ejecutarse cada minuto vía Vercel Cron (ver "crons" en vercel.json).
+// Pensado para ejecutarse cada minuto vía un cron externo (ej. cron-job.org),
+// ya que el plan Hobby de Vercel no permite Cron Jobs con frecuencia < 1 día.
+// El cron externo debe enviar el header: Authorization: Bearer <CRON_SECRET>.
 const REMINDER_WINDOW_MIN = 5;   // dispara cuando faltan entre 0 y 5 min (tolerante a runs atrasados)
 const COT_OFFSET = "-05:00";     // Colombia = UTC-5 fijo (sin horario de verano)
 const REMINDED_TTL_MS = 2 * 60 * 60 * 1000;
