@@ -5607,10 +5607,13 @@ const EMP_VIEWS = [
 
 const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
   const [mobileOpen,setMobileOpen] = React.useState(false);
-  const [appts] = useAppts();
+  const [appts, setAppts] = useAppts();
   const [admin] = useAdmin();
   const pendingAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[])
     .filter(x => x.stylist===emp.name && empNeedsConfirm(x)).length;
+  const todayD = todayStr();
+  const activeWarnings = (appts.timeWarnings||[]).filter(w=>w.date>=todayD);
+  const dismissWarning = (id) => setAppts(s=>({ ...s, timeWarnings:(s.timeWarnings||[]).filter(x=>x.id!==id) }));
 
   const navContent = (
     <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
