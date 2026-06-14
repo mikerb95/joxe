@@ -5194,6 +5194,38 @@ const EmpBookingView = ({emp, onNav}) => {
     if (!selectedSvc)        { setErr("Selecciona el servicio."); return; }
     if (!timeOk)             { setErr("Selecciona una hora disponible para el bloque."); return; }
     setSaving(true);
+
+    // Antes de guardar, revisa contra la data más reciente del servidor por si
+    // un cliente acaba de agendar este mismo horario desde el sitio web mientras
+    // el empleado llenaba el formulario ("turno entrante").
+    let freshData = null;
+    try {
+      const t = storeToken();
+      const headers = t ? { "Authorization": `Bearer ${t}` } : {};
+      const res = await fetch("/api/store", { headers });
+      if (res.ok) freshData = { ...DEFAULT_APPTS(), ...(await res.json()) };
+    } catch {}
+
+    const s = timeToMin(form.time), e = s + dur;
+    if (freshData) {
+      const freshDayAppts = getAllAppts(freshData, admin.cancelledIds||[], admin.noShowIds||[])
+        .filter(a=> a.stylist===emp.name && a.date===form.date && !["cancelled","no-show"].includes(a.computedStatus));
+      const overlapping = freshDayAppts.find(a=>{ const as=timeToMin(a.time), ae=as+(a.serviceDur||60); return as<e && s<ae; });
+      if (overlapping) {
+        const withEnd = minToTime(timeToMin(overlapping.time)+(overlapping.serviceDur||60));
+        setErr(`Mientras reservabas, ${overlapping.name} agendó ${overlapping.time}–${withEnd}. Elige otro bloque.`);
+        const warning = {
+          id: genId(), stylist: emp.name, date: form.date,
+          time: form.time, end: minToTime(e),
+          withName: overlapping.name, withTime: overlapping.time, withEnd,
+          createdAt: Date.now(),
+        };
+        await setAppts(()=>({ ...freshData, timeWarnings:[...(freshData.timeWarnings||[]), warning] }));
+        setSaving(false);
+        return;
+      }
+    }
+
     const appt = {
       id: genId(),
       code: "JX-"+(Math.floor(Math.random()*9000)+1000),
@@ -5212,7 +5244,7 @@ const EmpBookingView = ({emp, onNav}) => {
       confirmedAt: Date.now(),
       bookedBy: "staff",
     };
-    await setAppts(s=>({ ...s, appointments:[...s.appointments, appt] }));
+    await setAppts(cur=>{ const src = freshData || cur; return { ...src, appointments:[...(src.appointments||[]), appt] }; });
     setSaving(false);
     setDone(appt);
   };
