@@ -5690,6 +5690,27 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
       )}
 
       <div style={{flex:1,display:"flex",flexDirection:"column",overflow:"hidden"}}>
+        {/* Banner de sobredemanda: turnos que se cruzan creados desde Reservar turno */}
+        {activeWarnings.length>0 && (
+          <div style={{flexShrink:0,background:"rgba(196,102,102,0.08)",borderBottom:`1px solid ${C.red}40`}}>
+            {activeWarnings.map(w=>(
+              <div key={w.id} style={{
+                padding:"10px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,
+                fontSize:12,color:C.text,lineHeight:1.5,
+              }}>
+                <span>
+                  ⚠ <strong style={{color:C.red}}>Sobredemanda</strong> · {w.stylist}: {w.time}–{w.end} ({fmtDateShort(w.date)}) se
+                  cruza con el turno de {w.withName} ({w.withTime}–{w.withEnd}).
+                </span>
+                <button onClick={()=>dismissWarning(w.id)} style={{
+                  flexShrink:0,background:"transparent",border:`1px solid ${C.red}40`,color:C.red,
+                  cursor:"pointer",padding:"4px 10px",fontFamily:"'JetBrains Mono',monospace",
+                  fontSize:9,letterSpacing:"0.08em",
+                }}>✕</button>
+              </div>
+            ))}
+          </div>
+        )}
         {/* Mobile topbar */}
         <div style={{
           padding:"12px 20px",borderBottom:`1px solid ${C.bdr}`,
