@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JOXE · Staff — Tutorial Reservar turno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0C0C0C; --s1:#111; --s2:#181818; --s3:#222;
+    --bdr:rgba(245,241,234,0.1); --bdr2:rgba(245,241,234,0.2);
+    --gold:#C29E66; --text:#F5F1EA;
+    --muted:rgba(245,241,234,0.5); --muted2:rgba(245,241,234,0.25);
+    --red:#C46666; --green:#66C499;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{width:390px;height:844px;overflow:hidden;background:var(--bg)}
+  body{font-family:'Outfit',sans-serif;color:var(--text);position:relative}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .serif{font-family:'Marcellus',serif}
+
+  /* ---- App chrome ---- */
+  .statusbar{height:0}
+  .app{position:absolute;inset:0;display:flex;flex-direction:column}
+  .screen{position:absolute;inset:0;display:flex;flex-direction:column;opacity:0;
+    transform:translateY(10px);transition:opacity .45s ease,transform .45s ease;pointer-events:none}
+  .screen.active{opacity:1;transform:none}
+
+  /* page header */
+  .pagehead{padding:18px 22px;border-bottom:1px solid var(--bdr);background:var(--s1)}
+  .pagehead h1{font-family:'Marcellus',serif;font-weight:400;font-size:24px;color:var(--text)}
+  .pagehead .sub{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold);
+    letter-spacing:.12em;text-transform:uppercase;margin-top:5px;display:block}
+  .scroll{flex:1;overflow:hidden;padding:20px}
+
+  .card{background:var(--s1);border:1px solid var(--bdr);padding:22px}
+
+  /* ---- Login ---- */
+  #scrLogin{align-items:center;justify-content:center;padding:24px}
+  #scrLogin .inner{width:100%;max-width:340px}
+  .logo{text-align:center;margin-bottom:34px}
+  .logo .name{font-family:'Marcellus',serif;font-size:34px;letter-spacing:.4em;color:var(--text)}
+  .logo .tag{font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:10px;margin-top:8px}
+  .emp-pick{display:flex;flex-direction:column;gap:9px;margin-bottom:22px}
+  .emp-opt{padding:14px 16px;background:var(--s2);border:1px solid var(--bdr);color:var(--text);
+    text-align:left;cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+    font-size:15px;transition:border-color .25s,background .25s}
+  .emp-opt.sel{border-color:var(--gold);background:rgba(194,158,102,0.10)}
+  .emp-opt .dot{color:var(--muted2);font-size:16px}
+  .emp-opt.sel .dot{color:var(--gold)}
+  .pin-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);
+    letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:10px}
+  .pin-row{display:flex;gap:10px;margin-bottom:22px}
+  .pin-box{flex:1;height:54px;border:1px solid var(--bdr);background:var(--s2);
+    display:flex;align-items:center;justify-content:center;font-size:26px;color:var(--text)}
+  .pin-box.fill{border-color:var(--gold)}
+
+  /* generic button */
+  .btn{width:100%;padding:15px;background:var(--gold);color:#0C0C0C;border:none;cursor:pointer;
+    font-family:'Outfit',sans-serif;font-size:14px;font-weight:500;letter-spacing:.02em;
+    transition:filter .2s, opacity .2s}
+  .btn.ghost{background:transparent;color:var(--text);border:1px solid var(--gold)}
+  .btn:disabled{opacity:.4}
+
+  /* ---- Agenda ---- */
+  .ag-btn{padding:9px 16px;background:transparent;border:1px solid var(--gold);color:var(--gold);
+    font-size:12px;cursor:pointer;font-family:'Outfit',sans-serif}
+  .ag-empty{margin-top:40px;text-align:center;color:var(--muted);font-size:13px;line-height:1.7}
+  .ag-empty .big{font-size:30px;color:var(--gold);margin-bottom:14px;font-family:'Marcellus',serif}
+
+  /* ---- Reservar turno ---- */
+  .hint{padding:12px 14px;background:rgba(194,158,102,0.06);border:1px solid rgba(194,158,102,.25);
+    font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:22px}
+  .hint b{color:var(--text)}
+  .seclabel{font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:9px;
+    display:block;margin-bottom:11px;letter-spacing:.05em}
+  .field{margin-bottom:22px}
+  .field label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--muted);
+    letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:8px}
+  .input{width:100%;padding:13px 14px;background:var(--s2);border:1px solid var(--bdr);
+    color:var(--text);font-size:15px;font-family:'Outfit',sans-serif;min-height:46px;display:flex;align-items:center}
+  .input.focus{border-color:var(--gold);outline:1px solid var(--gold);outline-offset:2px}
+  .input .ph{color:var(--muted2)}
+  .caret{display:inline-block;width:1px;height:18px;background:var(--gold);margin-left:1px;
+    animation:blink 1s step-end infinite;vertical-align:middle}
+  @keyframes blink{50%{opacity:0}}
+  .known{margin-top:7px;font-size:11px;color:var(--green)}
+  .newname{margin-top:7px;font-size:11px;color:var(--muted)}
+
+  .svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px}
+  .svc{padding:12px 13px;text-align:left;cursor:pointer;background:var(--s2);
+    border:1px solid var(--bdr);color:var(--text);transition:border-color .25s,background .25s}
+  .svc.sel{background:rgba(194,158,102,0.15);border-color:var(--gold)}
+  .svc .nm{font-size:13.5px;margin-bottom:6px}
+  .svc .row{display:flex;justify-content:space-between;align-items:baseline}
+  .svc .dur{font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:9px}
+  .svc .price{font-size:11px;color:var(--muted)}
+
+  .days{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:22px}
+  .day{padding:8px 15px;cursor:pointer;background:transparent;color:var(--muted);
+    border:1px solid var(--bdr);font-size:12px;letter-spacing:.04em;transition:.25s}
+  .day.sel{background:var(--gold);color:#0C0C0C;border-color:var(--gold)}
+
+  .blockchip{margin-bottom:14px;padding:10px 16px;background:rgba(102,196,153,0.1);
+    border:1px solid rgba(102,196,153,.4);display:inline-flex;gap:10px;align-items:center;
+    opacity:0;transform:translateY(4px);transition:.35s}
+  .blockchip.show{opacity:1;transform:none}
+  .blockchip .lbl{font-family:'JetBrains Mono',monospace;color:var(--green);font-size:10px}
+  .blockchip .rng{font-size:14px;color:var(--text)}
+  .blockchip .min{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:9px}
+
+  .timeline{border:1px solid var(--bdr);background:var(--s1);margin-bottom:22px}
+  .slot{display:grid;grid-template-columns:60px 1fr;border-bottom:1px solid var(--bdr);
+    transition:background .25s}
+  .slot:last-child{border-bottom:none}
+  .slot .t{padding:11px 0 11px 14px;border-right:1px solid var(--bdr);
+    font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:11px}
+  .slot .body{padding:8px 13px;display:flex;align-items:center;min-height:42px}
+  .slot .free{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:10px}
+  .slot.occ{}
+  .slot .occn{font-size:13px;color:var(--text)}
+  .slot .occs{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:9px;margin-top:2px}
+  .slot .short{font-family:'JetBrains Mono',monospace;color:var(--muted2);font-size:9px}
+  .slot.insel{background:rgba(194,158,102,0.16)}
+  .slot.insel .t{color:var(--gold)}
+  .slot .selmark{font-family:'JetBrains Mono',monospace;color:var(--gold);font-size:10px}
+
+  /* ---- Success ---- */
+  #scrDone{align-items:center;justify-content:center;padding:30px;text-align:center}
+  .checkwrap{width:88px;height:88px;border-radius:50%;border:2px solid var(--green);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 26px;
+    color:var(--green);font-size:42px;background:rgba(102,196,153,.08)}
+  #scrDone h2{font-family:'Marcellus',serif;font-weight:400;font-size:27px;margin-bottom:12px}
+  #scrDone .sumcard{margin-top:26px;width:100%;max-width:320px;text-align:left;
+    background:var(--s1);border:1px solid var(--bdr);padding:18px}
+  .sumrow{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--bdr);font-size:13px}
+  .sumrow:last-child{border-bottom:none}
+  .sumrow .k{color:var(--muted)}
+  .sumrow .v{color:var(--text)}
+
+  /* ---- Cursor ---- */
+  #cursor{position:absolute;left:0;top:0;width:26px;height:26px;z-index:60;
+    transform:translate(-4px,-2px);transition:transform .65s cubic-bezier(.4,0,.2,1);pointer-events:none;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.6))}
+  #cursor.tap{animation:tap .25s ease}
+  @keyframes tap{50%{transform:translate(-4px,-2px) scale(.8)}}
+  .ripple{position:absolute;z-index:55;border:2px solid var(--gold);border-radius:50%;
+    width:10px;height:10px;transform:translate(-50%,-50%);opacity:.9;pointer-events:none;
+    animation:rip .5s ease-out forwards}
+  @keyframes rip{to{width:60px;height:60px;opacity:0}}
+
+  /* ---- Caption ---- */
+  #caption{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);z-index:70;
+    width:330px;background:rgba(12,12,12,.82);backdrop-filter:blur(8px);
+    border:1px solid rgba(194,158,102,.35);padding:13px 18px;border-radius:2px;text-align:center;
+    opacity:0;transition:opacity .35s}
+  #caption.show{opacity:1}
+  #caption .step{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--gold);
+    letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:5px}
+  #caption .txt{font-size:14px;color:var(--text);line-height:1.45}
+
+  /* progress */
+  #progress{position:absolute;left:0;top:0;height:3px;width:0;background:var(--gold);z-index:80;
+    transition:width .4s linear}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<div class="app">
+  <!-- ===== LOGIN ===== -->
+  <div class="screen" id="scrLogin">
+    <div class="inner">
+      <div class="logo"><div class="name">JOXE</div><div class="tag">Staff · Acceso</div></div>
+      <div class="card">
+        <span class="pin-label">¿Quién eres?</span>
+        <div class="emp-pick">
+          <div class="emp-opt" id="emp1"><span>Carolina M.</span><span class="dot">◉</span></div>
+          <div class="emp-opt" id="emp2"><span>Andrés R.</span><span class="dot">◉</span></div>
+        </div>
+        <span class="pin-label">Tu PIN</span>
+        <div class="pin-row">
+          <div class="pin-box" data-pin="0"></div>
+          <div class="pin-box" data-pin="1"></div>
+          <div class="pin-box" data-pin="2"></div>
+          <div class="pin-box" data-pin="3"></div>
+        </div>
+        <button class="btn" id="btnEntrar">Entrar →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== AGENDA ===== -->
+  <div class="screen" id="scrAgenda">
+    <div class="pagehead" style="display:flex;justify-content:space-between;align-items:center">
+      <div><h1>Mi Agenda</h1><span class="sub">Staff · Hoy</span></div>
+      <button class="ag-btn" id="btnReservar">+ Reservar turno</button>
+    </div>
+    <div class="scroll">
+      <div class="ag-empty">
+        <div class="big">▦</div>
+        Aún no tienes turnos para hoy.<br>Cuando el cliente no pueda usar el sitio web,<br>agéndalo tú con <b style="color:var(--text)">+ Reservar turno</b>.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RESERVAR ===== -->
+  <div class="screen" id="scrReservar">
+    <div class="pagehead"><h1>Reservar turno</h1><span class="sub">Staff · Para el cliente</span></div>
+    <div class="scroll" id="reservarScroll">
+      <div class="hint">Agenda un turno cuando el cliente no puede usar el sitio web. El <b>celular</b> identifica al cliente, y al elegir el servicio el bloque se acomoda solo según su duración.</div>
+
+      <span class="seclabel">1 · Cliente</span>
+      <div class="field">
+        <label>Celular *</label>
+        <div class="input" id="inPhone"><span class="ph">300 123 4567</span></div>
+        <div class="newname" id="nameHelp" style="display:none">Cliente nuevo · el nombre es obligatorio.</div>
+      </div>
+      <div class="field">
+        <label>Nombre *</label>
+        <div class="input" id="inName"><span class="ph">Nombre del cliente</span></div>
+      </div>
+
+      <span class="seclabel">2 · Servicio</span>
+      <div class="svc-grid">
+        <div class="svc" id="svc1"><div class="nm">Corte clásico</div><div class="row"><span class="dur">45 min</span><span class="price">$45.000</span></div></div>
+        <div class="svc" id="svc2"><div class="nm">Corte + Barba</div><div class="row"><span class="dur">60 min</span><span class="price">$65.000</span></div></div>
+        <div class="svc" id="svc3"><div class="nm">Color completo</div><div class="row"><span class="dur">180 min</span><span class="price">$210.000</span></div></div>
+        <div class="svc" id="svc4"><div class="nm">Arreglo barba</div><div class="row"><span class="dur">30 min</span><span class="price">$28.000</span></div></div>
+      </div>
+
+      <div id="dayBlock" style="display:none">
+        <span class="seclabel">3 · Día</span>
+        <div class="days">
+          <div class="day" id="d1">HOY · 24 JUN</div>
+          <div class="day" id="d2">JUE · 25 JUN</div>
+          <div class="day" id="d3">VIE · 26 JUN</div>
+        </div>
+
+        <span class="seclabel">4 · Bloque en el calendario</span>
+        <div class="blockchip" id="blockChip">
+          <span class="lbl">Bloque</span><span class="rng" id="blockRng">14:00 – 15:00</span><span class="min" id="blockMin">60 min</span>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+
+      <button class="btn" id="btnConfirmar" disabled>Reservar turno →</button>
+    </div>
+  </div>
+
+  <!-- ===== DONE ===== -->
+  <div class="screen" id="scrDone">
+    <div>
+      <div class="checkwrap">✓</div>
+      <h2>Turno reservado</h2>
+      <div style="color:var(--muted);font-size:13px;line-height:1.6">Queda confirmada en tu agenda.<br>No necesita confirmación adicional.</div>
+      <div class="sumcard">
+        <div class="sumrow"><span class="k">Cliente</span><span class="v">María L.</span></div>
+        <div class="sumrow"><span class="k">Servicio</span><span class="v">Corte + Barba</span></div>
+        <div class="sumrow"><span class="k">Día</span><span class="v">Jue 25 jun</span></div>
+        <div class="sumrow"><span class="k">Hora</span><span class="v">14:00 – 15:00</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- cursor + caption -->
+<svg id="cursor" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 7-6 1.6L9.5 17 5 3z" fill="#F5F1EA" stroke="#0C0C0C" stroke-width="1.2" stroke-linejoin="round"/></svg>
+<div id="caption"><span class="step" id="capStep"></span><span class="txt" id="capTxt"></span></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+const cursor = $('#cursor');
+const caption = $('#caption');
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+function caphtml(step,txt){
+  $('#capStep').textContent = step||'';
+  $('#capTxt').innerHTML = txt;
+  caption.classList.add('show');
+}
+async function caphide(){ caption.classList.remove('show'); await sleep(350); }
+
+// move cursor to element center
+async function moveTo(el, dx=0, dy=0){
+  const r = el.getBoundingClientRect();
+  const x = r.left + r.width/2 + dx;
+  const y = r.top + r.height/2 + dy;
+  cursor.style.transform = `translate(${x-4}px,${y-2}px)`;
+  await sleep(700);
+}
+async function tap(el,dx=0,dy=0){
+  await moveTo(el,dx,dy);
+  const r = el.getBoundingClientRect();
+  const x = r.left + r.width/2 + dx, y = r.top + r.height/2 + dy;
+  cursor.classList.add('tap');
+  const rip = document.createElement('div');
+  rip.className='ripple'; rip.style.left=x+'px'; rip.style.top=y+'px';
+  document.body.appendChild(rip);
+  setTimeout(()=>rip.remove(),550);
+  await sleep(260);
+  cursor.classList.remove('tap');
+}
+async function typeInto(input, text, ph){
+  input.classList.add('focus');
+  input.innerHTML = '<span class="caret"></span>';
+  await sleep(250);
+  let cur='';
+  for(const ch of text){
+    cur+=ch;
+    input.innerHTML = cur + '<span class="caret"></span>';
+    await sleep(70);
+  }
+  await sleep(250);
+  input.innerHTML = cur;
+  input.classList.remove('focus');
+}
+
+function setProgress(p){ $('#progress').style.width = p+'%'; }
+
+// ---- build timeline slots ----
+const SLOTS = [
+  {t:'12:00', occ:'Juan P.', svc:'Corte clásico'},
+  {t:'13:00', free:true},
+  {t:'14:00', free:true},
+  {t:'15:00', free:true},
+  {t:'16:00', free:true},
+  {t:'17:00', short:true},
+];
+function buildTimeline(){
+  const tl = $('#timeline'); tl.innerHTML='';
+  SLOTS.forEach(s=>{
+    const row=document.createElement('div');
+    row.className='slot'+(s.occ?' occ':'');
+    row.dataset.t=s.t;
+    let body;
+    if(s.occ) body=`<div><div class="occn">${s.occ}</div><div class="occs">Ocupado · ${s.svc}</div></div>`;
+    else if(s.short) body=`<span class="short">No alcanza</span>`;
+    else body=`<span class="free">Libre · tocar para apartar</span>`;
+    row.innerHTML=`<div class="t">${s.t}</div><div class="body">${body}</div>`;
+    tl.appendChild(row);
+  });
+}
+
+// ===================== TIMELINE =====================
+async function run(){
+  await document.fonts.ready;
+  await sleep(400);
+
+  // ---- intro / login ----
+  showScreen('#scrLogin');
+  setProgress(5);
+  caphtml('','Así agendas un turno tú mismo desde <b>/staff</b>');
+  await sleep(2200);
+  await caphide();
+
+  caphtml('Paso 1','Entra con tu <b>PIN</b>: elige tu nombre…');
+  await tap($('#emp1'));
+  $('#emp1').classList.add('sel');
+  await sleep(500);
+  caphtml('Paso 1','…y escribe tu PIN personal.');
+  // type pin
+  const boxes=document.querySelectorAll('.pin-box');
+  for(let i=0;i<4;i++){ boxes[i].classList.add('fill'); boxes[i].textContent='•'; await sleep(280); }
+  await sleep(350);
+  await tap($('#btnEntrar'));
+  await caphide();
+  setProgress(20);
+
+  // ---- agenda ----
+  showScreen('#scrAgenda');
+  await sleep(700);
+  caphtml('Paso 2','En <b>Mi Agenda</b>, toca <b>+ Reservar turno</b>.');
+  await sleep(900);
+  await tap($('#btnReservar'));
+  await caphide();
+  setProgress(32);
+
+  // ---- reservar ----
+  buildTimeline();
+  showScreen('#scrReservar');
+  await sleep(700);
+
+  // phone
+  caphtml('Paso 3','Ingresa el <b>celular</b> del cliente — así se le identifica.');
+  await moveTo($('#inPhone'));
+  await typeInto($('#inPhone'), '300 123 4567');
+  $('#nameHelp').style.display='block';
+  await sleep(400);
+  setProgress(45);
+
+  // name
+  caphtml('Paso 3','Si el celular es nuevo, escribe el <b>nombre</b>.');
+  await moveTo($('#inName'));
+  await typeInto($('#inName'), 'María L.');
+  await sleep(300);
+  setProgress(54);
+  await caphide();
+
+  // service
+  caphtml('Paso 4','Elige el <b>servicio</b> — la duración sale del catálogo.');
+  await tap($('#svc2'));
+  $('#svc2').classList.add('sel');
+  $('#dayBlock').style.display='block';
+  await sleep(700);
+  setProgress(66);
+  await caphide();
+
+  // day
+  caphtml('Paso 5','Selecciona el <b>día</b>.');
+  await tap($('#d2'));
+  $('#d2').classList.add('sel');
+  await sleep(600);
+  setProgress(76);
+  await caphide();
+
+  // slot
+  caphtml('Paso 6','Toca una <b>hora libre</b>: el bloque se acomoda solo.');
+  const slot14 = document.querySelector('.slot[data-t="14:00"]');
+  // scroll timeline into view
+  $('#reservarScroll').scrollTo({top:$('#reservarScroll').scrollHeight, behavior:'smooth'});
+  await sleep(600);
+  await tap(slot14);
+  // fill block 14:00-15:00 (60 min => 14:00 only highlighted as start + reserved)
+  const s14 = document.querySelector('.slot[data-t="14:00"]');
+  s14.classList.add('insel');
+  s14.querySelector('.body').innerHTML='<span class="selmark">● Inicio del turno</span>';
+  $('#blockChip').classList.add('show');
+  $('#btnConfirmar').disabled=false;
+  await sleep(900);
+  setProgress(88);
+  await caphide();
+
+  // confirm
+  caphtml('Paso 7','Confirma con <b>Reservar turno</b>.');
+  await tap($('#btnConfirmar'));
+  await sleep(400);
+  await caphide();
+  setProgress(95);
+
+  // done
+  showScreen('#scrDone');
+  await sleep(800);
+  caphtml('','¡Listo! Queda <b>confirmada</b> en tu agenda.');
+  setProgress(100);
+  await sleep(2600);
+  await caphide();
+  await sleep(600);
+
+  window.__done = true;
+}
+
+window.addEventListener('load', run);
+</script>
+</body>
+</html>
