@@ -2390,7 +2390,28 @@ const RevenueView = () => {
         ))}
       </div>
 
-      {showForm && (
+      {showForm && tab==="gastos" && (
+        <div style={{padding:"20px 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,maxWidth:1000}}>
+            <FieldInput label="Fecha" type="date" value={expForm.date}
+              onChange={e=>setExpForm({...expForm,date:e.target.value})} />
+            <FieldInput label="Monto (COP)" type="number" value={expForm.amount}
+              onChange={e=>setExpForm({...expForm,amount:e.target.value})} placeholder="50000" />
+            <FieldSelect label="Categoría" value={expForm.category}
+              onChange={e=>setExpForm({...expForm,category:e.target.value})} options={EXPENSE_CATEGORIES} />
+            <FieldSelect label="Método" value={expForm.method}
+              onChange={e=>setExpForm({...expForm,method:e.target.value})} options={METHODS} />
+            <FieldInput label="Nota" value={expForm.note}
+              onChange={e=>setExpForm({...expForm,note:e.target.value})} placeholder="Proveedor, detalle…" />
+          </div>
+          <div style={{display:"flex",gap:10,marginTop:16}}>
+            <Btn onClick={submitExpense} disabled={!expForm.amount}>Guardar gasto</Btn>
+            <Btn variant="ghost" onClick={()=>setShowForm(false)}>Cancelar</Btn>
+          </div>
+        </div>
+      )}
+
+      {showForm && tab==="ingresos" && (
         <div style={{padding:"20px 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,maxWidth:1000}}>
             <FieldInput label="Fecha" type="date" value={form.date}
