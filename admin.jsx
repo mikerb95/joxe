@@ -2365,18 +2365,30 @@ const RevenueView = () => {
 
   return (
     <div>
-      <PageHeader title="Caja" subtitle="Ingresos · Pagos"
+      <PageHeader title="Caja" subtitle="Ingresos · Gastos · Utilidad"
         action={
           <div style={{display:"flex",gap:8}}>
             <Btn variant="ghost" onClick={()=>setShowDaySummary(s=>!s)}>
               {showDaySummary?"Ocultar cierre":"Cierre del día"}
             </Btn>
             <Btn onClick={()=>setShowForm(!showForm)}>
-              {showForm?"Cancelar":"+ Registrar ingreso"}
+              {showForm ? "Cancelar" : (tab==="gastos" ? "+ Registrar gasto" : "+ Registrar ingreso")}
             </Btn>
           </div>
         }
       />
+
+      {/* Ingresos / Gastos tabs */}
+      <div style={{display:"flex",gap:0,padding:"0 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
+        {[{id:"ingresos",label:"Ingresos"},{id:"gastos",label:"Gastos"}].map(t=>(
+          <button key={t.id} onClick={()=>{setTab(t.id);setShowForm(false);}} style={{
+            padding:"14px 22px",background:"transparent",border:"none",
+            borderBottom:`2px solid ${tab===t.id?C.gold:"transparent"}`,
+            color:tab===t.id?C.text:C.muted,cursor:"pointer",
+            fontFamily:"'Outfit',sans-serif",fontSize:13,letterSpacing:"0.04em",
+          }}>{t.label}</button>
+        ))}
+      </div>
 
       {showForm && (
         <div style={{padding:"20px 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
