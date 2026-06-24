@@ -2568,15 +2568,31 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
           ))}
         </div>
 
-        {/* Stats */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:16,marginBottom:28}}>
-          <StatCard label={PERIODS.find(p=>p.id===period)?.label||"Periodo"} value={fmtCOP(total)} small
+        {/* Stats — profitability summary (shared) */}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:16,marginBottom:20}}>
+          <StatCard label="Ingresos" value={fmtCOP(total)} small
             color={total>0?C.green:C.muted} sub={`${filtered.length} transacción${filtered.length!==1?"es":""}`} />
-          {Object.entries(byMethod).map(([m,v])=>(
-            <StatCard key={m} label={m} value={fmtCOP(v)} small
-              color={PAY_COLORS[m]||C.muted} />
-          ))}
+          <StatCard label="Gastos" value={fmtCOP(expTotal)} small
+            color={expTotal>0?C.red:C.muted} sub={`${filteredExp.length} registro${filteredExp.length!==1?"s":""}`} />
+          <StatCard label="Utilidad" value={fmtCOP(profit)} small
+            color={profit>=0?C.gold:C.red} />
         </div>
+
+        {/* Tab-specific breakdown by method/category */}
+        {tab==="ingresos" && Object.keys(byMethod).length>0 && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:16,marginBottom:28}}>
+            {Object.entries(byMethod).map(([m,v])=>(
+              <StatCard key={m} label={m} value={fmtCOP(v)} small color={PAY_COLORS[m]||C.muted} />
+            ))}
+          </div>
+        )}
+        {tab==="gastos" && Object.keys(byCategory).length>0 && (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:16,marginBottom:28}}>
+            {Object.entries(byCategory).sort((a,b)=>b[1]-a[1]).map(([c,v])=>(
+              <StatCard key={c} label={c} value={fmtCOP(v)} small color={C.red} />
+            ))}
+          </div>
+        )}
 
         {/* Employee breakdown */}
         {Object.keys(byEmployee).length>0 && (
