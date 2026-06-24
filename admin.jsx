@@ -272,6 +272,7 @@ const empWorksOnSlot = (emp, date, timeStr, dur) => {
 };
 
 const METHODS  = ["Efectivo","Transferencia","Datáfono","Nequi"];
+const EXPENSE_CATEGORIES = ["Insumos","Arriendo","Servicios","Nómina","Comisiones","Productos","Marketing","Otros"];
 const ROLES    = ["Estilista","Colorista","Manicurista","Pedicurista","Barbero","Maquillador/a","Masajista","Recepcionista","Otro"];
 const DAYS_WORK = [
   { key:"lun", label:"Lun" },
@@ -545,8 +546,10 @@ const VIEWS = [
   {id:"agenda",      label:"Agenda",           icon:"▦", tooltip:"Vista semanal de citas por estilista"},
   {id:"appointments",label:"Citas",            icon:"≡", tooltip:"Listado y gestión de todas las citas"},
   {id:"clients",     label:"CRM · Clientes",   icon:"◯", tooltip:"Perfiles, historial y fidelización de clientes"},
+  {id:"waitlist",    label:"Lista de espera",  icon:"☷", tooltip:"Clientes esperando un cupo libre"},
   {id:"blockslots",  label:"Bloquear horas",   icon:"⊘", tooltip:"Bloquear horarios para evitar reservas"},
-  {id:"revenue",     label:"Caja",             icon:"◎", tooltip:"Registro de ingresos y pagos"},
+  {id:"revenue",     label:"Caja",             icon:"◎", tooltip:"Ingresos, gastos y utilidad"},
+  {id:"commissions", label:"Comisiones",       icon:"%", tooltip:"Comisiones por empleado y liquidaciones"},
   {id:"employees",   label:"Empleados",        icon:"◉", tooltip:"Gestión del equipo y sus PINs"},
   {id:"services",    label:"Servicios",        icon:"✦", tooltip:"Catálogo de servicios y precios"},
   {id:"settings",    label:"Configuración",    icon:"⊛", tooltip:"Ajustes generales del salón"},
@@ -2240,12 +2243,15 @@ const BlockSlotsView = () => {
 // ==================== REVENUE ====================
 const RevenueView = () => {
   const [admin,setAdmin] = useAdmin();
+  const [tab,setTab] = React.useState("ingresos");
   const [showForm,setShowForm] = React.useState(false);
   const [period,setPeriod] = React.useState("today");
   const [showDaySummary,setShowDaySummary] = React.useState(false);
   const [form,setForm] = React.useState({date:todayStr(),amount:"",service:"",client:"",method:"Efectivo",note:"",stylist:""});
+  const [expForm,setExpForm] = React.useState({date:todayStr(),amount:"",category:"Insumos",method:"Efectivo",note:""});
 
   const revenue   = (admin.revenue||[]).filter(r=>!r.deleted);
+  const expenses  = (admin.expenses||[]).filter(r=>!r.deleted);
   const employees = (admin.employees||[]).filter(e=>e.active);
   const todayD    = todayStr();
   const now       = new Date();
@@ -2263,6 +2269,18 @@ const RevenueView = () => {
   }).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
 
   const total = filtered.reduce((s,r)=>s+Number(r.amount||0),0);
+
+  const inPeriod = (d) => {
+    if (period==="today") return d===todayD;
+    if (period==="week")  return d>=weekStart;
+    if (period==="month") return d>=monthStart;
+    return true;
+  };
+  const filteredExp = expenses.filter(r=>inPeriod(r.date)).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const expTotal = filteredExp.reduce((s,r)=>s+Number(r.amount||0),0);
+  const profit   = total - expTotal;
+  const byCategory = {};
+  filteredExp.forEach(r=>{ byCategory[r.category||"Otros"]=(byCategory[r.category||"Otros"]||0)+Number(r.amount||0); });
 
   const byMethod = {};
   filtered.forEach(r=>{ byMethod[r.method]=(byMethod[r.method]||0)+Number(r.amount||0); });
@@ -5846,7 +5864,9 @@ const AdminPortal = () => {
     appointments:        AppointmentsView,
     clients:             CrmView,
     blockslots:          BlockSlotsView,
+    waitlist:            WaitlistView,
     revenue:             RevenueView,
+    commissions:         CommissionsView,
     employees:           EmployeesView,
     services:            ServicesView,
     settings:            SettingsView,
