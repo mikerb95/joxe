@@ -481,6 +481,12 @@ const BookingPortal = () => {
   const [ticket, setTicket] = React.useState(null);
   const [secsLeft, setSecsLeft] = React.useState(null);
 
+  // Waitlist (lista de espera) — para cuando no hay un horario que sirva
+  const [wlOpen, setWlOpen] = React.useState(false);
+  const [wlSent, setWlSent] = React.useState(false);
+  const [wlSending, setWlSending] = React.useState(false);
+  const [wlForm, setWlForm] = React.useState({ name: "", phone: "" });
+
   // Auto-save form/step to sessionStorage on every change (so refresh keeps the draft)
   React.useEffect(() => {
     try { sessionStorage.setItem(BOOKING_DRAFT_KEY, JSON.stringify({ form, step })); } catch {}
@@ -602,6 +608,31 @@ const BookingPortal = () => {
     setTicket(appt);
     setStep(5);
     try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch {}
+  };
+
+  const submitWaitlist = async () => {
+    const name = wlForm.name.trim();
+    const phone = (wlForm.phone || "").replace(/\D/g, "");
+    if (name.length < 3 || phone.length < 7) return;
+    setWlSending(true);
+    try {
+      await fetch("/api/waitlist", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name, phone,
+          service: form.service || "",
+          serviceDur: selectedDur,
+          stylist: form.stylist && form.stylist !== "Sin preferencia" ? form.stylist : "",
+          preferredDate: form.date || "",
+          note: "",
+        }),
+      });
+      setWlSent(true);
+    } catch {
+      setWlSent(true); // fail-soft: avoid blocking the client
+    } finally {
+      setWlSending(false);
+    }
   };
 
   const TOTAL_STEPS = 4;
@@ -892,6 +923,68 @@ const BookingPortal = () => {
                 <div style={{ fontSize: 28, color: "#C29E66" }}>✓</div>
               </div>
             )}
+
+            {/* Lista de espera */}
+            <div style={{ marginTop: 28, padding: "20px 24px", border: "1px dashed rgba(12,12,12,0.2)", background: "#FFF" }}>
+              {wlSent ? (
+                <div style={{ fontFamily: "'Outfit',sans-serif" }}>
+                  <div style={{ fontFamily: "'Marcellus', serif", fontSize: 20, marginBottom: 6, color: "#0C0C0C" }}>
+                    ¡Listo! Estás en la lista de espera ✓
+                  </div>
+                  <div style={{ fontSize: 13, color: "rgba(12,12,12,0.6)" }}>
+                    Te escribiremos por WhatsApp en cuanto se libere un cupo para tu {form.service || "servicio"}.
+                  </div>
+                </div>
+              ) : !wlOpen ? (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontFamily: "'Marcellus', serif", fontSize: 18, color: "#0C0C0C" }}>
+                      ¿No encuentras un horario que te sirva?
+                    </div>
+                    <div style={{ fontSize: 13, color: "rgba(12,12,12,0.55)", fontFamily: "'Outfit',sans-serif", marginTop: 4 }}>
+                      Únete a la lista de espera y te avisamos cuando se libere un cupo.
+                    </div>
+                  </div>
+                  <button onClick={() => { setWlForm({ name: form.name || "", phone: form.phone || "" }); setWlOpen(true); }} style={{
+                    background: "#0C0C0C", color: "#F5F1EA", border: "none",
+                    padding: "12px 20px", cursor: "pointer", whiteSpace: "nowrap",
+                    fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                    letterSpacing: "0.15em", textTransform: "uppercase",
+                  }}>Lista de espera →</button>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 460 }}>
+                  <PMono style={{ fontSize: 10, color: "rgba(12,12,12,0.5)" }}>Lista de espera · {form.service}</PMono>
+                  <input value={wlForm.name} onChange={e => setWlForm({ ...wlForm, name: e.target.value })}
+                    placeholder="Tu nombre" style={{
+                      padding: "14px 16px", border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
+                      fontFamily: "'Outfit', sans-serif", fontSize: 14, color: "#0C0C0C",
+                    }} />
+                  <input value={wlForm.phone} onChange={e => setWlForm({ ...wlForm, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                    placeholder="WhatsApp (300 123 4567)" inputMode="tel" style={{
+                      padding: "14px 16px", border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
+                      fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "#0C0C0C",
+                    }} />
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={submitWaitlist}
+                      disabled={wlSending || wlForm.name.trim().length < 3 || wlForm.phone.replace(/\D/g, "").length < 7}
+                      style={{
+                        background: "#C29E66", color: "#0C0C0C", border: "none",
+                        padding: "12px 22px", cursor: "pointer",
+                        fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                        letterSpacing: "0.15em", textTransform: "uppercase",
+                        opacity: (wlSending || wlForm.name.trim().length < 3 || wlForm.phone.replace(/\D/g, "").length < 7) ? 0.5 : 1,
+                      }}>{wlSending ? "Enviando…" : "Unirme"}</button>
+                    <button onClick={() => setWlOpen(false)} style={{
+                      background: "transparent", color: "rgba(12,12,12,0.5)",
+                      border: "1px solid rgba(12,12,12,0.2)", padding: "12px 20px", cursor: "pointer",
+                      fontFamily: "'Outfit', sans-serif", fontSize: 12,
+                      letterSpacing: "0.15em", textTransform: "uppercase",
+                    }}>Cancelar</button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
 
@@ -1826,6 +1919,55 @@ const CuentaPortal = () => {
     cancelled:   { label: "Cancelada",      color: "#C46666",              bg: "rgba(196,102,102,0.1)"  },
   };
 
+  // ── Self-service: cancelar / reagendar ────────────────────
+  const dialog = useDialog();
+  const [busyId, setBusyId] = React.useState(null);
+  const selfService = data?.selfService || { allowCancel: true, minHoursBefore: 2 };
+  const waNumber = (data?.waNumber || "").replace(/\D/g, "") || "573124499862";
+
+  const waReschedule = (a) => {
+    const msg = [
+      `Hola 👋 Quiero *reagendar* mi cita:`,
+      `✂️ ${a.service}${a.stylist ? ` con ${a.stylist}` : ""}`,
+      `📅 ${a.date} a las ${a.time}`,
+      a.code ? `Código: ${a.code}` : "",
+      ``,
+      `¿Qué otros horarios tienen disponibles?`,
+    ].filter(Boolean).join("\n");
+    return `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+  };
+
+  const cancelAppt = async (a) => {
+    const ok = await dialog.confirm({
+      title: "Cancelar cita",
+      body: `¿Seguro que quieres cancelar tu cita de ${a.service} el ${fmtDate(a.date)}${a.time ? ` a las ${a.time}` : ""}?`,
+      confirmLabel: "Sí, cancelar", cancelLabel: "No", danger: true,
+    });
+    if (!ok) return;
+    setBusyId(a.id);
+    try {
+      const res = await fetch("/api/client", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: a.id, cedula, action: "cancel" }),
+      });
+      if (res.status === 409) {
+        const d = await res.json().catch(() => ({}));
+        await dialog.alert({
+          title: "No se puede cancelar en línea",
+          body: `Faltan menos de ${d.minHours || selfService.minHoursBefore} horas para tu cita. Escríbenos por WhatsApp para coordinar la cancelación.`,
+        });
+      } else if (!res.ok) {
+        await dialog.alert({ title: "Error", body: "No pudimos cancelar la cita. Intenta de nuevo." });
+      } else {
+        await fetchData(cedula, true);
+      }
+    } catch {
+      await dialog.alert({ title: "Sin conexión", body: "No pudimos conectarnos. Intenta de nuevo." });
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   // ── LOGIN SCREEN ──────────────────────────────────────────
   if (!cedula || !data) {
     return (
@@ -2191,6 +2333,30 @@ const CuentaPortal = () => {
                             whiteSpace: "nowrap",
                           }}>Check-In →</a>
                         )}
+                        {a.computedStatus === "scheduled" && (
+                          <>
+                            <a href={waReschedule(a)} target="_blank" rel="noopener noreferrer" style={{
+                              background: "transparent",
+                              border: "1px solid rgba(245,241,234,0.15)",
+                              color: "rgba(245,241,234,0.5)", textDecoration: "none",
+                              padding: "8px 16px",
+                              fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                              letterSpacing: "0.1em", textTransform: "uppercase",
+                              whiteSpace: "nowrap",
+                            }}>Reagendar</a>
+                            {selfService.allowCancel && (
+                              <button onClick={() => cancelAppt(a)} disabled={busyId === a.id} style={{
+                                background: "transparent",
+                                border: "1px solid rgba(196,102,102,0.4)",
+                                color: "#C46666", cursor: busyId === a.id ? "wait" : "pointer",
+                                padding: "8px 16px",
+                                fontFamily: "'Outfit', sans-serif", fontSize: 11,
+                                letterSpacing: "0.1em", textTransform: "uppercase",
+                                whiteSpace: "nowrap", opacity: busyId === a.id ? 0.5 : 1,
+                              }}>{busyId === a.id ? "Cancelando…" : "Cancelar"}</button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -2286,6 +2452,7 @@ const CuentaPortal = () => {
         )}
 
       </main>
+      {dialog.node}
     </PortalShell>
   );
 };

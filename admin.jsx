@@ -2595,7 +2595,7 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
         )}
 
         {/* Employee breakdown */}
-        {Object.keys(byEmployee).length>0 && (
+        {tab==="ingresos" && Object.keys(byEmployee).length>0 && (
           <Card style={{marginBottom:24}}>
             <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Por empleado</Mono>
             <div style={{display:"flex",flexDirection:"column",gap:6}}>
@@ -2624,7 +2624,7 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
         )}
 
         {/* Service breakdown */}
-        {Object.keys(byService).length>0 && (
+        {tab==="ingresos" && Object.keys(byService).length>0 && (
           <Card style={{marginBottom:24}}>
             <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Por servicio</Mono>
             <div style={{display:"flex",flexDirection:"column",gap:8}}>
@@ -2651,7 +2651,7 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
         )}
 
         {/* Entries list */}
-        {filtered.length===0 ? (
+        {tab==="ingresos" && (filtered.length===0 ? (
           <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
             <div style={{fontSize:32,marginBottom:8}}>—</div>
             <Mono style={{fontSize:10}}>Sin ingresos en este periodo</Mono>
@@ -2702,6 +2702,363 @@ ${Object.entries(todayByMethod).map(([m,v])=>`  ${m.padEnd(16)} ${fmtCOP(v)}`).j
                 </div>
               ))}
             </div>
+          </div>
+        ))}
+
+        {/* Expenses list */}
+        {tab==="gastos" && (filteredExp.length===0 ? (
+          <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
+            <div style={{fontSize:32,marginBottom:8}}>—</div>
+            <Mono style={{fontSize:10}}>Sin gastos en este periodo</Mono>
+          </div>
+        ) : (
+          <div>
+            <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:12}}>
+              {filteredExp.length} registro{filteredExp.length!==1?"s":""}
+            </Mono>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {filteredExp.map(r=>(
+                <div key={r.id} style={{
+                  display:"grid",
+                  gridTemplateColumns:"80px 100px 1fr 120px 140px 80px 40px",
+                  gap:12,padding:"12px 16px",background:C.s1,
+                  border:`1px solid ${C.bdr}`,alignItems:"center",
+                }}>
+                  <Mono style={{fontSize:10,color:C.muted}}>{fmtDateShort(r.date)}</Mono>
+                  <div style={{
+                    fontFamily:"'JetBrains Mono',monospace",fontSize:16,
+                    color:C.red,fontVariantNumeric:"tabular-nums",
+                  }}>{fmtCOP(r.amount)}</div>
+                  <div>
+                    <div style={{fontSize:13}}>{r.category||"Otros"}</div>
+                    {r.note&&<div style={{fontSize:10,color:C.muted,fontStyle:"italic"}}>{r.note}</div>}
+                  </div>
+                  <span style={{
+                    padding:"3px 10px",fontSize:10,
+                    fontFamily:"'JetBrains Mono',monospace",
+                    letterSpacing:"0.1em",textTransform:"uppercase",
+                    background:`${C.red}15`,color:C.red,border:`1px solid ${C.red}30`,
+                    justifySelf:"start",
+                  }}>{r.category||"Otros"}</span>
+                  <span style={{
+                    padding:"3px 10px",fontSize:10,
+                    fontFamily:"'JetBrains Mono',monospace",
+                    letterSpacing:"0.1em",textTransform:"uppercase",
+                    background:`${PAY_COLORS[r.method]||C.gold}15`,
+                    color:PAY_COLORS[r.method]||C.gold,
+                    border:`1px solid ${PAY_COLORS[r.method]||C.gold}30`,
+                    justifySelf:"start",
+                  }}>{r.method}</span>
+                  <Mono style={{color:C.muted,fontSize:9}}>
+                    {r.createdAt?fmtDateTime(r.createdAt):""}
+                  </Mono>
+                  <button onClick={()=>deleteExpense(r.id)} style={{
+                    background:"transparent",border:"none",
+                    color:C.muted,cursor:"pointer",fontSize:14,
+                    opacity:0.5,
+                  }} title="Eliminar">✕</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ==================== COMISIONES ====================
+// Comisión por entry: si el servicio tiene "commissionFixed" se paga ese monto fijo;
+// de lo contrario es amount * (commissionPct del empleado) / 100.
+const COMM_PERIODS = [
+  {id:"week",label:"Esta semana"},
+  {id:"month",label:"Este mes"},
+  {id:"all",label:"Todo"},
+];
+
+const CommissionsView = () => {
+  const [admin,setAdmin] = useAdmin();
+  const [period,setPeriod] = React.useState("month");
+  const [payModal,setPayModal] = React.useState(null); // { empId, empName, base, commission }
+  const [payMethod,setPayMethod] = React.useState("Efectivo");
+
+  const revenue   = (admin.revenue||[]).filter(r=>!r.deleted);
+  const employees = (admin.employees||[]).filter(e=>e.active);
+  const payouts   = admin.payouts||[];
+
+  const todayD = todayStr();
+  const now = new Date();
+  const weekStart = (()=>{ const d=new Date(now); d.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1)); return d.toISOString().split("T")[0]; })();
+  const monthStart = todayD.slice(0,7)+"-01";
+  const periodStart = period==="week"?weekStart:period==="month"?monthStart:"";
+
+  const inPeriod = (d)=> period==="all" ? true : (d||"")>=periodStart;
+  const filtered = revenue.filter(r=>inPeriod(r.date));
+
+  // Monto fijo de comisión por nombre de servicio (los ingresos guardan el nombre).
+  const fixedBySvc = {};
+  (admin.services||[]).forEach(s=>{ if (s.commissionFixed) fixedBySvc[s.name]=Number(s.commissionFixed); });
+
+  const commissionFor = (entry, pct) => {
+    if (entry.service && fixedBySvc[entry.service] != null) return fixedBySvc[entry.service];
+    return Math.round(Number(entry.amount||0) * (pct||0) / 100);
+  };
+
+  const rows = employees.map(e=>{
+    const pct = Number(e.commissionPct||0);
+    const ents = filtered.filter(r=>r.stylist===e.name);
+    const base = ents.reduce((s,r)=>s+Number(r.amount||0),0);
+    const commission = ents.reduce((s,r)=>s+commissionFor(r,pct),0);
+    return { emp:e, pct, count:ents.length, base, commission };
+  }).filter(r=>r.count>0 || r.pct>0);
+
+  const totalCommission = rows.reduce((s,r)=>s+r.commission,0);
+  const totalBase       = rows.reduce((s,r)=>s+r.base,0);
+
+  const confirmPayout = () => {
+    if (!payModal) return;
+    const periodEnd = todayD;
+    const pStart = periodStart || (filtered.reduce((min,r)=>(!min||r.date<min)?r.date:min, "") || todayD);
+    const payout = {
+      id:genId(), empId:payModal.empId, empName:payModal.empName,
+      periodStart:pStart, periodEnd, base:payModal.base, commission:payModal.commission,
+      method:payMethod, note:`Comisión ${COMM_PERIODS.find(p=>p.id===period)?.label||""}`.trim(),
+      paidAt:Date.now(),
+    };
+    // Registra también un gasto para que impacte la utilidad en Caja.
+    const expense = {
+      id:genId(), date:periodEnd, amount:payModal.commission, category:"Comisiones",
+      method:payMethod, note:`Pago comisión · ${payModal.empName}`, createdAt:Date.now(),
+    };
+    setAdmin(a=>({
+      ...a,
+      payouts:[...(a.payouts||[]), payout],
+      expenses:[...(a.expenses||[]), expense],
+    }));
+    setPayModal(null);
+    setPayMethod("Efectivo");
+  };
+
+  return (
+    <div>
+      <PageHeader title="Comisiones" subtitle="Liquidación por empleado" />
+
+      <div style={{padding:"24px 32px"}}>
+        <div style={{display:"flex",gap:4,marginBottom:24}}>
+          {COMM_PERIODS.map(p=>(
+            <button key={p.id} onClick={()=>setPeriod(p.id)} style={{
+              padding:"8px 18px",background:period===p.id?C.gold:"transparent",
+              color:period===p.id?"#0C0C0C":C.muted,
+              border:`1px solid ${period===p.id?C.gold:C.bdr}`,cursor:"pointer",
+              fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.08em",
+            }}>{p.label}</button>
+          ))}
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:16,marginBottom:28}}>
+          <StatCard label="Facturado (base)" value={fmtCOP(totalBase)} small color={C.green} />
+          <StatCard label="Comisiones a pagar" value={fmtCOP(totalCommission)} small color={C.gold} />
+        </div>
+
+        {rows.length===0 ? (
+          <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
+            <Mono style={{fontSize:10}}>Sin datos. Configura el % de comisión en Empleados y registra ingresos.</Mono>
+          </div>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {rows.sort((a,b)=>b.commission-a.commission).map(r=>(
+              <div key={r.emp.id} style={{
+                display:"grid",gridTemplateColumns:"1fr 90px 120px 120px 130px",gap:12,
+                padding:"14px 16px",background:C.s1,border:`1px solid ${C.bdr}`,alignItems:"center",
+              }}>
+                <div>
+                  <div style={{fontSize:14}}>{r.emp.name}</div>
+                  <Mono style={{fontSize:9,color:C.muted}}>{r.emp.role} · {r.count} svc</Mono>
+                </div>
+                <Mono style={{fontSize:11,color:C.muted}}>{r.pct}%</Mono>
+                <div style={{fontSize:13,color:C.green,textAlign:"right"}}>{fmtCOP(r.base)}</div>
+                <div style={{fontSize:15,color:C.gold,textAlign:"right",fontFamily:"'JetBrains Mono',monospace"}}>{fmtCOP(r.commission)}</div>
+                <div style={{textAlign:"right"}}>
+                  <Btn small disabled={r.commission<=0}
+                    onClick={()=>{setPayModal({empId:r.emp.id,empName:r.emp.name,base:r.base,commission:r.commission});setPayMethod("Efectivo");}}>
+                    Registrar pago
+                  </Btn>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Historial de pagos */}
+        {payouts.length>0 && (
+          <Card style={{marginTop:28}}>
+            <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Pagos registrados</Mono>
+            <div style={{display:"flex",flexDirection:"column",gap:4}}>
+              {[...payouts].sort((a,b)=>(b.paidAt||0)-(a.paidAt||0)).slice(0,30).map(p=>(
+                <div key={p.id} style={{
+                  display:"grid",gridTemplateColumns:"1fr 140px 120px 110px",gap:12,
+                  padding:"10px 14px",background:C.s2,border:`1px solid ${C.bdr}`,alignItems:"center",
+                }}>
+                  <div style={{fontSize:13}}>{p.empName}</div>
+                  <Mono style={{fontSize:9,color:C.muted}}>{fmtDateShort(p.periodStart)} – {fmtDateShort(p.periodEnd)}</Mono>
+                  <div style={{fontSize:13,color:C.gold,textAlign:"right"}}>{fmtCOP(p.commission)}</div>
+                  <Mono style={{fontSize:9,color:C.muted,textAlign:"right"}}>{p.method}</Mono>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+      </div>
+
+      {/* Modal de confirmación de pago */}
+      {payModal && (
+        <div onClick={()=>setPayModal(null)} style={{
+          position:"fixed",inset:0,zIndex:200,background:"rgba(0,0,0,0.7)",
+          display:"flex",alignItems:"center",justifyContent:"center",padding:20,
+        }}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            background:C.s1,border:`1px solid ${C.bdr2}`,padding:28,width:"100%",maxWidth:420,
+          }}>
+            <Mono style={{color:C.gold,fontSize:10,display:"block",marginBottom:8}}>Registrar pago de comisión</Mono>
+            <div style={{fontFamily:"'Marcellus',serif",fontSize:22,marginBottom:4}}>{payModal.empName}</div>
+            <div style={{fontSize:13,color:C.muted,marginBottom:18}}>
+              Base {fmtCOP(payModal.base)} · Comisión <span style={{color:C.gold}}>{fmtCOP(payModal.commission)}</span>
+            </div>
+            <FieldSelect label="Método de pago" value={payMethod}
+              onChange={e=>setPayMethod(e.target.value)} options={METHODS} />
+            <div style={{fontSize:11,color:C.muted,margin:"14px 0 18px"}}>
+              Se registrará como gasto (categoría "Comisiones") y afectará la utilidad en Caja.
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <Btn onClick={confirmPayout}>Confirmar pago</Btn>
+              <Btn variant="ghost" onClick={()=>setPayModal(null)}>Cancelar</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ==================== LISTA DE ESPERA ====================
+const WaitlistView = () => {
+  const [admin] = useAdmin();
+  const [entries,setEntries] = React.useState([]);
+  const [loading,setLoading] = React.useState(true);
+  const [filter,setFilter]   = React.useState("waiting");
+
+  const load = React.useCallback(async ()=>{
+    try {
+      const res = await fetch("/api/waitlist", { headers: staffHeaders() });
+      if (!res.ok) return;
+      const d = await res.json();
+      setEntries(d.entries||[]);
+    } catch {} finally { setLoading(false); }
+  }, []);
+
+  React.useEffect(()=>{ load(); const t=setInterval(load,10000); return ()=>clearInterval(t); }, [load]);
+
+  const act = async (id, body) => {
+    try {
+      await fetch("/api/waitlist", {
+        method:"POST", headers: staffHeaders(),
+        body: JSON.stringify({ id, ...body }),
+      });
+      load();
+    } catch {}
+  };
+
+  const waNumber = (admin.whatsappAdminNumber||"").replace(/\D/g,"");
+  const salonName = admin.salonName||"JOXE";
+  const waLink = (e) => {
+    const phone = (e.phone||"").replace(/\D/g,"");
+    const num = phone.startsWith("57") ? phone : `57${phone}`;
+    const msg = [
+      `Hola ${(e.name||"").split(" ")[0]} 👋 Soy de ${salonName}.`,
+      `¡Se liberó un cupo!`,
+      e.service ? `Para tu ${e.service}${e.preferredDate?` el ${e.preferredDate}`:""}.` : ``,
+      `¿Te gustaría agendar? Responde este mensaje y coordinamos.`,
+    ].filter(Boolean).join("\n");
+    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  };
+
+  const STATUS_LABEL = { waiting:"En espera", booked:"Reservada", cancelled:"Cancelada" };
+  const STATUS_COLOR = { waiting:C.gold, booked:C.green, cancelled:C.red };
+
+  const shown = entries
+    .filter(e => filter==="all" ? true : e.status===filter)
+    .sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+
+  const FILTERS = [
+    {id:"waiting",label:"En espera"},
+    {id:"booked",label:"Reservadas"},
+    {id:"cancelled",label:"Canceladas"},
+    {id:"all",label:"Todas"},
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Lista de espera" subtitle="Clientes esperando un cupo" />
+      <div style={{padding:"24px 32px"}}>
+        <div style={{display:"flex",gap:4,marginBottom:24,flexWrap:"wrap"}}>
+          {FILTERS.map(f=>(
+            <button key={f.id} onClick={()=>setFilter(f.id)} style={{
+              padding:"8px 18px",background:filter===f.id?C.gold:"transparent",
+              color:filter===f.id?"#0C0C0C":C.muted,
+              border:`1px solid ${filter===f.id?C.gold:C.bdr}`,cursor:"pointer",
+              fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.08em",
+            }}>{f.label}</button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div style={{textAlign:"center",padding:"48px",color:C.muted}}><Mono style={{fontSize:10}}>Cargando…</Mono></div>
+        ) : shown.length===0 ? (
+          <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
+            <div style={{fontSize:32,marginBottom:8}}>—</div>
+            <Mono style={{fontSize:10}}>Sin clientes en esta lista</Mono>
+          </div>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {shown.map(e=>(
+              <div key={e.id} style={{
+                display:"grid",gridTemplateColumns:"1fr auto",gap:12,
+                padding:"14px 16px",background:C.s1,border:`1px solid ${C.bdr}`,alignItems:"center",
+              }}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <span style={{fontSize:14}}>{e.name}</span>
+                    <span style={{
+                      padding:"2px 8px",fontSize:9,fontFamily:"'JetBrains Mono',monospace",
+                      letterSpacing:"0.1em",textTransform:"uppercase",
+                      background:`${STATUS_COLOR[e.status]||C.muted}15`,
+                      color:STATUS_COLOR[e.status]||C.muted,
+                      border:`1px solid ${STATUS_COLOR[e.status]||C.muted}30`,
+                    }}>{STATUS_LABEL[e.status]||e.status}</span>
+                  </div>
+                  <Mono style={{fontSize:10,color:C.muted,display:"block",marginTop:4}}>
+                    {[e.service, e.stylist, e.preferredDate&&fmtDateShort(e.preferredDate), e.phone].filter(Boolean).join(" · ")}
+                  </Mono>
+                  {e.note&&<div style={{fontSize:11,color:C.muted,fontStyle:"italic",marginTop:2}}>{e.note}</div>}
+                </div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",justifyContent:"flex-end"}}>
+                  {e.phone && (
+                    <a href={waLink(e)} target="_blank" rel="noopener noreferrer" style={{
+                      padding:"7px 14px",background:`${C.green}15`,color:C.green,
+                      border:`1px solid ${C.green}40`,textDecoration:"none",
+                      fontFamily:"'Outfit',sans-serif",fontSize:11,letterSpacing:"0.08em",
+                    }}>WhatsApp →</a>
+                  )}
+                  {e.status==="waiting" && (
+                    <Btn small variant="ghost" onClick={()=>act(e.id,{action:"status",status:"booked"})}>Reservada</Btn>
+                  )}
+                  <button onClick={()=>{ if(confirm("¿Eliminar de la lista de espera?")) act(e.id,{action:"delete"}); }} style={{
+                    background:"transparent",border:`1px solid ${C.bdr}`,color:C.muted,
+                    cursor:"pointer",fontSize:13,padding:"6px 10px",
+                  }} title="Eliminar">✕</button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -2870,7 +3227,7 @@ const EmployeesView = () => {
   const [showAdd,setShowAdd] = React.useState(false);
   const [editId,setEditId] = React.useState(null);
   const [editForm,setEditForm] = React.useState({});
-  const [newEmp,setNewEmp] = React.useState({name:"",role:"Estilista",services:[],pin:"",workHours:DEFAULT_WORK_HOURS()});
+  const [newEmp,setNewEmp] = React.useState({name:"",role:"Estilista",services:[],pin:"",commissionPct:"",workHours:DEFAULT_WORK_HOURS()});
   const [chairQROpen,setChairQROpen] = React.useState(null);
 
   const employees = admin.employees || [];
@@ -2900,18 +3257,19 @@ const EmployeesView = () => {
   const addEmployee = () => {
     if (!newEmp.name.trim()) return;
     const emp = { id:genId(), name:newEmp.name.trim(), role:newEmp.role, services:newEmp.services,
-      pin:newEmp.pin||"", workHours:newEmp.workHours||DEFAULT_WORK_HOURS(), active:true };
+      pin:newEmp.pin||"", commissionPct:Number(newEmp.commissionPct)||0,
+      workHours:newEmp.workHours||DEFAULT_WORK_HOURS(), active:true };
     // Also sync to stylists list for booking portal
     const stylists = [...(admin.stylists||[])];
     if (!stylists.includes(emp.name)) stylists.push(emp.name);
     setAdmin(a=>({...a, employees:[...(a.employees||[]),emp], stylists}));
-    setNewEmp({name:"",role:"Estilista",services:[],pin:"",workHours:DEFAULT_WORK_HOURS()});
+    setNewEmp({name:"",role:"Estilista",services:[],pin:"",commissionPct:"",workHours:DEFAULT_WORK_HOURS()});
     setShowAdd(false);
   };
 
   const startEdit = (e) => {
     setEditId(e.id);
-    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})}});
+    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",commissionPct:e.commissionPct||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})}});
   };
 
   const saveEdit = (id) => {
@@ -2922,7 +3280,7 @@ const EmployeesView = () => {
       stylists = stylists.map(s=>s===prev.name?editForm.name:s);
     }
     setAdmin(a=>({...a,
-      employees: a.employees.map(e=>e.id===id?{...e,...editForm}:e),
+      employees: a.employees.map(e=>e.id===id?{...e,...editForm,commissionPct:Number(editForm.commissionPct)||0}:e),
       stylists,
     }));
     setEditId(null);
@@ -2966,6 +3324,10 @@ const EmployeesView = () => {
                 onChange={e=>setNewEmp({...newEmp,pin:e.target.value.replace(/\D/g,"").slice(0,6)})} />
               <div style={{fontSize:10,color:C.muted,marginTop:4}}>Permite al empleado iniciar sesión</div>
             </div>
+            <FieldInput label="Comisión (%)" type="number" min="0" max="100"
+              value={newEmp.commissionPct}
+              placeholder="0"
+              onChange={e=>setNewEmp({...newEmp,commissionPct:e.target.value})} />
           </div>
           <div style={{marginBottom:14}}>
             <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios que ofrece</Mono>
@@ -3140,6 +3502,10 @@ const EmployeesView = () => {
                           {editForm.pin ? `${editForm.pin.length} dígitos configurados` : "Sin PIN · no puede iniciar sesión"}
                         </div>
                       </div>
+                      <FieldInput label="Comisión (%)" type="number" min="0" max="100"
+                        value={editForm.commissionPct ?? ""}
+                        placeholder="0"
+                        onChange={e=>setEditForm({...editForm,commissionPct:e.target.value})} />
                     </div>
                     <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios</Mono>
                     <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>
@@ -3209,7 +3575,7 @@ const ServicesView = () => {
   const [editId,setEditId] = React.useState(null);
   const [editForm,setEditForm] = React.useState({});
   const [showAdd,setShowAdd] = React.useState(false);
-  const [newSvc,setNewSvc] = React.useState({name:"",price:"",dur:"",note:""});
+  const [newSvc,setNewSvc] = React.useState({name:"",price:"",dur:"",note:"",commissionFixed:""});
 
   const services = admin.services||[];
   const revenue  = (admin.revenue||[]).filter(r=>!r.deleted);
@@ -3221,12 +3587,12 @@ const ServicesView = () => {
 
   const startEdit = (s) => {
     setEditId(s.id);
-    setEditForm({name:s.name,price:s.price,dur:s.dur,note:s.note||""});
+    setEditForm({name:s.name,price:s.price,dur:s.dur,note:s.note||"",commissionFixed:s.commissionFixed||""});
   };
 
   const saveEdit = (id) => {
     setAdmin(a=>({...a, services:a.services.map(s=>
-      s.id===id ? {...s,...editForm,price:Number(editForm.price),dur:Number(editForm.dur)} : s
+      s.id===id ? {...s,...editForm,price:Number(editForm.price),dur:Number(editForm.dur),commissionFixed:Number(editForm.commissionFixed)||0} : s
     )}));
     setEditId(null);
   };
@@ -3245,9 +3611,10 @@ const ServicesView = () => {
   const addService = () => {
     if (!newSvc.name||!newSvc.price) return;
     setAdmin(a=>({...a, services:[...a.services,{
-      id:genId(),...newSvc,price:Number(newSvc.price),dur:Number(newSvc.dur)||60,active:true,
+      id:genId(),...newSvc,price:Number(newSvc.price),dur:Number(newSvc.dur)||60,
+      commissionFixed:Number(newSvc.commissionFixed)||0,active:true,
     }]}));
-    setNewSvc({name:"",price:"",dur:"",note:""});
+    setNewSvc({name:"",price:"",dur:"",note:"",commissionFixed:""});
     setShowAdd(false);
   };
 
@@ -3270,6 +3637,8 @@ const ServicesView = () => {
               onChange={e=>setNewSvc({...newSvc,dur:e.target.value})} placeholder="40" />
             <FieldInput label="Nota (desde, aprox…)" value={newSvc.note}
               onChange={e=>setNewSvc({...newSvc,note:e.target.value})} placeholder="desde" />
+            <FieldInput label="Comisión fija (COP, opcional)" type="number" value={newSvc.commissionFixed}
+              onChange={e=>setNewSvc({...newSvc,commissionFixed:e.target.value})} placeholder="0 = usar %" />
           </div>
           <div style={{display:"flex",gap:10,marginTop:14}}>
             <Btn onClick={addService} disabled={!newSvc.name||!newSvc.price}>Agregar servicio</Btn>
@@ -3345,6 +3714,8 @@ const ServicesView = () => {
                         onChange={e=>setEditForm({...editForm,dur:e.target.value})} />
                       <FieldInput label="Nota" value={editForm.note}
                         onChange={e=>setEditForm({...editForm,note:e.target.value})} />
+                      <FieldInput label="Comisión fija (COP, opcional)" type="number" value={editForm.commissionFixed ?? ""}
+                        onChange={e=>setEditForm({...editForm,commissionFixed:e.target.value})} placeholder="0 = usar %" />
                     </div>
                     <div style={{display:"flex",gap:8,marginTop:12}}>
                       <Btn small onClick={()=>saveEdit(s.id)}>Guardar</Btn>
@@ -4245,6 +4616,42 @@ const SettingsView = ({ onNav }) => {
                   Puedes sumar o restar visitas manualmente desde el panel CRM.
                 </div>
               </>
+            )}
+          </div>
+        </Card>
+
+        {/* Self-service cancelación */}
+        <Card>
+          <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Autoservicio del cliente</Mono>
+          <div style={{display:"flex",flexDirection:"column",gap:16}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+              <div>
+                <div style={{fontSize:14}}>Permitir que el cliente cancele su cita</div>
+                <div style={{fontSize:12,color:C.muted,marginTop:4}}>
+                  Desde "Mi Cuenta", el cliente podrá cancelar sus citas próximas. Reagendar se coordina por WhatsApp.
+                </div>
+              </div>
+              <button onClick={()=>setAdmin(a=>({...a,selfService:{...(a.selfService||{}),allowCancel:!(a.selfService?.allowCancel!==false)}}))}
+                style={{
+                  padding:"8px 18px",flexShrink:0,
+                  background:admin.selfService?.allowCancel!==false?"rgba(102,196,153,0.1)":C.s3,
+                  border:`1px solid ${admin.selfService?.allowCancel!==false?C.green+"40":C.bdr}`,
+                  color:admin.selfService?.allowCancel!==false?C.green:C.muted,
+                  cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                  fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",
+                }}>
+                {admin.selfService?.allowCancel!==false?"Activo":"Inactivo"}
+              </button>
+            </div>
+            {admin.selfService?.allowCancel!==false && (
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <FieldInput label="Horas mínimas antes de la cita" type="number" min="0" max="72"
+                  value={admin.selfService?.minHoursBefore??2}
+                  onChange={e=>setAdmin(a=>({...a,selfService:{...(a.selfService||{}),minHoursBefore:Number(e.target.value)||0}}))} />
+                <div style={{alignSelf:"end",fontSize:12,color:C.muted}}>
+                  El cliente no podrá cancelar si faltan menos de <strong style={{color:C.text}}>{admin.selfService?.minHoursBefore??2}h</strong>.
+                </div>
+              </div>
             )}
           </div>
         </Card>
