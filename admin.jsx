@@ -2320,6 +2320,26 @@ const RevenueView = () => {
   const todayByMethod={};
   todayEntries.forEach(r=>{ todayByMethod[r.method]=(todayByMethod[r.method]||0)+Number(r.amount||0); });
 
+  const todayExpenses = expenses.filter(r=>r.date===todayD);
+  const todayExpTotal = todayExpenses.reduce((s,r)=>s+Number(r.amount||0),0);
+  const todayProfit   = todayTotal - todayExpTotal;
+
+  const submitExpense = () => {
+    if (!expForm.amount||!expForm.date) return;
+    setAdmin(a=>({...a, expenses:[...(a.expenses||[]),{
+      id:genId(),...expForm,amount:Number(expForm.amount),createdAt:Date.now(),
+    }]}));
+    setExpForm({date:todayStr(),amount:"",category:"Insumos",method:"Efectivo",note:""});
+    setShowForm(false);
+  };
+
+  const deleteExpense = (id) => {
+    if (!confirm("¿Eliminar este gasto? Quedará oculto pero no se borrará del historial.")) return;
+    setAdmin(a=>({...a, expenses:(a.expenses||[]).map(r=>
+      r.id===id ? {...r, deleted:true, deletedAt:Date.now()} : r
+    )}));
+  };
+
   const submitEntry = () => {
     if (!form.amount||!form.date) return;
     setAdmin(a=>({...a, revenue:[...a.revenue,{
