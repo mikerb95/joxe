@@ -2446,8 +2446,19 @@ const RevenueView = () => {
               <Mono style={{color:C.gold,fontSize:11}}>Cierre del día</Mono>
               <div style={{fontSize:11,color:C.muted,marginTop:4}}>{fmtDateMed(todayD)}</div>
             </div>
-            <div style={{fontFamily:"'Marcellus',serif",fontSize:32,color:C.green}}>
-              {fmtCOP(todayTotal)}
+            <div style={{display:"flex",gap:24,alignItems:"flex-end",flexWrap:"wrap"}}>
+              <div style={{textAlign:"right"}}>
+                <Mono style={{fontSize:8,color:C.muted}}>Ingresos</Mono>
+                <div style={{fontFamily:"'Marcellus',serif",fontSize:24,color:C.green}}>{fmtCOP(todayTotal)}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <Mono style={{fontSize:8,color:C.muted}}>Gastos</Mono>
+                <div style={{fontFamily:"'Marcellus',serif",fontSize:24,color:C.red}}>{fmtCOP(todayExpTotal)}</div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <Mono style={{fontSize:8,color:C.muted}}>Utilidad</Mono>
+                <div style={{fontFamily:"'Marcellus',serif",fontSize:32,color:todayProfit>=0?C.gold:C.red}}>{fmtCOP(todayProfit)}</div>
+              </div>
             </div>
           </div>
 
