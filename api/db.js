@@ -37,6 +37,42 @@ export async function kvSet(key, value) {
 }
 
 // ------------------------------------------------------------
+// Backup / restore of the entire kv table.
+// kvDump() returns every row (value already parsed into JSON) so the result
+// is a single self-contained snapshot. kvRestore() writes the rows back in a
+// batch transaction, optionally wiping the table first ("replace" mode).
+// ------------------------------------------------------------
+export async function kvDump() {
+  const res = await getDb().execute("SELECT key, value, updated_at FROM kv ORDER BY key");
+  return res.rows.map(r => {
+    let value;
+    try { value = JSON.parse(r.value); } catch { value = r.value; }
+    return { key: r.key, value, updated_at: Number(r.updated_at) };
+  });
+}
+
+export async function kvRestore(rows, { replace = false } = {}) {
+  if (!Array.isArray(rows)) throw new Error("backup rows must be an array");
+
+  const stmts = [];
+  if (replace) stmts.push("DELETE FROM kv");
+  for (const r of rows) {
+    if (!r || typeof r.key !== "string" || !r.key) continue;
+    const value = typeof r.value === "string" ? r.value : JSON.stringify(r.value);
+    const updatedAt = Number.isFinite(Number(r.updated_at)) ? Number(r.updated_at) : Date.now();
+    stmts.push({
+      sql: `INSERT INTO kv (key, value, updated_at) VALUES (?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+      args: [r.key, value, updatedAt],
+    });
+  }
+
+  // batch() runs all statements in a single implicit transaction (all-or-nothing)
+  await getDb().batch(stmts, "write");
+  return stmts.length - (replace ? 1 : 0);
+}
+
+// ------------------------------------------------------------
 // Admin auth
 // Resolves the active admin password from (in order):
 //   1. admin_store.password (set via admin panel)
