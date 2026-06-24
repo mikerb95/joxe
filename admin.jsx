@@ -3989,6 +3989,46 @@ const SettingsView = ({ onNav }) => {
     setNewStylist("");
   };
 
+  // ---- Backup / restauración de la base de datos ----
+  const [backupMsg,setBackupMsg] = React.useState(null);
+  const restoreRef = React.useRef(null);
+
+  const downloadBackup = async () => {
+    try {
+      const res = await fetch("/api/backup", { headers: { Authorization: `Bearer ${getToken()}` } });
+      if (!res.ok) { setBackupMsg({type:"error", text:"No se pudo generar el backup."}); return; }
+      const blob = await res.blob();
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href = url;
+      a.download = `joxe-backup-${new Date().toISOString().replace(/[:.]/g,"-")}.json`;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+      setBackupMsg({type:"success", text:"Backup descargado."});
+      setTimeout(()=>setBackupMsg(null), 4000);
+    } catch {
+      setBackupMsg({type:"error", text:"Error de conexión al generar el backup."});
+    }
+  };
+
+  const restoreBackup = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!confirm("Restaurar combinará los datos del archivo con los actuales (los registros con la misma clave se sobrescriben). ¿Continuar?")) return;
+    try {
+      const snapshot = JSON.parse(await file.text());
+      const res  = await fetch("/api/backup", {
+        method: "POST", headers: adminHeaders(), body: JSON.stringify(snapshot),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.ok) { setBackupMsg({type:"error", text:data.error || "No se pudo restaurar."}); return; }
+      setBackupMsg({type:"success", text:`Restaurados ${data.restored} registros. Recargá la página para ver los cambios.`});
+    } catch {
+      setBackupMsg({type:"error", text:"El archivo no es un backup válido."});
+    }
+  };
+
   const deleteStylist = (s) => {
     if (!confirm(`¿Eliminar a ${s}? Se archivará su historial pero ya no aparecerá en el equipo ni en el portal de reservas.`)) return;
     const empMatch = (admin.employees||[]).find(e=>e.name===s);
@@ -4262,6 +4302,29 @@ const SettingsView = ({ onNav }) => {
 
         {/* Dispositivos de todos los empleados (solo admin) */}
         <AllDevicesCard />
+
+        {/* Backup de la base de datos */}
+        <Card>
+          <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Copia de seguridad</Mono>
+          <div style={{fontSize:13,color:C.muted,marginBottom:16}}>
+            Descargá un respaldo completo de todos los datos (turnos, clientes, configuración)
+            en un archivo JSON, o restaurá desde un respaldo anterior.
+          </div>
+          {backupMsg && (
+            <div style={{
+              marginBottom:14,padding:"10px 14px",fontSize:13,
+              background:backupMsg.type==="error"?"rgba(196,102,102,0.1)":"rgba(102,196,153,0.1)",
+              border:`1px solid ${backupMsg.type==="error"?C.red+"40":C.green+"40"}`,
+              color:backupMsg.type==="error"?C.red:C.green,
+            }}>{backupMsg.text}</div>
+          )}
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <Btn onClick={downloadBackup}>↓ Descargar backup</Btn>
+            <Btn variant="ghost" onClick={()=>restoreRef.current?.click()}>↑ Restaurar desde archivo</Btn>
+            <input ref={restoreRef} type="file" accept="application/json,.json"
+              onChange={restoreBackup} style={{display:"none"}} />
+          </div>
+        </Card>
 
         {/* Change password */}
         <Card>
