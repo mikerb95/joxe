@@ -52,19 +52,18 @@ const useStore = () => {
     };
   }, [pull]);
 
+  // Persist to Turso. Returns { ok, status, error } so booking callers can
+  // surface server-side rejections (slot taken, rate-limited, storage full)
+  // instead of showing a confirmed ticket for a booking the server refused.
   const update = React.useCallback(async (updater, bookingAppt) => {
-    const current = loadCache();
-    const next = typeof updater === "function" ? updater(current) : updater;
-    // Optimistic: apply immediately
-    setStore(next);
-    localStorage.setItem(STORE_KEY, JSON.stringify(next));
-    // Persist to Turso. Returns { ok, status, error } so booking callers can
-    // surface server-side rejections (slot taken, rate-limited, storage full)
-    // instead of showing a confirmed ticket for a booking the server refused.
     const token = sessionStorage.getItem("joxe_admin_session") || "";
-    try {
-      if (bookingAppt && !token) {
-        // Client booking without session: use append-only endpoint
+
+    // Client booking without session: append-only endpoint (its own atomic path)
+    if (bookingAppt && !token) {
+      const next = typeof updater === "function" ? updater(loadCache()) : updater;
+      setStore(next);
+      localStorage.setItem(STORE_KEY, JSON.stringify(next));
+      try {
         const res = await fetch("/api/book", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -77,21 +76,48 @@ const useStore = () => {
           return { ok: false, status: res.status, error };
         }
         return { ok: true, status: res.status };
+      } catch (err) {
+        console.warn("[store] book failed, using local cache", err.message);
+        return { ok: false, status: 0, error: "Sin conexión" };
       }
-      // Admin / employee: full store write (with auth if available)
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch("/api/store", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(next),
-      });
-      broadcastUpdate();
-      return { ok: res.ok, status: res.status };
-    } catch (err) {
-      console.warn("[store] save failed, using local cache", err.message);
-      return { ok: false, status: 0, error: "Sin conexión" };
     }
+
+    // Staff write: optimistic concurrency. Send the version we based the edit on;
+    // if the server rejects (409, store moved), reconcile with the fresh store
+    // and re-apply the updater on top, then retry — never clobber a booking that
+    // landed in between. Non-functional updaters (full replaces) can't be merged,
+    // so they just force through on the fresh version.
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const next = typeof updater === "function" ? updater(loadCache()) : updater;
+      setStore(next);
+      localStorage.setItem(STORE_KEY, JSON.stringify(next));
+      try {
+        const res = await fetch("/api/store", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ ...next, _v: versionRef.current }),
+        });
+        if (res.status === 409) {
+          const data = await res.json().catch(() => null);
+          if (data?.store) {
+            versionRef.current = Number(data._v) || 0;
+            localStorage.setItem(STORE_KEY, JSON.stringify(data.store));
+            setStore(data.store);
+          }
+          continue; // re-apply updater on the reconciled base
+        }
+        const data = await res.json().catch(() => null);
+        if (data && data._v != null) versionRef.current = Number(data._v) || 0;
+        broadcastUpdate();
+        return { ok: res.ok, status: res.status };
+      } catch (err) {
+        console.warn("[store] save failed, using local cache", err.message);
+        return { ok: false, status: 0, error: "Sin conexión" };
+      }
+    }
+    return { ok: false, status: 409, error: "Conflicto al guardar, reintenta" };
   }, []);
 
   return [store, update];
