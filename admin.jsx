@@ -5582,6 +5582,18 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
     }));
   };
 
+  const cancelAppt = async (apptId) => {
+    if (!confirm("¿Cancelar esta cita?")) return;
+    const patch = (list) => list.map(a=>
+      a.id===apptId ? {...a, status:"cancelled", cancelledBy:emp.name, cancelledAt:Date.now()} : a
+    );
+    setAppts(s=>({
+      ...s,
+      appointments: patch(s.appointments),
+      active:       patch(s.active),
+    }));
+  };
+
   const pendingCount = myAppts.filter(needsConfirm).length;
 
   const TABS = [
