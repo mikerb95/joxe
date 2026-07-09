@@ -14,7 +14,7 @@ function getDb() {
   // native driver; this branch never runs in production.
   if (url.startsWith("file:")) {
     // Lazy require so the native client is only loaded when actually used.
-    const { createClient } = require("@libsql/client");
+    const { createClient } = createRequire(import.meta.url)("@libsql/client");
     _db = createClient({ url });
     return _db;
   }
