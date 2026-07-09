@@ -20,6 +20,8 @@ const broadcastUpdate = () => {
 
 const useStore = () => {
   const [store, setStore] = React.useState(loadCache);
+  // Version stamp of the store we last read, for optimistic-concurrency writes.
+  const versionRef = React.useRef(0);
 
   // Fetch from Turso and update local cache
   const pull = React.useCallback(async () => {
@@ -28,7 +30,8 @@ const useStore = () => {
       const headers = t ? { "Authorization": `Bearer ${t}` } : {};
       const res = await fetch("/api/store", { headers });
       if (!res.ok) return;
-      const data = await res.json();
+      const { _v, ...data } = await res.json();
+      versionRef.current = Number(_v) || 0;
       localStorage.setItem(STORE_KEY, JSON.stringify(data));
       setStore(data);
     } catch {}
