@@ -637,9 +637,14 @@ const BookingPortal = () => {
         ).length,
       }));
       const free = counts.filter(e => !isSlotTaken(form.date, form.time, e.name));
-      assignedStylist = free.length > 0
-        ? free.sort((a, b) => a.count - b.count)[0].name
-        : counts.sort((a, b) => a.count - b.count)[0].name;
+      // Si ningún estilista está libre en este bloque, NO reservar sobre el menos
+      // ocupado (eso genera doble reserva). Rechazar y devolver al paso de horario.
+      if (free.length === 0) {
+        setBookError("Ese horario ya no está disponible. Elige otro.");
+        setStep(3);
+        return;
+      }
+      assignedStylist = free.sort((a, b) => a.count - b.count)[0].name;
     }
     const id = crypto.randomUUID ? crypto.randomUUID() : String(Math.random());
     const code = genTicket();
