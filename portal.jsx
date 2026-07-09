@@ -55,29 +55,39 @@ const useStore = () => {
     // Optimistic: apply immediately
     setStore(next);
     localStorage.setItem(STORE_KEY, JSON.stringify(next));
-    // Persist to Turso
+    // Persist to Turso. Returns { ok, status, error } so booking callers can
+    // surface server-side rejections (slot taken, rate-limited, storage full)
+    // instead of showing a confirmed ticket for a booking the server refused.
     const token = sessionStorage.getItem("joxe_admin_session") || "";
     try {
       if (bookingAppt && !token) {
         // Client booking without session: use append-only endpoint
-        await fetch("/api/book", {
+        const res = await fetch("/api/book", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(bookingAppt),
         });
-      } else {
-        // Admin / employee: full store write (with auth if available)
-        const headers = { "Content-Type": "application/json" };
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-        await fetch("/api/store", {
-          method: "POST",
-          headers,
-          body: JSON.stringify(next),
-        });
+        broadcastUpdate();
+        if (!res.ok) {
+          let error = "No se pudo agendar";
+          try { error = (await res.json()).error || error; } catch {}
+          return { ok: false, status: res.status, error };
+        }
+        return { ok: true, status: res.status };
       }
+      // Admin / employee: full store write (with auth if available)
+      const headers = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch("/api/store", {
+        method: "POST",
+        headers,
+        body: JSON.stringify(next),
+      });
       broadcastUpdate();
+      return { ok: res.ok, status: res.status };
     } catch (err) {
       console.warn("[store] save failed, using local cache", err.message);
+      return { ok: false, status: 0, error: "Sin conexión" };
     }
   }, []);
 
