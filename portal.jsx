@@ -586,7 +586,18 @@ const BookingPortal = () => {
     return conflictsFor(stylistName);
   };
 
-  const submit = () => {
+  const submit = async () => {
+    if (submitting) return;
+    setBookError("");
+
+    // Re-check availability right before submitting (the cache may have moved
+    // since the client picked the slot). Fail fast with a clear message.
+    if (form.stylist !== "Sin preferencia" && isSlotTaken(form.date, form.time, form.stylist)) {
+      setBookError("Ese horario ya no está disponible. Elige otro.");
+      setStep(3);
+      return;
+    }
+
     let assignedStylist = form.stylist;
     // Assign least-busy eligible stylist when "Sin preferencia"
     if (form.stylist === "Sin preferencia") {
