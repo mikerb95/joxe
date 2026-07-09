@@ -61,6 +61,32 @@ function validateAppt(raw) {
   return { appt };
 }
 
+function timeToMin(t) {
+  const [h, m] = String(t).split(":").map(Number);
+  return h * 60 + m;
+}
+
+// Server-side occupancy check — the authoritative guard against double-booking.
+// Mirrors the essential rule the client enforces: no two live appointments for
+// the same stylist may overlap, and admin-blocked slots are unavailable.
+// Business-hours / closed-day / past-time checks stay client-side (UX hints);
+// the invariant that actually protects data integrity is the overlap rule.
+function slotConflict(appointments, blockedSlots, appt) {
+  if ((blockedSlots || []).some(b => b.date === appt.date && b.time === appt.time)) return true;
+
+  const newStart = timeToMin(appt.time);
+  const newEnd = newStart + appt.serviceDur;
+
+  return (appointments || []).some(a => {
+    if (a.date !== appt.date) return false;
+    if (a.stylist !== appt.stylist) return false;
+    if (a.status === "cancelled") return false;
+    const aStart = timeToMin(a.time);
+    const aEnd = aStart + (Number(a.serviceDur) || 60);
+    return aStart < newEnd && newStart < aEnd; // interval overlap
+  });
+}
+
 export default async function handler(req, res) {
   applyCors(req, res, "POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
