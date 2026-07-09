@@ -5838,11 +5838,25 @@ const EmpBookingView = ({emp, onNav}) => {
       confirmedAt: Date.now(),
       bookedBy: "staff",
     };
-    // Base the write on `cur` (the reconciled fresh store the setAppts retry
-    // loop provides), not the earlier freshData snapshot, so a booking that
-    // lands during save is preserved instead of overwritten.
-    await setAppts(cur=>({ ...cur, appointments:[...(cur.appointments||[]), appt] }));
+    // Re-check the overlap against `cur` on every attempt the setAppts retry
+    // loop makes (not just once up front): if a 409 lands mid-save because
+    // another booking landed first, the retry re-applies this updater on the
+    // reconciled store, so without re-validating here a losing booking would
+    // get appended blindly on top of the winner — the double-booking bug.
+    let conflict = null;
+    await setAppts(cur => {
+      const dayAppts = getAllAppts(cur, admin.cancelledIds||[], admin.noShowIds||[])
+        .filter(a=> a.stylist===emp.name && a.date===form.date && !["cancelled","no-show"].includes(a.computedStatus));
+      const overlapping = dayAppts.find(a=>{ const as=timeToMin(a.time), ae=as+(a.serviceDur||60); return as<e && s<ae; });
+      if (overlapping) { conflict = overlapping; return cur; } // no-op: don't append on conflict
+      return { ...cur, appointments:[...(cur.appointments||[]), appt] };
+    });
     setSaving(false);
+    if (conflict) {
+      const withEnd = minToTime(timeToMin(conflict.time)+(conflict.serviceDur||60));
+      setErr(`Mientras reservabas, ${conflict.name} agendó ${conflict.time}–${withEnd}. Elige otro bloque.`);
+      return;
+    }
     setDone(appt);
   };
 
