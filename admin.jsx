@@ -220,21 +220,41 @@ const useAppts = () => {
     };
   }, [pull]);
 
+  // Optimistic concurrency: send the version we based the edit on. If the store
+  // moved since (e.g. a client booking landed via /api/book), the server rejects
+  // with 409 + the fresh store; we reconcile, re-apply the updater on top, and
+  // retry — so an admin edit never silently drops a concurrent booking.
   const setAppts = React.useCallback(async (fn) => {
-    const current = loadApptCache();
-    const next = typeof fn === "function" ? fn(current) : fn;
-    setS(next);
-    localStorage.setItem(APPT_KEY, JSON.stringify(next));
-    try {
-      await fetch("/api/store", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${storeToken()}` },
-        body: JSON.stringify(next),
-      });
-      try { new BroadcastChannel("joxe_turnos").postMessage({ type:"update" }); } catch {}
-    } catch (err) {
-      console.warn("[appts] save failed", err.message);
+    const headers = { "Content-Type": "application/json", "Authorization": `Bearer ${storeToken()}` };
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const next = typeof fn === "function" ? fn(loadApptCache()) : fn;
+      setS(next);
+      localStorage.setItem(APPT_KEY, JSON.stringify(next));
+      try {
+        const res = await fetch("/api/store", {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ ...next, _v: versionRef.current }),
+        });
+        if (res.status === 409) {
+          const data = await res.json().catch(() => null);
+          if (data?.store) {
+            versionRef.current = Number(data._v) || 0;
+            localStorage.setItem(APPT_KEY, JSON.stringify(data.store));
+            setS(data.store);
+          }
+          continue; // re-apply updater on the reconciled base
+        }
+        const data = await res.json().catch(() => null);
+        if (data && data._v != null) versionRef.current = Number(data._v) || 0;
+        try { new BroadcastChannel("joxe_turnos").postMessage({ type:"update" }); } catch {}
+        return;
+      } catch (err) {
+        console.warn("[appts] save failed", err.message);
+        return;
+      }
     }
+    console.warn("[appts] save gave up after repeated conflicts");
   }, []);
 
   return [s, setAppts];
