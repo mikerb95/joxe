@@ -46,27 +46,30 @@ export async function kvGetWithMeta(key) {
   return { value, updatedAt: Number(res.rows[0].updated_at) };
 }
 
-// Optimistic compare-and-swap write. Returns true only if the row was written.
+// Optimistic compare-and-swap write. Returns the new updated_at (version) on
+// success, or null if the write was rejected because the row moved.
 //   expectedUpdatedAt === null  -> insert only if the row does not exist yet.
 //   expectedUpdatedAt === number -> update only if updated_at still matches.
 // The new updated_at is forced strictly greater than the previous one so two
 // writes landing in the same millisecond can't silently clobber each other.
+// (A truthy number keeps `if (await kvCas(...))` working for boolean callers.)
 export async function kvCas(key, value, expectedUpdatedAt) {
   const json = JSON.stringify(value);
   if (expectedUpdatedAt == null) {
+    const now = Date.now();
     const res = await getDb().execute({
       sql: `INSERT INTO kv (key, value, updated_at) VALUES (?, ?, ?)
             ON CONFLICT(key) DO NOTHING`,
-      args: [key, json, Date.now()],
+      args: [key, json, now],
     });
-    return res.rowsAffected > 0;
+    return res.rowsAffected > 0 ? now : null;
   }
   const next = Math.max(Date.now(), Number(expectedUpdatedAt) + 1);
   const res = await getDb().execute({
     sql: "UPDATE kv SET value = ?, updated_at = ? WHERE key = ? AND updated_at = ?",
     args: [json, next, key, Number(expectedUpdatedAt)],
   });
-  return res.rowsAffected > 0;
+  return res.rowsAffected > 0 ? next : null;
 }
 
 // ------------------------------------------------------------
