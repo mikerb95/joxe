@@ -627,7 +627,27 @@ const BookingPortal = () => {
       createdAt: Date.now(),
       status: "pending",
     };
-    setStore(s => ({ ...s, appointments: [...s.appointments, appt] }), appt);
+    setSubmitting(true);
+    // Optimistic add + persist. Only confirm the ticket if the server accepted;
+    // otherwise revert the local add and show why (slot taken, rate-limited...).
+    const result = await setStore(
+      s => ({ ...s, appointments: [...s.appointments, appt] }),
+      appt
+    );
+    setSubmitting(false);
+
+    if (result && result.ok === false) {
+      // Roll back the optimistic insert so the cache doesn't show a ghost.
+      setStore(s => ({ ...s, appointments: s.appointments.filter(a => a.id !== id) }));
+      setBookError(
+        result.status === 409 ? "Ese horario acaba de ocuparse. Elige otro."
+        : result.status === 429 ? "Demasiados intentos. Espera un momento."
+        : (result.error || "No se pudo agendar. Intenta de nuevo.")
+      );
+      if (result.status === 409) setStep(3);
+      return;
+    }
+
     setTicket(appt);
     setStep(5);
     try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch {}
