@@ -1,4 +1,4 @@
-import { initTables, kvGetWithMeta, kvCas, verifyStaffAuth, applyCors } from "./db.js";
+import { initTables, kvGetWithMeta, kvCas, verifyStaffAuth, applyCors } from "../lib/db.js";
 
 const DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [] });
 

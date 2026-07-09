@@ -1,4 +1,4 @@
-import { initTables, getAdminPassword, safeEqual } from "./db.js";
+import { initTables, getAdminPassword, safeEqual } from "../lib/db.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",

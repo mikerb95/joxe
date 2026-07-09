@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr } from "./db.js";
+import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr } from "../lib/db.js";
 // kvGet: reads admin_store (catalog); kvGetWithMeta + kvCas: optimistic append.
 import webpush from "web-push";
 

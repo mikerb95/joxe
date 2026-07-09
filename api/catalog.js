@@ -1,4 +1,4 @@
-import { initTables, kvGet } from "./db.js";
+import { initTables, kvGet } from "../lib/db.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",

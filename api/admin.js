@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet, verifyAdminAuth } from "./db.js";
+import { initTables, kvGet, kvSet, verifyAdminAuth, getAdminPassword, safeEqual } from "../lib/db.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -30,6 +30,17 @@ export default async function handler(req, res) {
 
   try {
     await initTables();
+
+    if (req.method === "POST" && req.query.action === "auth") {
+      const { password } = req.body ?? {};
+      if (!password) return res.status(400).json({ error: "Missing password" });
+      const stored = await getAdminPassword();
+      if (!stored) {
+        console.error("[admin/auth] No admin password configured (set ADMIN_PASSWORD env or admin_store.password)");
+        return res.status(503).json({ error: "Auth not configured" });
+      }
+      return res.status(200).json({ ok: safeEqual(password, stored) });
+    }
 
     if (req.method === "GET") {
       if (!(await verifyAdminAuth(req))) return res.status(401).json({ error: "Unauthorized" });

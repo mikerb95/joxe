@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet, applyCors, clientIp, rateLimit } from "./db.js";
+import { initTables, kvGet, kvSet, applyCors, clientIp, rateLimit } from "../lib/db.js";
 
 const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
 

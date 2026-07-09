@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet } from "./db.js";
+import { initTables, kvGet, kvSet } from "../lib/db.js";
 import webpush from "web-push";
 
 // Avisa al estilista ~5 minutos antes de que empiece cada turno confirmado.

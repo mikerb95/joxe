@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet, applyCors, clientIp, rateLimit, sanitizeStr, verifyStaffAuth } from "./db.js";
+import { initTables, kvGet, kvSet, applyCors, clientIp, rateLimit, sanitizeStr, verifyStaffAuth } from "../lib/db.js";
 
 const MAX_ENTRIES = 2000;          // hard cap to bound storage / abuse
 const ID_RE   = /^[A-Za-z0-9_-]{6,64}$/;
