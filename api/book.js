@@ -1,7 +1,8 @@
-import { initTables, kvGet, kvSet, applyCors, clientIp, rateLimit, sanitizeStr } from "./db.js";
+import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr } from "./db.js";
 import webpush from "web-push";
 
 const MAX_APPOINTMENTS = 5000; // hard cap to bound storage / abuse
+const CAS_RETRIES = 6;         // retries for the optimistic append under contention
 const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
