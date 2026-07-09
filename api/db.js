@@ -1,5 +1,6 @@
 import { createClient as createHttpClient } from "@libsql/client/http";
 import { timingSafeEqual, createHmac, scryptSync, randomBytes } from "node:crypto";
+import { createRequire } from "node:module";
 
 let _db = null;
 
