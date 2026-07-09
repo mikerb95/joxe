@@ -5676,6 +5676,14 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
                   {a.confirmedBy && (
                     <Mono style={{fontSize:9,color:C.green}}>✓ Confirmada</Mono>
                   )}
+                  {!needsConfirm(a) && !["cancelled","completed","no-show"].includes(a.computedStatus) && (
+                    <button onClick={()=>cancelAppt(a.id)} style={{
+                      padding:"7px 12px",background:"transparent",
+                      border:`1px solid ${C.red}30`,color:C.red,
+                      cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                      fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",
+                    }}>✕ Cancelar</button>
+                  )}
                 </div>
               </div>
             </div>
