@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvSet, verifyStaffAuth, applyCors } from "./db.js";
+import { initTables, kvGet, kvGetWithMeta, kvCas, verifyStaffAuth, applyCors } from "./db.js";
 
 const DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [] });
 
@@ -25,15 +25,19 @@ export default async function handler(req, res) {
     await initTables();
 
     if (req.method === "GET") {
-      const stored = { ...DEFAULT(), ...((await kvGet("turno_store")) || {}) };
+      const rec = await kvGetWithMeta("turno_store");
+      const version = rec ? rec.updatedAt : 0;
+      const stored = { ...DEFAULT(), ...(rec?.value || {}) };
       const auth = await verifyStaffAuth(req);
-      if (auth) return res.status(200).json(stored);
+      // _v is the optimistic-concurrency stamp staff clients echo back on write.
+      if (auth) return res.status(200).json({ ...stored, _v: version });
       // Public: only occupancy data, no client PII
       return res.status(200).json({
         appointments: (stored.appointments || []).map(publicAppt),
         active: [],
         completed: [],
         blockedSlots: stored.blockedSlots || [],
+        _v: version,
       });
     }
 
@@ -49,13 +53,41 @@ export default async function handler(req, res) {
         }
       }
 
-      await kvSet("turno_store", {
+      const payload = {
         appointments: body.appointments ?? [],
         active: body.active ?? [],
         completed: body.completed ?? [],
         blockedSlots: body.blockedSlots ?? [],
-      });
-      return res.status(200).json({ ok: true });
+      };
+
+      const rec = await kvGetWithMeta("turno_store");
+      const curV = rec ? rec.updatedAt : 0;
+      const clientV = Number(body._v);
+      const guarded = Number.isFinite(clientV);
+
+      // Optimistic concurrency: if the client sent the version it based its edit
+      // on and the store has moved since (e.g. a client booking landed via
+      // /api/book), reject instead of clobbering. The client reconciles with the
+      // fresh store and retries — no silent loss of appointments.
+      if (guarded && clientV !== curV) {
+        const fresh = { ...DEFAULT(), ...(rec?.value || {}) };
+        return res.status(409).json({ error: "stale", store: fresh, _v: curV });
+      }
+
+      const newV = rec
+        ? await kvCas("turno_store", payload, rec.updatedAt)
+        : await kvCas("turno_store", payload, null);
+
+      // Lost the race between our read and write → tell the client to reconcile.
+      if (!newV) {
+        const after = await kvGetWithMeta("turno_store");
+        return res.status(409).json({
+          error: "stale",
+          store: { ...DEFAULT(), ...(after?.value || {}) },
+          _v: after ? after.updatedAt : 0,
+        });
+      }
+      return res.status(200).json({ ok: true, _v: newV });
     }
 
     return res.status(405).json({ error: "Method not allowed" });
