@@ -107,25 +107,51 @@ export default async function handler(req, res) {
     if (v.error) return res.status(400).json({ error: v.error });
     const appt = v.appt;
 
-    const store = await kvGet("turno_store") ?? { appointments: [], active: [], completed: [], blockedSlots: [] };
-
-    if (store.appointments.length >= MAX_APPOINTMENTS) {
-      return res.status(507).json({ error: "Storage limit reached" });
+    // Cross-check stylist + service duration against the source of truth
+    // (admin_store), so a stale or tampered client can't book a non-existent
+    // stylist or send a duration that corrupts later overlap math.
+    const admin = await kvGet("admin_store");
+    const employees = admin?.employees || [];
+    if (employees.length) {
+      const emp = employees.find(e => e.name === appt.stylist && e.active !== false);
+      if (!emp) return res.status(400).json({ error: "Invalid stylist" });
+    }
+    const svc = (admin?.services || []).find(
+      s => s.active && s.name === appt.service
+    );
+    if (svc && Number.isFinite(Number(svc.dur))) {
+      appt.serviceDur = Number(svc.dur); // authoritative duration wins
     }
 
-    // Idempotent: ignore if already exists
-    if (store.appointments.some(a => a.id === appt.id)) {
-      return res.status(200).json({ ok: true });
+    // Optimistic append: read the store with its version stamp, re-validate the
+    // slot, then compare-and-swap. If another booking landed first, retry on the
+    // fresh state so we never blindly overwrite (lost write) or double-book.
+    for (let attempt = 0; attempt < CAS_RETRIES; attempt++) {
+      const rec = await kvGetWithMeta("turno_store");
+      const store = rec?.value ?? { appointments: [], active: [], completed: [], blockedSlots: [] };
+      const appointments = Array.isArray(store.appointments) ? store.appointments : [];
+
+      // Idempotent: already stored → treat as success
+      if (appointments.some(a => a.id === appt.id)) {
+        return res.status(200).json({ ok: true });
+      }
+      if (appointments.length >= MAX_APPOINTMENTS) {
+        return res.status(507).json({ error: "Storage limit reached" });
+      }
+      if (slotConflict(appointments, store.blockedSlots, appt)) {
+        return res.status(409).json({ error: "Slot no disponible" });
+      }
+
+      const next = { ...store, appointments: [...appointments, appt] };
+      const written = await kvCas("turno_store", next, rec ? rec.updatedAt : null);
+      if (written) {
+        sendPushNotifications(appt).catch(() => {});
+        return res.status(200).json({ ok: true });
+      }
+      // Lost the race — loop and re-read the fresh state.
     }
 
-    await kvSet("turno_store", {
-      ...store,
-      appointments: [...store.appointments, appt],
-    });
-
-    sendPushNotifications(appt).catch(() => {});
-
-    return res.status(200).json({ ok: true });
+    return res.status(409).json({ error: "Alta concurrencia, reintenta" });
   } catch (err) {
     console.error("[book]", err.message);
     return res.status(500).json({ error: "Internal error" });
