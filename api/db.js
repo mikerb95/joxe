@@ -1,4 +1,4 @@
-import { createClient } from "@libsql/client/http";
+import { createClient as createHttpClient } from "@libsql/client/http";
 import { timingSafeEqual, createHmac, scryptSync, randomBytes } from "node:crypto";
 
 let _db = null;
@@ -7,8 +7,18 @@ function getDb() {
   if (_db) return _db;
   const url   = process.env.TURSO_DATABASE_URL;
   const token = process.env.TURSO_AUTH_TOKEN;
-  if (!url || !token) throw new Error("Missing TURSO_DATABASE_URL or TURSO_AUTH_TOKEN");
-  _db = createClient({ url, authToken: token });
+  if (!url) throw new Error("Missing TURSO_DATABASE_URL");
+  // Remote Turso/libsql uses the lightweight HTTP client (as on Vercel). A
+  // local file: URL (dev/testing) needs the full client, which bundles the
+  // native driver; this branch never runs in production.
+  if (url.startsWith("file:")) {
+    // Lazy require so the native client is only loaded when actually used.
+    const { createClient } = require("@libsql/client");
+    _db = createClient({ url });
+    return _db;
+  }
+  if (!token) throw new Error("Missing TURSO_AUTH_TOKEN");
+  _db = createHttpClient({ url, authToken: token });
   return _db;
 }
 
