@@ -5838,7 +5838,10 @@ const EmpBookingView = ({emp, onNav}) => {
       confirmedAt: Date.now(),
       bookedBy: "staff",
     };
-    await setAppts(cur=>{ const src = freshData || cur; return { ...src, appointments:[...(src.appointments||[]), appt] }; });
+    // Base the write on `cur` (the reconciled fresh store the setAppts retry
+    // loop provides), not the earlier freshData snapshot, so a booking that
+    // lands during save is preserved instead of overwritten.
+    await setAppts(cur=>({ ...cur, appointments:[...(cur.appointments||[]), appt] }));
     setSaving(false);
     setDone(appt);
   };
