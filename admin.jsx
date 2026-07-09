@@ -5518,8 +5518,8 @@ const EmpAgendaView = ({emp, onNav}) => {
                                 padding:"4px 8px",background:"transparent",
                                 border:`1px solid ${C.red}30`,color:C.red,
                                 cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
-                                fontSize:9,letterSpacing:"0.06em",
-                              }}>✕</button>
+                                fontSize:9,letterSpacing:"0.06em",whiteSpace:"nowrap",
+                              }}>✕ Cancelar cita</button>
                             )}
                             <div style={{textAlign:"right"}}>
                               <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
