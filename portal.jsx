@@ -1261,22 +1261,32 @@ const BookingPortal = () => {
         )}
 
         {step < 5 && (
-          <div style={{
-            display: "flex", justifyContent: "space-between", marginTop: 48,
-          }}>
-            <button onClick={() => step > 1 && setStep(step - 1)} style={{
-              background: "transparent", border: "none", cursor: step > 1 ? "pointer" : "default",
-              fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase",
-              opacity: step > 1 ? 0.7 : 0.3, padding: "18px 0", color: "#0C0C0C",
-              fontFamily: "'Outfit', sans-serif",
-            }}>← Atrás</button>
-            <button disabled={!canNext} onClick={() => step === TOTAL_STEPS ? submit() : setStep(step + 1)} style={{
-              background: canNext ? "#0C0C0C" : "rgba(12,12,12,0.2)",
-              color: "#F5F1EA", border: "none",
-              padding: "18px 36px", cursor: canNext ? "pointer" : "not-allowed",
-              fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase",
-              fontFamily: "'Outfit', sans-serif",
-            }}>{step === TOTAL_STEPS ? "Confirmar reserva" : "Continuar →"}</button>
+          <div>
+            {bookError && (
+              <div role="alert" style={{
+                marginTop: 24, padding: "12px 16px",
+                background: "rgba(180,30,30,0.08)", border: "1px solid rgba(180,30,30,0.35)",
+                color: "#8A1A1A", fontSize: 13, fontFamily: "'Outfit', sans-serif",
+                letterSpacing: "0.02em",
+              }}>{bookError}</div>
+            )}
+            <div style={{
+              display: "flex", justifyContent: "space-between", marginTop: 48,
+            }}>
+              <button onClick={() => { if (step > 1) { setBookError(""); setStep(step - 1); } }} style={{
+                background: "transparent", border: "none", cursor: step > 1 ? "pointer" : "default",
+                fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase",
+                opacity: step > 1 ? 0.7 : 0.3, padding: "18px 0", color: "#0C0C0C",
+                fontFamily: "'Outfit', sans-serif",
+              }}>← Atrás</button>
+              <button disabled={!canNext || submitting} onClick={() => step === TOTAL_STEPS ? submit() : setStep(step + 1)} style={{
+                background: (canNext && !submitting) ? "#0C0C0C" : "rgba(12,12,12,0.2)",
+                color: "#F5F1EA", border: "none",
+                padding: "18px 36px", cursor: (canNext && !submitting) ? "pointer" : "not-allowed",
+                fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase",
+                fontFamily: "'Outfit', sans-serif",
+              }}>{step === TOTAL_STEPS ? (submitting ? "Agendando…" : "Confirmar reserva") : "Continuar →"}</button>
+            </div>
           </div>
         )}
       </main>
