@@ -36,6 +36,39 @@ export async function kvSet(key, value) {
   });
 }
 
+// Read a key together with its updated_at stamp, so a caller can later do an
+// optimistic compare-and-swap write. Returns null when the row does not exist.
+export async function kvGetWithMeta(key) {
+  const res = await getDb().execute({ sql: "SELECT value, updated_at FROM kv WHERE key = ?", args: [key] });
+  if (!res.rows.length) return null;
+  let value;
+  try { value = JSON.parse(res.rows[0].value); } catch { value = null; }
+  return { value, updatedAt: Number(res.rows[0].updated_at) };
+}
+
+// Optimistic compare-and-swap write. Returns true only if the row was written.
+//   expectedUpdatedAt === null  -> insert only if the row does not exist yet.
+//   expectedUpdatedAt === number -> update only if updated_at still matches.
+// The new updated_at is forced strictly greater than the previous one so two
+// writes landing in the same millisecond can't silently clobber each other.
+export async function kvCas(key, value, expectedUpdatedAt) {
+  const json = JSON.stringify(value);
+  if (expectedUpdatedAt == null) {
+    const res = await getDb().execute({
+      sql: `INSERT INTO kv (key, value, updated_at) VALUES (?, ?, ?)
+            ON CONFLICT(key) DO NOTHING`,
+      args: [key, json, Date.now()],
+    });
+    return res.rowsAffected > 0;
+  }
+  const next = Math.max(Date.now(), Number(expectedUpdatedAt) + 1);
+  const res = await getDb().execute({
+    sql: "UPDATE kv SET value = ?, updated_at = ? WHERE key = ? AND updated_at = ?",
+    args: [json, next, key, Number(expectedUpdatedAt)],
+  });
+  return res.rowsAffected > 0;
+}
+
 // ------------------------------------------------------------
 // Backup / restore of the entire kv table.
 // kvDump() returns every row (value already parsed into JSON) so the result
