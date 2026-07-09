@@ -5335,6 +5335,14 @@ const EmpAgendaView = ({emp, onNav}) => {
     setAppts(s=>({...s, appointments:patch(s.appointments), active:patch(s.active)}));
   };
 
+  const cancelAppt = (apptId) => {
+    if (!confirm("¿Cancelar esta cita?")) return;
+    const patch = (list) => list.map(a =>
+      a.id===apptId ? {...a, status:"cancelled", cancelledBy:emp.name, cancelledAt:Date.now()} : a
+    );
+    setAppts(s=>({...s, appointments:patch(s.appointments), active:patch(s.active)}));
+  };
+
   const DAY_TAB_LABEL = (d, i) =>
     i===0 ? "Hoy" : i===1 ? "Mañana" :
     new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric"});
