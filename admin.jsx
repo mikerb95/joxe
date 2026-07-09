@@ -719,7 +719,7 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
   const attemptAdmin = async () => {
     setLoading(true); setErr("");
     try {
-      const res  = await fetch("/api/auth", { method:"POST",
+      const res  = await fetch("/api/admin?action=auth", { method:"POST",
         headers:{"Content-Type":"application/json"}, body:JSON.stringify({password:pw}) });
       const data = await res.json();
       if (data.ok) { doLogin(pw); onAdminSuccess(); }
@@ -4460,7 +4460,7 @@ const SettingsView = ({ onNav }) => {
     }
     // Verify current password via API
     try {
-      const res  = await fetch("/api/auth", {
+      const res  = await fetch("/api/admin?action=auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pwForm.current }),

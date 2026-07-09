@@ -149,7 +149,7 @@ const LoginScreen = ({ onLogin }) => {
     setLoading(true);
     setErr("");
     try {
-      const res = await fetch("/api/auth", {
+      const res = await fetch("/api/admin?action=auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pw }),
