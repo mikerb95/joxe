@@ -190,6 +190,8 @@ const loadApptCache = () => {
 
 const useAppts = () => {
   const [s, setS] = React.useState(loadApptCache);
+  // Version stamp of the store we last read, for optimistic-concurrency writes.
+  const versionRef = React.useRef(0);
 
   const pull = React.useCallback(async () => {
     try {
@@ -197,7 +199,8 @@ const useAppts = () => {
       const headers = t ? { "Authorization": `Bearer ${t}` } : {};
       const res = await fetch("/api/store", { headers });
       if (!res.ok) return;
-      const data = await res.json();
+      const { _v, ...data } = await res.json();
+      versionRef.current = Number(_v) || 0;
       localStorage.setItem(APPT_KEY, JSON.stringify(data));
       setS(data);
     } catch {}
