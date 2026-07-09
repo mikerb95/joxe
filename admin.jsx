@@ -5513,6 +5513,14 @@ const EmpAgendaView = ({emp, onNav}) => {
                                 fontSize:9,letterSpacing:"0.06em",
                               }}>{a.computedStatus==="expired"?"↺":"✓"}</button>
                             )}
+                            {!isPending && !["cancelled","completed","no-show"].includes(a.computedStatus) && (
+                              <button onClick={e=>{e.stopPropagation();cancelAppt(a.id);}} style={{
+                                padding:"4px 8px",background:"transparent",
+                                border:`1px solid ${C.red}30`,color:C.red,
+                                cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+                                fontSize:9,letterSpacing:"0.06em",
+                              }}>✕</button>
+                            )}
                             <div style={{textAlign:"right"}}>
                               <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
                                 {statusLabel(a.computedStatus)}
