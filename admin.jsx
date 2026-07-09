@@ -5698,7 +5698,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
                       border:`1px solid ${C.red}30`,color:C.red,
                       cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
                       fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",
-                    }}>✕ Cancelar</button>
+                    }}>✕ Cancelar cita</button>
                   )}
                 </div>
               </div>
