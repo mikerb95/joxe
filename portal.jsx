@@ -490,6 +490,8 @@ const BookingPortal = () => {
   const [form, setForm] = React.useState(initial.form);
   const [ticket, setTicket] = React.useState(null);
   const [secsLeft, setSecsLeft] = React.useState(null);
+  const [submitting, setSubmitting] = React.useState(false);
+  const [bookError, setBookError] = React.useState("");
 
   // Waitlist (lista de espera) — para cuando no hay un horario que sirva
   const [wlOpen, setWlOpen] = React.useState(false);
