@@ -5,7 +5,7 @@
 // STORE — Turso (via /api/store) + localStorage cache
 // ============================================================
 const STORE_KEY = "joxe_turnos_v1";
-const STORE_DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [] });
+const STORE_DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [], blockRanges: [] });
 
 const loadCache = () => {
   try {
