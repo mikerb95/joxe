@@ -1,5 +1,6 @@
 import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr } from "../lib/db.js";
 // kvGet: reads admin_store (catalog); kvGetWithMeta + kvCas: optimistic append.
+import { blocksFromStore, blockConflict } from "../lib/blocks.js";
 import webpush from "web-push";
 
 const MAX_APPOINTMENTS = 5000; // hard cap to bound storage / abuse
