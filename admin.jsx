@@ -2135,18 +2135,18 @@ const BlockRangeModal = ({ employees, defaultEmpId, lockedEmpId, onSave, onClose
           </div>
         )}
 
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
-          <div>
-            <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:5}}>Desde</Mono>
-            <input type="date" value={dateStart} onChange={e=>{
-              setDateStart(e.target.value);
-              if (e.target.value>dateEnd) setDateEnd(e.target.value);
-            }} style={inputStyle} />
-          </div>
-          <div>
-            <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:5}}>Hasta</Mono>
-            <input type="date" value={dateEnd} min={dateStart} onChange={e=>setDateEnd(e.target.value)} style={inputStyle} />
-          </div>
+        <div style={{marginBottom:12}}>
+          <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:6}}>
+            Fecha(s) — clic para inicio, clic de nuevo para fin
+          </Mono>
+          <DayRangePicker
+            dateStart={dateStart}
+            dateEnd={dateEnd}
+            onPick={(s,e)=>{ setDateStart(s); setDateEnd(e); }}
+          />
+          <Mono style={{color:C.gold,fontSize:9,display:"block",marginTop:8}}>
+            {dateStart===dateEnd ? fmtDateMed(dateStart) : `${fmtDateShort(dateStart)} – ${fmtDateShort(dateEnd)}`}
+          </Mono>
         </div>
 
         <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,cursor:"pointer"}}>
