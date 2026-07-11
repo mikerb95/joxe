@@ -5971,6 +5971,71 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   );
 };
 
+// ---- Mis ausencias (staff self-service) ----
+// El propio empleado bloquea su agenda: almuerzo/descanso puntual o una
+// ausencia de uno o varios días (vacaciones, cita médica, permiso). Los
+// bloqueos quedan asociados a su employeeId y afectan su propia disponibilidad
+// en el portal público y en /api/book, igual que si los creara el admin.
+const EmpAbsencesView = ({emp}) => {
+  const [appts, setAppts] = useAppts();
+  const [showRangeModal, setShowRangeModal] = React.useState(false);
+
+  const myBlocks = normalizeBlocks(appts)
+    .filter(b => b.employeeId === emp.id)
+    .filter(b => (b.dateEnd || b.dateStart) >= todayStr()) // oculta bloqueos ya vencidos
+    .sort((a,b) => a.dateStart===b.dateStart
+      ? (a.timeStart||"").localeCompare(b.timeStart||"")
+      : a.dateStart.localeCompare(b.dateStart));
+
+  return (
+    <div>
+      <PageHeader title="Mis ausencias" subtitle="Bloquea horas o días en tu agenda"
+        action={<Btn small onClick={()=>setShowRangeModal(true)}>+ Bloquear rango / ausencia</Btn>} />
+
+      {showRangeModal && (
+        <BlockRangeModal
+          employees={[]}
+          lockedEmpId={emp.id}
+          onSave={(range)=>setAppts(s=>({...s, blockRanges:[...(s.blockRanges||[]),range]}))}
+          onClose={()=>setShowRangeModal(false)}
+        />
+      )}
+
+      <div style={{padding:"24px 32px"}}>
+        {myBlocks.length===0 ? (
+          <Card>
+            <div style={{color:C.muted,fontSize:12}}>No tienes horas ni días bloqueados próximamente.</div>
+          </Card>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {myBlocks.map(b=>{
+              const multiDay = b.dateStart!==b.dateEnd;
+              const whenLabel = b.allDay
+                ? (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día` : `${fmtDateMed(b.dateStart)} · Todo el día`)
+                : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${b.timeStart}–${b.timeEnd}` : `${fmtDateMed(b.dateStart)} · ${b.timeStart}–${b.timeEnd}`);
+              return (
+                <Card key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px"}}>
+                  <div>
+                    <Mono style={{color:C.gold,fontSize:10,display:"block"}}>{whenLabel}</Mono>
+                    {b.reason && b.reason!=="No disponible" && (
+                      <div style={{fontSize:12,color:C.muted,marginTop:4}}>{b.reason}</div>
+                    )}
+                  </div>
+                  <button onClick={()=>setAppts(s=>removeBlock(s,b.id))} style={{
+                    background:"transparent",border:`1px solid ${C.red}40`,color:C.red,
+                    cursor:"pointer",padding:"6px 12px",fontSize:11,
+                    fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.08em",
+                  }}>Quitar</button>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ---- Reservar turno (staff agenda en mano) ----
 // El empleado agenda un turno cuando el cliente no puede usar el sitio web.
 // El celular identifica al cliente; al elegir el servicio, el bloque se acomoda
