@@ -1326,6 +1326,20 @@ const AppointmentsView = () => {
     )}));
   };
 
+  // Extra minutes reserved after a turno's own service duration — for when the
+  // stylist needs more room (running late, extra touch-up, etc.). Kept separate
+  // from serviceDur so revenue/reporting still reflect the real service length.
+  // Applied to whichever array currently holds the appointment (appointments,
+  // active, or completed), mirroring how deleteAppt touches all three.
+  const setApptBuffer = (id, bufferAfter) => {
+    const patch = arr => arr.map(a => a.id===id ? {...a, bufferAfter} : a);
+    setAppts(s=>({...s, appointments:patch(s.appointments), active:patch(s.active), completed:patch(s.completed)}));
+  };
+  const extendAppt = (id, extraMin) => {
+    const current = all.find(a=>a.id===id)?.bufferAfter || 0;
+    setApptBuffer(id, current + extraMin);
+  };
+
   const buildWaToClient = (appt) => {
     const adminCfg = (() => { try { return JSON.parse(localStorage.getItem(ADMIN_KEY)||"{}"); } catch { return {}; } })();
     const salonName = adminCfg.salonName || "JOXE";
