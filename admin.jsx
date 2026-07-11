@@ -4402,7 +4402,6 @@ const StylistSettingsView = ({ empId, onNav }) => {
   const todayD       = todayStr();
   const myAllBlocks  = normalizeBlocks(appts).filter(b => b.employeeId === empId);
   const DAY_LABELS   = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
-  const [showRangeModal, setShowRangeModal] = React.useState(false);
 
   const myBlocks   = (date, time) => myAllBlocks.filter(b => blockCoversSlot(b, date, time));
   const isBlocked  = (date, time) => myBlocks(date, time).length > 0;
