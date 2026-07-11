@@ -1286,7 +1286,11 @@ const BookingPortal = () => {
                         <img src="/assets/breb-logo.png" alt="Bre-B" style={{ height: 16, width: "auto", display: "block", borderRadius: 3 }} />
                         <span>Llave <strong>@3124499862</strong></span>
                       </div>
-                      <div>Nequi o DaviPlata <strong>3124499862</strong></div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <img src="/assets/nequi-logo.png" alt="Nequi" style={{ height: 16, width: "auto", display: "block" }} />
+                        <img src="/assets/daviplata-logo.png" alt="DaviPlata" style={{ height: 16, width: "auto", display: "block", borderRadius: 3 }} />
+                        <span>Nequi o DaviPlata <strong>3124499862</strong></span>
+                      </div>
                       <div>Cuenta ahorros Davivienda <strong>488414015989</strong></div>
                     </div>
                   </div>
