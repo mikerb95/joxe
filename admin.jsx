@@ -4528,7 +4528,21 @@ const StylistSettingsView = ({ empId, onNav }) => {
                 color: C.text, padding: "6px 10px",
                 fontFamily: "'Outfit',sans-serif", fontSize: 12, outline: "none",
               }} />
+            <button onClick={() => setShowRangeModal(true)} style={{
+              background: "transparent", border: `1px solid ${C.gold + "60"}`, color: C.gold,
+              cursor: "pointer", padding: "6px 12px", fontSize: 10, whiteSpace: "nowrap",
+              fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.08em",
+            }}>+ Ausencia / rango</button>
           </div>
+
+          {showRangeModal && (
+            <BlockRangeModal
+              employees={employees}
+              lockedEmpId={empId}
+              onSave={(range) => setAppts(s => ({ ...s, blockRanges: [...(s.blockRanges || []), range] }))}
+              onClose={() => setShowRangeModal(false)}
+            />
+          )}
 
           <div style={{ overflowX: "auto" }}>
             <div style={{
