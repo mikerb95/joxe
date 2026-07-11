@@ -132,7 +132,7 @@ export default async function handler(req, res) {
     // fresh state so we never blindly overwrite (lost write) or double-book.
     for (let attempt = 0; attempt < CAS_RETRIES; attempt++) {
       const rec = await kvGetWithMeta("turno_store");
-      const store = rec?.value ?? { appointments: [], active: [], completed: [], blockedSlots: [] };
+      const store = rec?.value ?? { appointments: [], active: [], completed: [], blockedSlots: [], blockRanges: [] };
       const appointments = Array.isArray(store.appointments) ? store.appointments : [];
 
       // Idempotent: already stored → treat as success
@@ -142,7 +142,7 @@ export default async function handler(req, res) {
       if (appointments.length >= MAX_APPOINTMENTS) {
         return res.status(507).json({ error: "Storage limit reached" });
       }
-      if (slotConflict(appointments, store.blockedSlots, appt)) {
+      if (slotConflict(appointments, blocksFromStore(store), appt, stylistId)) {
         return res.status(409).json({ error: "Slot no disponible" });
       }
 
