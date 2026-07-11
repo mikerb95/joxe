@@ -605,7 +605,6 @@ const VIEWS = [
   {id:"agenda",      label:"Agenda",           icon:"▦", tooltip:"Vista semanal de citas por estilista"},
   {id:"appointments",label:"Citas",            icon:"≡", tooltip:"Listado y gestión de todas las citas"},
   {id:"clients",     label:"CRM · Clientes",   icon:"◯", tooltip:"Perfiles, historial y fidelización de clientes"},
-  {id:"waitlist",    label:"Lista de espera",  icon:"☷", tooltip:"Clientes esperando un cupo libre"},
   {id:"blockslots",  label:"Bloquear horas",   icon:"⊘", tooltip:"Bloquear horarios para evitar reservas"},
   {id:"revenue",     label:"Caja",             icon:"◎", tooltip:"Ingresos, gastos y utilidad"},
   {id:"commissions", label:"Comisiones",       icon:"%", tooltip:"Comisiones por empleado y liquidaciones"},
