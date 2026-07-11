@@ -4537,7 +4537,7 @@ const StylistSettingsView = ({ empId, onNav }) => {
 
           {showRangeModal && (
             <BlockRangeModal
-              employees={employees}
+              employees={[]}
               lockedEmpId={empId}
               onSave={(range) => setAppts(s => ({ ...s, blockRanges: [...(s.blockRanges || []), range] }))}
               onClose={() => setShowRangeModal(false)}
