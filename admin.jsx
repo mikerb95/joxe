@@ -1348,7 +1348,12 @@ const AppointmentsView = () => {
       `📅 ${appt.date} a las ${appt.time}`,
       `✂️ ${appt.service} con ${appt.stylist}`,
       ``,
-      `Para confirmar tu reserva, envíanos la captura del abono. ¡Gracias!`,
+      `Para confirmar tu reserva, realiza un abono de $10.000 y envíanos la captura:`,
+      `Llave @3124499862`,
+      `Nequi o DaviPlata 3124499862`,
+      `Cuenta ahorros Davivienda 488414015989`,
+      ``,
+      `¡Gracias!`,
     ].join("\n");
     const phone = (appt.phone||"").replace(/\D/g,"");
     const num = phone.startsWith("57") ? phone : `57${phone}`;
