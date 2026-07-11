@@ -1292,7 +1292,7 @@ const BookingPortal = () => {
                 {/* Botón WhatsApp */}
                 <a
                   href={`https://wa.me/${waAdminRaw}?text=${encodeURIComponent(
-                    `Hola, quiero confirmar mi cita 🗓️\n\nNombre: ${ticket.name}\nServicio: ${ticket.service}\nFecha: ${ticket.date} a las ${ticket.time}\nEstilista: ${ticket.stylist}\nCódigo: ${ticket.code}\n\nAdjunto comprobante de abono de $10.000.`
+                    `Hola, quiero confirmar mi cita 🗓️\n\nNombre: ${ticket.name}\nServicio: ${ticket.service}\nFecha: ${ticket.date} a las ${ticket.time}\nEstilista: ${ticket.stylist}\nCódigo: ${ticket.code}\n\nAdjunto comprobante de abono de $10.000 a Nequi/DaviPlata 3124499862.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
