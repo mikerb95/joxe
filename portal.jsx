@@ -1033,67 +1033,6 @@ const BookingPortal = () => {
               </div>
             )}
 
-            {/* Lista de espera */}
-            <div style={{ marginTop: 28, padding: "20px 24px", border: "1px dashed rgba(12,12,12,0.2)", background: "#FFF" }}>
-              {wlSent ? (
-                <div style={{ fontFamily: "'Outfit',sans-serif" }}>
-                  <div style={{ fontFamily: "'Marcellus', serif", fontSize: 20, marginBottom: 6, color: "#0C0C0C" }}>
-                    ¡Listo! Estás en la lista de espera ✓
-                  </div>
-                  <div style={{ fontSize: 13, color: "rgba(12,12,12,0.6)" }}>
-                    Te escribiremos por WhatsApp en cuanto se libere un cupo para tu {form.service || "servicio"}.
-                  </div>
-                </div>
-              ) : !wlOpen ? (
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                  <div>
-                    <div style={{ fontFamily: "'Marcellus', serif", fontSize: 18, color: "#0C0C0C" }}>
-                      ¿No encuentras un horario que te sirva?
-                    </div>
-                    <div style={{ fontSize: 13, color: "rgba(12,12,12,0.55)", fontFamily: "'Outfit',sans-serif", marginTop: 4 }}>
-                      Únete a la lista de espera y te avisamos cuando se libere un cupo.
-                    </div>
-                  </div>
-                  <button onClick={() => { setWlForm({ name: form.name || "", phone: form.phone || "" }); setWlOpen(true); }} style={{
-                    background: "#0C0C0C", color: "#F5F1EA", border: "none",
-                    padding: "12px 20px", cursor: "pointer", whiteSpace: "nowrap",
-                    fontFamily: "'Outfit', sans-serif", fontSize: 12,
-                    letterSpacing: "0.15em", textTransform: "uppercase",
-                  }}>Lista de espera →</button>
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: 12, maxWidth: 460 }}>
-                  <PMono style={{ fontSize: 10, color: "rgba(12,12,12,0.5)" }}>Lista de espera · {form.service}</PMono>
-                  <input value={wlForm.name} onChange={e => setWlForm({ ...wlForm, name: e.target.value })}
-                    placeholder="Tu nombre" style={{
-                      padding: "14px 16px", border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
-                      fontFamily: "'Outfit', sans-serif", fontSize: 14, color: "#0C0C0C",
-                    }} />
-                  <input value={wlForm.phone} onChange={e => setWlForm({ ...wlForm, phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                    placeholder="WhatsApp (300 123 4567)" inputMode="tel" style={{
-                      padding: "14px 16px", border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
-                      fontFamily: "'JetBrains Mono', monospace", fontSize: 14, color: "#0C0C0C",
-                    }} />
-                  <div style={{ display: "flex", gap: 10 }}>
-                    <button onClick={submitWaitlist}
-                      disabled={wlSending || wlForm.name.trim().length < 3 || wlForm.phone.replace(/\D/g, "").length < 7}
-                      style={{
-                        background: "#C29E66", color: "#0C0C0C", border: "none",
-                        padding: "12px 22px", cursor: "pointer",
-                        fontFamily: "'Outfit', sans-serif", fontSize: 12,
-                        letterSpacing: "0.15em", textTransform: "uppercase",
-                        opacity: (wlSending || wlForm.name.trim().length < 3 || wlForm.phone.replace(/\D/g, "").length < 7) ? 0.5 : 1,
-                      }}>{wlSending ? "Enviando…" : "Unirme"}</button>
-                    <button onClick={() => setWlOpen(false)} style={{
-                      background: "transparent", color: "rgba(12,12,12,0.5)",
-                      border: "1px solid rgba(12,12,12,0.2)", padding: "12px 20px", cursor: "pointer",
-                      fontFamily: "'Outfit', sans-serif", fontSize: 12,
-                      letterSpacing: "0.15em", textTransform: "uppercase",
-                    }}>Cancelar</button>
-                  </div>
-                </div>
-              )}
-            </div>
           </>
         )}
 
