@@ -2388,9 +2388,15 @@ const BlockSlotsView = () => {
               <div style={{color:C.muted,fontSize:12}}>Sin bloqueos para este día.</div>
             ) : (
               <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                {selectedBlocked.sort((a,b)=>a.time<b.time?-1:a.time>b.time?1:0).map(b=>{
+                {selectedBlocked
+                  .sort((a,b)=>(a.timeStart||"")<(b.timeStart||"")?-1:(a.timeStart||"")>(b.timeStart||"")?1:0)
+                  .map(b=>{
                   const emp = employees.find(e=>e.id===b.employeeId);
                   const color = b.employeeId ? empColor(b.employeeId) : C.red;
+                  const multiDay = b.dateStart!==b.dateEnd;
+                  const whenLabel = b.allDay
+                    ? (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día` : "Todo el día")
+                    : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${b.timeStart}–${b.timeEnd}` : `${b.timeStart}–${b.timeEnd}`);
                   return (
                     <div key={b.id} style={{
                       display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -2399,14 +2405,14 @@ const BlockSlotsView = () => {
                     }}>
                       <div>
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
-                          <Mono style={{color,fontSize:10}}>{b.time}</Mono>
+                          <Mono style={{color,fontSize:10}}>{whenLabel}</Mono>
                           {emp && <Mono style={{color:C.muted,fontSize:8}}>{emp.name}</Mono>}
                         </div>
                         {b.reason && b.reason!=="No disponible" && (
                           <div style={{fontSize:10,color:C.muted,marginTop:2}}>{b.reason}</div>
                         )}
                       </div>
-                      <button onClick={()=>setAppts(s=>({...s,blockedSlots:(s.blockedSlots||[]).filter(x=>x.id!==b.id)}))} style={{
+                      <button onClick={()=>setAppts(s=>removeBlock(s, b.id))} style={{
                         background:"transparent",border:"none",color:C.muted,
                         cursor:"pointer",fontSize:13,padding:"2px 6px",
                       }}>✕</button>
