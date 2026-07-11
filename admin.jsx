@@ -6718,7 +6718,6 @@ const AdminPortal = () => {
     appointments:        AppointmentsView,
     clients:             CrmView,
     blockslots:          BlockSlotsView,
-    waitlist:            WaitlistView,
     revenue:             RevenueView,
     commissions:         CommissionsView,
     employees:           EmployeesView,
