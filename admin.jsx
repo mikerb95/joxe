@@ -4347,6 +4347,7 @@ const StylistSettingsView = ({ empId, onNav }) => {
   const [weekOffset, setWeekOffset] = React.useState(0);
   const [selectedDate, setSelectedDate] = React.useState(todayStr());
   const [reason, setReason] = React.useState("");
+  const [showRangeModal, setShowRangeModal] = React.useState(false);
 
   const emp      = (admin.employees || []).find(e => e.id === empId);
   const services = (admin.services  || []).filter(s => s.active);
