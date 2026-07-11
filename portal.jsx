@@ -713,31 +713,6 @@ const BookingPortal = () => {
     try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch {}
   };
 
-  const submitWaitlist = async () => {
-    const name = wlForm.name.trim();
-    const phone = (wlForm.phone || "").replace(/\D/g, "");
-    if (name.length < 3 || phone.length < 7) return;
-    setWlSending(true);
-    try {
-      await fetch("/api/waitlist", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name, phone,
-          service: form.service || "",
-          serviceDur: selectedDur,
-          stylist: form.stylist && form.stylist !== "Sin preferencia" ? form.stylist : "",
-          preferredDate: form.date || "",
-          note: "",
-        }),
-      });
-      setWlSent(true);
-    } catch {
-      setWlSent(true); // fail-soft: avoid blocking the client
-    } finally {
-      setWlSending(false);
-    }
-  };
-
   const TOTAL_STEPS = 4;
 
   // Inline field validation for step 4
