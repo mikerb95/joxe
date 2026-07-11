@@ -1528,6 +1528,27 @@ const AppointmentsView = () => {
                             ⊘ Marcar incumplida
                           </Btn>
                         )}
+                        {["scheduled","waiting","in-service"].includes(a.computedStatus) && (
+                          <div style={{padding:"8px 10px",background:C.s2,border:`1px solid ${C.bdr}`}}>
+                            <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:6}}>
+                              Ampliar ventana{a.bufferAfter>0?` · +${a.bufferAfter} min extra`:""}
+                            </Mono>
+                            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                              {[15,30,45,60].map(min=>(
+                                <button key={min} onClick={()=>extendAppt(a.id,min)} style={{
+                                  padding:"5px 10px",background:C.s3,border:`1px solid ${C.bdr}`,color:C.text,
+                                  cursor:"pointer",fontSize:10,fontFamily:"'JetBrains Mono',monospace",
+                                }}>+{min}m</button>
+                              ))}
+                              {a.bufferAfter>0 && (
+                                <button onClick={()=>setApptBuffer(a.id,0)} style={{
+                                  padding:"5px 10px",background:"transparent",border:`1px solid ${C.red}30`,color:C.red,
+                                  cursor:"pointer",fontSize:10,fontFamily:"'JetBrains Mono',monospace",
+                                }}>Quitar</button>
+                              )}
+                            </div>
+                          </div>
+                        )}
                         {a.computedStatus!=="pending" && a.computedStatus!=="cancelled" && !hasPayment && (
                           <Btn variant="subtle" small onClick={()=>registerPay(a)}>
                             $ Registrar pago
