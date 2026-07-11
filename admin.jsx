@@ -4628,23 +4628,31 @@ const StylistSettingsView = ({ empId, onNav }) => {
               <div style={{ color: C.muted, fontSize: 12 }}>Sin bloqueos para este día. Haz clic en la grilla para bloquear.</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                {selectedBlocked.sort((a, b) => a.time < b.time ? -1 : 1).map(b => (
-                  <div key={b.id} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "6px 10px", background: C.s1, borderLeft: `2px solid ${C.red}50`,
-                  }}>
-                    <div>
-                      <Mono style={{ color: C.red, fontSize: 10 }}>{b.time}</Mono>
-                      {b.reason && b.reason !== "No disponible" && (
-                        <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{b.reason}</div>
-                      )}
-                    </div>
-                    <button onClick={() => setAppts(s => ({ ...s, blockedSlots: (s.blockedSlots || []).filter(x => x.id !== b.id) }))}
-                      style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, padding: "2px 6px" }}>
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                {selectedBlocked
+                  .sort((a, b) => (a.timeStart||"") < (b.timeStart||"") ? -1 : 1)
+                  .map(b => {
+                    const multiDay = b.dateStart !== b.dateEnd;
+                    const whenLabel = b.allDay
+                      ? (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día` : "Todo el día")
+                      : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${b.timeStart}–${b.timeEnd}` : `${b.timeStart}–${b.timeEnd}`);
+                    return (
+                      <div key={b.id} style={{
+                        display: "flex", justifyContent: "space-between", alignItems: "center",
+                        padding: "6px 10px", background: C.s1, borderLeft: `2px solid ${C.red}50`,
+                      }}>
+                        <div>
+                          <Mono style={{ color: C.red, fontSize: 10 }}>{whenLabel}</Mono>
+                          {b.reason && b.reason !== "No disponible" && (
+                            <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{b.reason}</div>
+                          )}
+                        </div>
+                        <button onClick={() => setAppts(s => removeBlock(s, b.id))}
+                          style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 13, padding: "2px 6px" }}>
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
               </div>
             )}
           </div>
