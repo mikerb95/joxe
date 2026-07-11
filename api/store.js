@@ -37,6 +37,7 @@ export default async function handler(req, res) {
         active: [],
         completed: [],
         blockedSlots: stored.blockedSlots || [],
+        blockRanges: stored.blockRanges || [],
         _v: version,
       });
     }
