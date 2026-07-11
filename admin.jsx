@@ -4364,31 +4364,44 @@ const StylistSettingsView = ({ empId, onNav }) => {
   ];
   const weekDates    = getWeekDates(weekOffset);
   const todayD       = todayStr();
-  const blockedSlots = appts.blockedSlots || [];
+  const myAllBlocks  = normalizeBlocks(appts).filter(b => b.employeeId === empId);
   const DAY_LABELS   = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const [showRangeModal, setShowRangeModal] = React.useState(false);
 
-  const myBlocks   = (date, time) => blockedSlots.filter(b => b.date === date && b.time === time && b.employeeId === empId);
+  const myBlocks   = (date, time) => myAllBlocks.filter(b => blockCoversSlot(b, date, time));
   const isBlocked  = (date, time) => myBlocks(date, time).length > 0;
 
+  // Clicking toggles a single 30-min slot. A bigger range/absence covering this
+  // cell must be removed from the list below instead.
   const toggleSlot = (date, time) => {
-    const existing = blockedSlots.find(b => b.date === date && b.time === time && b.employeeId === empId);
-    if (existing) {
-      setAppts(s => ({ ...s, blockedSlots: (s.blockedSlots || []).filter(b => b.id !== existing.id) }));
-    } else {
-      setAppts(s => ({ ...s, blockedSlots: [...(s.blockedSlots || []), {
-        id: genId(), date, time, reason: reason || "No disponible", employeeId: empId,
-      }] }));
+    const covering = myBlocks(date, time);
+    const exact = covering.find(b => b.dateStart === date && b.dateEnd === date && !b.allDay && b.timeStart === time);
+    if (exact) {
+      setAppts(s => removeBlock(s, exact.id));
+      return;
     }
+    if (covering.length > 0) {
+      alert("Esta hora está cubierta por un bloqueo de rango. Elimínalo desde la lista de abajo.");
+      return;
+    }
+    const endMin = timeToMin(time) + BLOCK_SLOT_MIN;
+    setAppts(s => ({ ...s, blockRanges: [...(s.blockRanges || []), {
+      id: genId(), dateStart: date, dateEnd: date, allDay: false,
+      timeStart: time, timeEnd: minToTime(endMin),
+      employeeId: empId, reason: reason || "No disponible", type: "block", createdAt: Date.now(),
+    }] }));
   };
 
-  const blockedForDay   = (date) => blockedSlots.filter(b => b.date === date && b.employeeId === empId);
+  const blockedForDay   = (date) => myAllBlocks.filter(b => date >= b.dateStart && date <= (b.dateEnd || b.dateStart));
   const selectedBlocked = blockedForDay(selectedDate);
 
   const clearDay = (date) => {
     if (!confirm(`¿Desbloquear todas las horas de ${fmtDateShort(date)}?`)) return;
-    setAppts(s => ({ ...s, blockedSlots: (s.blockedSlots || []).filter(b =>
-      !(b.date === date && b.employeeId === empId)
-    ) }));
+    setAppts(s => ({
+      ...s,
+      blockedSlots: (s.blockedSlots || []).filter(b => !(b.date === date && b.employeeId === empId)),
+      blockRanges: (s.blockRanges || []).filter(b => !(b.dateStart === date && b.dateEnd === date && b.employeeId === empId)),
+    }));
   };
 
   const weekLabel = () => {
