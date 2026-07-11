@@ -1281,8 +1281,11 @@ const BookingPortal = () => {
                     <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 8 }}>
                       Datos para el abono
                     </PMono>
-                    <div style={{ fontSize: 13, lineHeight: 1.9, color: "#0C0C0C" }}>
-                      <div>Llave <strong>@3124499862</strong></div>
+                    <div style={{ fontSize: 13, lineHeight: 1.9, color: "#0C0C0C", display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <img src="/assets/breb-logo.png" alt="Bre-B" style={{ height: 16, width: "auto", display: "block", borderRadius: 3 }} />
+                        <span>Llave <strong>@3124499862</strong></span>
+                      </div>
                       <div>Nequi o DaviPlata <strong>3124499862</strong></div>
                       <div>Cuenta ahorros Davivienda <strong>488414015989</strong></div>
                     </div>
