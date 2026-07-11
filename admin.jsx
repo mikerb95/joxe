@@ -6575,6 +6575,7 @@ const EMP_VIEWS = [
   {id:"reservar",      label:"Reservar turno",  icon:"＋"},
   {id:"confirmaciones",label:"Confirmar citas", icon:"◉"},
   {id:"todas",         label:"Mis Citas",       icon:"≡"},
+  {id:"ausencias",     label:"Mis ausencias",   icon:"⊘"},
   {id:"ayuda",         label:"Ayuda",           icon:"?"},
 ];
 
