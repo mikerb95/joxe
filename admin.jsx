@@ -179,7 +179,7 @@ const useCrm = () => {
 };
 
 // ---- Appointment store (shared with portal) ----
-const DEFAULT_APPTS = () => ({ appointments:[], active:[], completed:[], blockedSlots:[], timeWarnings:[] });
+const DEFAULT_APPTS = () => ({ appointments:[], active:[], completed:[], blockedSlots:[], blockRanges:[], timeWarnings:[] });
 
 const loadApptCache = () => {
   try {
