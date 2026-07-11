@@ -114,9 +114,11 @@ export default async function handler(req, res) {
     // stylist or send a duration that corrupts later overlap math.
     const admin = await kvGet("admin_store");
     const employees = admin?.employees || [];
+    let stylistId = null;
     if (employees.length) {
       const emp = employees.find(e => e.name === appt.stylist && e.active !== false);
       if (!emp) return res.status(400).json({ error: "Invalid stylist" });
+      stylistId = emp.id;
     }
     const svc = (admin?.services || []).find(
       s => s.active && s.name === appt.service
