@@ -403,6 +403,33 @@ const fmtDateLabel = (d) => {
 };
 
 const timeToMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
+const minToTime = (mins) => `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+
+// ---- Unified block-range model (mirrors lib/blocks.js on the server) ----
+// blockedSlots (legacy) = one 30-min cell each; blockRanges (current) = flexible
+// date/time ranges, optionally multi-day or spanning the whole day (absences).
+const BLOCK_SLOT_MIN = 30;
+const legacySlotToRange = (s) => {
+  const endMin = timeToMin(s.time) + BLOCK_SLOT_MIN;
+  return {
+    dateStart: s.date, dateEnd: s.date, allDay: false,
+    timeStart: s.time, timeEnd: minToTime(endMin), employeeId: s.employeeId ?? null,
+  };
+};
+const normalizeBlocks = (store) => {
+  const ranges = Array.isArray(store?.blockRanges) ? store.blockRanges : [];
+  const legacy = Array.isArray(store?.blockedSlots) ? store.blockedSlots : [];
+  return [...ranges, ...legacy.map(legacySlotToRange)];
+};
+const blockAppliesToEmp = (b, empId) => b.employeeId == null || b.employeeId === empId;
+// True if block `b` overlaps the [time, time+durMin) window on `date`.
+const blockOverlapsSlot = (b, date, time, durMin) => {
+  if (date < b.dateStart || date > (b.dateEnd || b.dateStart)) return false;
+  if (b.allDay) return true;
+  const s = timeToMin(time), e = s + durMin;
+  const bs = timeToMin(b.timeStart), be = timeToMin(b.timeEnd);
+  return bs < e && s < be;
+};
 
 const fmtDateSub = (d) => {
   try {
