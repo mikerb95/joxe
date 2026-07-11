@@ -549,12 +549,6 @@ const BookingPortal = () => {
   const [submitting, setSubmitting] = React.useState(false);
   const [bookError, setBookError] = React.useState("");
 
-  // Waitlist (lista de espera) — para cuando no hay un horario que sirva
-  const [wlOpen, setWlOpen] = React.useState(false);
-  const [wlSent, setWlSent] = React.useState(false);
-  const [wlSending, setWlSending] = React.useState(false);
-  const [wlForm, setWlForm] = React.useState({ name: "", phone: "" });
-
   // Auto-save form/step to sessionStorage on every change (so refresh keeps the draft)
   React.useEffect(() => {
     try { sessionStorage.setItem(BOOKING_DRAFT_KEY, JSON.stringify({ form, step })); } catch {}
