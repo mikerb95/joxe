@@ -1991,6 +1991,96 @@ const EMP_COLORS = ["#C29E66","#66C499","#8ab0ff","#C466A0","#66B5C4","#C49066"]
 // horas" view and the per-employee self-service section (Staff mode).
 // `lockedEmpId`: if set, the employee selector is hidden and forced to that id
 // (an employee blocking their own agenda can't block someone else's).
+const MONTH_DOW = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+// Compact month calendar for picking a date range inside BlockRangeModal.
+// Reuses the same visual language as the weekly grid in BlockSlotsView (same
+// nav-arrow buttons, Mono day labels, gold "today"/selection highlight) but
+// shows a full navigable month instead of a fixed week, and highlights the
+// selected range (click once for the start day, again for the end day)
+// instead of a single selected day.
+const DayRangePicker = ({ dateStart, dateEnd, onPick }) => {
+  const [viewMonth, setViewMonth] = React.useState(() => {
+    const [y,m] = dateStart.split("-").map(Number);
+    return new Date(y, m-1, 1);
+  });
+  const [pickingEnd, setPickingEnd] = React.useState(false);
+  const todayD = todayStr();
+
+  const monthLabel = viewMonth.toLocaleDateString("es-CO",{month:"long",year:"numeric"});
+  const shiftMonth = (n) => setViewMonth(v => new Date(v.getFullYear(), v.getMonth()+n, 1));
+
+  const cells = React.useMemo(() => {
+    const year = viewMonth.getFullYear(), month = viewMonth.getMonth();
+    const firstDow = new Date(year, month, 1).getDay();
+    const numDays = new Date(year, month+1, 0).getDate();
+    const out = [];
+    for (let i=0;i<firstDow;i++) out.push(null);
+    for (let d=1; d<=numDays; d++) {
+      const dt = new Date(year, month, d, 12);
+      out.push(`${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,"0")}-${String(dt.getDate()).padStart(2,"0")}`);
+    }
+    return out;
+  }, [viewMonth]);
+
+  const pickDay = (d) => {
+    if (d < todayD) return; // no se pueden bloquear fechas pasadas
+    if (!pickingEnd) {
+      onPick(d, d);
+      setPickingEnd(true);
+    } else {
+      if (d < dateStart) onPick(d, dateStart);
+      else onPick(dateStart, d);
+      setPickingEnd(false);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <button onClick={()=>shiftMonth(-1)} style={{
+          background:"transparent",border:`1px solid ${C.bdr}`,color:C.text,
+          cursor:"pointer",padding:"4px 10px",fontSize:12,
+        }}>←</button>
+        <Mono style={{color:C.gold,fontSize:9,textTransform:"capitalize"}}>{monthLabel}</Mono>
+        <button onClick={()=>shiftMonth(1)} style={{
+          background:"transparent",border:`1px solid ${C.bdr}`,color:C.text,
+          cursor:"pointer",padding:"4px 10px",fontSize:12,
+        }}>→</button>
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+        {MONTH_DOW.map(l=>(
+          <Mono key={l} style={{color:C.muted,fontSize:7,textAlign:"center"}}>{l[0]}</Mono>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+        {cells.map((d,i)=>{
+          if (!d) return <div key={i} />;
+          const isToday = d===todayD;
+          const isPast = d<todayD;
+          const inRange = d>=dateStart && d<=dateEnd;
+          const isEdge = d===dateStart || d===dateEnd;
+          return (
+            <button key={d} disabled={isPast} onClick={()=>pickDay(d)} style={{
+              background:isEdge?C.gold:inRange?"rgba(194,158,102,0.18)":C.s1,
+              border:`1px solid ${isEdge?C.gold:C.bdr}`,
+              color:isPast?C.muted2:isEdge?"#0C0C0C":isToday?C.gold:C.text,
+              cursor:isPast?"default":"pointer",
+              opacity:isPast?0.35:1,
+              padding:"6px 0",fontSize:11,
+              fontFamily:"'Outfit',sans-serif",fontWeight:isToday||isEdge?600:400,
+            }}>
+              {Number(d.slice(8,10))}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const BlockRangeModal = ({ employees, defaultEmpId, lockedEmpId, onSave, onClose }) => {
   const [employeeId,setEmployeeId] = React.useState(lockedEmpId ?? defaultEmpId ?? "all");
   const [dateStart,setDateStart] = React.useState(todayStr());
