@@ -609,8 +609,6 @@ const BookingPortal = () => {
     if (!date) return false;
     if (isClosedDay(date)) return true;
     if (isTimePast(date, time)) return true;
-    const adminBlocked = (store.blockedSlots || []).some(b => b.date === date && b.time === time);
-    if (adminBlocked) return true;
 
     const dur = newDur ?? selectedDur;
     const newStart = timeToMin(time);
@@ -618,6 +616,12 @@ const BookingPortal = () => {
 
     // Service must finish before closing time
     if (newEnd > closesAtMin(date)) return true;
+
+    // Admin-blocked ranges/absences — scoped per stylist (null employeeId = salon-wide)
+    const blocks = normalizeBlocks(store);
+    const blockedForEmp = (empId) => blocks.some(b =>
+      blockAppliesToEmp(b, empId) && blockOverlapsSlot(b, date, time, dur)
+    );
 
     const aptsOnDay = (store.appointments || []).filter(
       a => a.date === date && !["cancelled"].includes(a.status) && !isPendingExpired(a)
@@ -627,18 +631,19 @@ const BookingPortal = () => {
       .filter(a => a.stylist === stylist)
       .some(a => {
         const aStart = timeToMin(a.time);
-        const aEnd   = aStart + (a.serviceDur || 60);
+        const aEnd   = aStart + (a.serviceDur || 60) + (Number(a.bufferAfter) || 0);
         // Overlap: existing ends after new starts AND new ends after existing starts
         return aStart < newEnd && newStart < aEnd;
       });
 
     if (stylistName === "Sin preferencia") {
       return eligibleEmployees.every(e =>
-        conflictsFor(e.name) || !empWorksOnSlot(e, date, time, dur)
+        conflictsFor(e.name) || !empWorksOnSlot(e, date, time, dur) || blockedForEmp(e.id)
       );
     }
     const emp = employees.find(e => e.name === stylistName);
     if (emp && !empWorksOnSlot(emp, date, time, dur)) return true;
+    if (blockedForEmp(emp ? emp.id : null)) return true;
     return conflictsFor(stylistName);
   };
 
