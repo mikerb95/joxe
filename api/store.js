@@ -48,7 +48,7 @@ export default async function handler(req, res) {
 
       const body = req.body;
       if (!body || typeof body !== "object") return res.status(400).json({ error: "Invalid body" });
-      for (const field of ["appointments", "active", "completed", "blockedSlots"]) {
+      for (const field of ["appointments", "active", "completed", "blockedSlots", "blockRanges"]) {
         if (body[field] !== undefined && !Array.isArray(body[field])) {
           return res.status(400).json({ error: `${field} must be an array` });
         }
@@ -59,6 +59,7 @@ export default async function handler(req, res) {
         active: body.active ?? [],
         completed: body.completed ?? [],
         blockedSlots: body.blockedSlots ?? [],
+        blockRanges: body.blockRanges ?? [],
       };
 
       const rec = await kvGetWithMeta("turno_store");
