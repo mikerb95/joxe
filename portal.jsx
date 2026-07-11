@@ -1277,6 +1277,16 @@ const BookingPortal = () => {
                     Realiza un abono de <strong>$10.000</strong> y envía el comprobante por WhatsApp.
                     El estilista confirmará tu cita al recibirlo.
                   </p>
+                  <div style={{ margin: "16px 0 0", paddingTop: 14, borderTop: "1px solid rgba(194,158,102,0.35)" }}>
+                    <PMono style={{ color: "#C29E66", fontSize: 9, display: "block", marginBottom: 8 }}>
+                      Datos para el abono
+                    </PMono>
+                    <div style={{ fontSize: 13, lineHeight: 1.9, color: "#0C0C0C" }}>
+                      <div>Llave <strong>@3124499862</strong></div>
+                      <div>Nequi o DaviPlata <strong>3124499862</strong></div>
+                      <div>Cuenta ahorros Davivienda <strong>488414015989</strong></div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Botón WhatsApp */}
