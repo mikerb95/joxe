@@ -1,6 +1,6 @@
 import { initTables, kvGetWithMeta, kvCas, verifyStaffAuth, applyCors } from "../lib/db.js";
 
-const DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [] });
+const DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [], blockRanges: [] });
 
 // Fields the public booking page legitimately needs to compute availability.
 // Everything else (name, phone, cedula, notes...) is PII and must be stripped
