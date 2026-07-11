@@ -294,6 +294,42 @@ const empWorksOnSlot = (emp, date, timeStr, dur) => {
   return s >= timeToMin(day.start) && e <= timeToMin(day.end);
 };
 
+// ---- Unified block-range model (mirrors lib/blocks.js on the server) ----
+// blockedSlots (legacy) = one 30-min cell per entry. blockRanges (current) =
+// flexible date/time ranges, optionally multi-day or spanning the whole day
+// (absences). Legacy entries are read and converted on the fly so old data
+// keeps working; anything created going forward is written as a blockRange.
+const BLOCK_SLOT_MIN = 30;
+const legacySlotToRange = (s) => {
+  const endMin = timeToMin(s.time) + BLOCK_SLOT_MIN;
+  return {
+    id: s.id, dateStart: s.date, dateEnd: s.date, allDay: false,
+    timeStart: s.time, timeEnd: minToTime(endMin),
+    employeeId: s.employeeId ?? null, reason: s.reason || "No disponible",
+    type: "block", createdAt: s.createdAt || 0, _legacy: true,
+  };
+};
+const normalizeBlocks = (appts) => {
+  const ranges = Array.isArray(appts?.blockRanges) ? appts.blockRanges : [];
+  const legacy = Array.isArray(appts?.blockedSlots) ? appts.blockedSlots : [];
+  return [...ranges, ...legacy.map(legacySlotToRange)];
+};
+const blockAppliesToEmp = (b, empId) => b.employeeId == null || b.employeeId === empId;
+// Does block `b` cover the half-open [time, time+durMin) window on `date`?
+const blockCoversSlot = (b, date, time, durMin = BLOCK_SLOT_MIN) => {
+  if (date < b.dateStart || date > (b.dateEnd || b.dateStart)) return false;
+  if (b.allDay) return true;
+  const s = timeToMin(time), e = s + durMin;
+  const bs = timeToMin(b.timeStart), be = timeToMin(b.timeEnd);
+  return bs < e && s < be; // interval overlap
+};
+// Remove a block by id from whichever array it actually lives in (new or legacy).
+const removeBlock = (appts, id) => ({
+  ...appts,
+  blockRanges: (appts.blockRanges || []).filter(b => b.id !== id),
+  blockedSlots: (appts.blockedSlots || []).filter(b => b.id !== id),
+});
+
 const METHODS  = ["Efectivo","Transferencia","Datáfono","Nequi"];
 const EXPENSE_CATEGORIES = ["Insumos","Arriendo","Servicios","Nómina","Comisiones","Productos","Marketing","Otros"];
 const ROLES    = ["Estilista","Colorista","Manicurista","Pedicurista","Barbero","Maquillador/a","Masajista","Recepcionista","Otro"];
