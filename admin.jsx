@@ -1952,6 +1952,124 @@ const CrmView = () => {
 // ==================== BLOCK SLOTS ====================
 const EMP_COLORS = ["#C29E66","#66C499","#8ab0ff","#C466A0","#66B5C4","#C49066"];
 
+// Modal to create a block range or absence. Shared by the admin "Bloquear
+// horas" view and the per-employee self-service section (Staff mode).
+// `lockedEmpId`: if set, the employee selector is hidden and forced to that id
+// (an employee blocking their own agenda can't block someone else's).
+const BlockRangeModal = ({ employees, defaultEmpId, lockedEmpId, onSave, onClose }) => {
+  const [employeeId,setEmployeeId] = React.useState(lockedEmpId ?? defaultEmpId ?? "all");
+  const [dateStart,setDateStart] = React.useState(todayStr());
+  const [dateEnd,setDateEnd] = React.useState(todayStr());
+  const [allDay,setAllDay] = React.useState(false);
+  const [timeStart,setTimeStart] = React.useState("09:00");
+  const [timeEnd,setTimeEnd] = React.useState("18:00");
+  const [reason,setReason] = React.useState("");
+
+  const inputStyle = {
+    background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,
+    padding:"7px 10px",fontFamily:"'Outfit',sans-serif",fontSize:12,
+    outline:"none",width:"100%",
+  };
+
+  const valid = dateStart && dateEnd && dateStart<=dateEnd && (allDay || (timeStart && timeEnd && timeStart<timeEnd));
+
+  const submit = () => {
+    if (!valid) return;
+    const empVal = lockedEmpId ?? (employeeId==="all" ? null : employeeId);
+    onSave({
+      id: genId(),
+      dateStart, dateEnd,
+      allDay,
+      timeStart: allDay ? null : timeStart,
+      timeEnd: allDay ? null : timeEnd,
+      employeeId: empVal,
+      reason: reason || (allDay ? "Ausencia" : "No disponible"),
+      type: (allDay || dateStart!==dateEnd) ? "absence" : "block",
+      createdAt: Date.now(),
+    });
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:200,
+      display:"flex",alignItems:"center",justifyContent:"center",padding:20,
+    }} onClick={onClose}>
+      <div onClick={e=>e.stopPropagation()} style={{
+        background:C.s1,border:`1px solid ${C.bdr}`,padding:24,width:400,maxWidth:"100%",
+      }}>
+        <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Bloquear rango / Ausencia</Mono>
+
+        {!lockedEmpId && (
+          <div style={{marginBottom:12}}>
+            <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:5}}>Empleado</Mono>
+            <select value={employeeId} onChange={e=>setEmployeeId(e.target.value)} style={inputStyle}>
+              <option value="all">Todos</option>
+              {employees.map(e=>(<option key={e.id} value={e.id}>{e.name}</option>))}
+            </select>
+          </div>
+        )}
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+          <div>
+            <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:5}}>Desde</Mono>
+            <input type="date" value={dateStart} onChange={e=>{
+              setDateStart(e.target.value);
+              if (e.target.value>dateEnd) setDateEnd(e.target.value);
+            }} style={inputStyle} />
+          </div>
+          <div>
+            <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:5}}>Hasta</Mono>
+            <input type="date" value={dateEnd} min={dateStart} onChange={e=>setDateEnd(e.target.value)} style={inputStyle} />
+          </div>
+        </div>
+
+        <label style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,cursor:"pointer"}}>
+          <input type="checkbox" checked={allDay} onChange={e=>setAllDay(e.target.checked)} />
+          <Mono style={{color:C.text,fontSize:10,textTransform:"none",letterSpacing:0}}>Día(s) completo(s) — ausencia</Mono>
+        </label>
+
+        {!allDay && (
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+            <div>
+              <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:5}}>Hora inicio</Mono>
+              <input type="time" value={timeStart} onChange={e=>setTimeStart(e.target.value)} style={inputStyle} />
+            </div>
+            <div>
+              <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:5}}>Hora fin</Mono>
+              <input type="time" value={timeEnd} onChange={e=>setTimeEnd(e.target.value)} style={inputStyle} />
+            </div>
+          </div>
+        )}
+
+        <div style={{marginBottom:18}}>
+          <Mono style={{color:C.muted,fontSize:8,display:"block",marginBottom:5}}>Motivo</Mono>
+          <input value={reason} onChange={e=>setReason(e.target.value)}
+            placeholder="Vacaciones, cita médica, permiso… (opcional)" style={inputStyle} />
+        </div>
+
+        {!valid && (
+          <div style={{color:C.red,fontSize:10,marginBottom:12}}>
+            Verifica las fechas/horas: inicio debe ser anterior al fin.
+          </div>
+        )}
+
+        <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+          <button onClick={onClose} style={{
+            background:"transparent",border:`1px solid ${C.bdr}`,color:C.muted,
+            cursor:"pointer",padding:"8px 16px",fontSize:11,fontFamily:"'Outfit',sans-serif",
+          }}>Cancelar</button>
+          <button onClick={submit} disabled={!valid} style={{
+            background:valid?C.gold:C.s2,border:"none",color:valid?"#0C0C0C":C.muted,
+            cursor:valid?"pointer":"not-allowed",padding:"8px 16px",fontSize:11,
+            fontFamily:"'Outfit',sans-serif",fontWeight:600,
+          }}>Bloquear</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const BlockSlotsView = () => {
   const [appts,setAppts] = useAppts();
   const [admin] = useAdmin();
@@ -1960,6 +2078,7 @@ const BlockSlotsView = () => {
   const [hovered,setHovered] = React.useState(null);
   const [selectedDate,setSelectedDate] = React.useState(todayStr());
   const [empId,setEmpId] = React.useState("all");
+  const [showRangeModal,setShowRangeModal] = React.useState(false);
 
   const ALL_TIMES = ["9:00","9:30","10:00","10:30","11:00","11:30",
     "12:00","12:30","13:00","13:30","14:00","14:30",
@@ -1968,7 +2087,7 @@ const BlockSlotsView = () => {
   const employees = (admin.employees||[]).filter(e=>e.active);
   const weekDates = getWeekDates(weekOffset);
   const todayD = todayStr();
-  const blockedSlots = appts.blockedSlots || [];
+  const blocks = normalizeBlocks(appts);
 
   const empColor = (id) => {
     const idx = employees.findIndex(e=>e.id===id);
@@ -1976,38 +2095,54 @@ const BlockSlotsView = () => {
   };
 
   const visibleBlocks = (date,time) => {
-    const matches = blockedSlots.filter(b=>b.date===date&&b.time===time);
+    const matches = blocks.filter(b=>blockCoversSlot(b,date,time));
     if (empId==="all") return matches;
-    return matches.filter(b=>!b.employeeId||b.employeeId===empId);
+    return matches.filter(b=>blockAppliesToEmp(b,empId));
   };
 
   const isBlocked = (date,time) => visibleBlocks(date,time).length > 0;
 
+  // Clicking a cell only toggles a single-slot block. Bigger ranges/absences
+  // covering this cell must be removed from the sidebar list (can't slice a
+  // range from a single click without ambiguity about what to keep).
   const toggleSlot = (date,time) => {
-    const existing = blockedSlots.find(b=>
-      b.date===date && b.time===time &&
-      (empId==="all" ? (!b.employeeId) : b.employeeId===empId)
+    const covering = visibleBlocks(date,time);
+    const exact = covering.find(b=>
+      b.dateStart===date && b.dateEnd===date && !b.allDay &&
+      b.timeStart===time && (empId==="all" ? b.employeeId==null : b.employeeId===empId)
     );
-    if (existing) {
-      setAppts(s=>({...s, blockedSlots:(s.blockedSlots||[]).filter(b=>b.id!==existing.id)}));
-    } else {
-      const newSlot = {id:genId(), date, time, reason:reason||"No disponible"};
-      if (empId!=="all") newSlot.employeeId = empId;
-      setAppts(s=>({...s, blockedSlots:[...(s.blockedSlots||[]),newSlot]}));
+    if (exact) {
+      setAppts(s=>removeBlock(s, exact.id));
+      return;
     }
+    if (covering.length>0) {
+      alert("Esta hora está cubierta por un bloqueo de rango. Elimínalo desde la lista de la derecha.");
+      return;
+    }
+    const endMin = timeToMin(time)+BLOCK_SLOT_MIN;
+    const newRange = {
+      id:genId(), dateStart:date, dateEnd:date, allDay:false,
+      timeStart:time, timeEnd:minToTime(endMin),
+      employeeId: empId==="all" ? null : empId,
+      reason: reason||"No disponible", type:"block", createdAt:Date.now(),
+    };
+    setAppts(s=>({...s, blockRanges:[...(s.blockRanges||[]),newRange]}));
   };
 
   const clearDay = (date) => {
     if (!confirm(`¿Desbloquear todas las horas del ${fmtDateShort(date)}?`)) return;
-    setAppts(s=>({...s, blockedSlots:(s.blockedSlots||[]).filter(b=>
-      !(b.date===date && (empId==="all" ? true : (!b.employeeId||b.employeeId===empId)))
-    )}));
+    const matchesEmp = (b) => empId==="all" ? true : blockAppliesToEmp(b,empId);
+    setAppts(s=>({
+      ...s,
+      blockedSlots:(s.blockedSlots||[]).filter(b=>!(b.date===date && matchesEmp(b))),
+      blockRanges:(s.blockRanges||[]).filter(b=>!(b.dateStart===date && b.dateEnd===date && matchesEmp(b))),
+    }));
   };
 
   const blockedForDay = (date) => {
-    const all = blockedSlots.filter(b=>b.date===date);
+    const all = blocks.filter(b=>date>=b.dateStart && date<=(b.dateEnd||b.dateStart));
     if (empId==="all") return all;
-    return all.filter(b=>!b.employeeId||b.employeeId===empId);
+    return all.filter(b=>blockAppliesToEmp(b,empId));
   };
   const selectedBlocked = blockedForDay(selectedDate);
 
