@@ -273,7 +273,7 @@ const minToTime = (mins) => `${Math.floor(mins/60)}:${String(mins%60).padStart(2
 // Salon business hours by JS getDay(): 0=dom … 6=sab.
 // El salón no tiene días cerrados fijos: la disponibilidad real la define
 // cada empleado en su workHours y sus ausencias (blockRanges).
-const ALL_DAY_SLOTS = ["8:00","9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
+const ALL_DAY_SLOTS = ["10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
 const BUSINESS_HOURS = {
   0:ALL_DAY_SLOTS, 1:ALL_DAY_SLOTS, 2:ALL_DAY_SLOTS, 3:ALL_DAY_SLOTS,
   4:ALL_DAY_SLOTS, 5:ALL_DAY_SLOTS, 6:ALL_DAY_SLOTS,
