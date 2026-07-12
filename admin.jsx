@@ -5944,60 +5944,326 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
 // bloqueos quedan asociados a su employeeId y afectan su propia disponibilidad
 // en el portal público y en /api/book, igual que si los creara el admin.
 const EmpAbsencesView = ({emp}) => {
-  const [appts, setAppts] = useAppts();
-  const [showRangeModal, setShowRangeModal] = React.useState(false);
+  const [appts,setAppts] = useAppts();
+  const [weekOffset,setWeekOffset] = React.useState(0);
+  const [reason,setReason] = React.useState("");
+  const [hovered,setHovered] = React.useState(null);
+  const [selectedDate,setSelectedDate] = React.useState(todayStr());
+  const [showRangeModal,setShowRangeModal] = React.useState(false);
 
-  const myBlocks = normalizeBlocks(appts)
-    .filter(b => b.employeeId === emp.id)
-    .filter(b => (b.dateEnd || b.dateStart) >= todayStr()) // oculta bloqueos ya vencidos
-    .sort((a,b) => a.dateStart===b.dateStart
-      ? (a.timeStart||"").localeCompare(b.timeStart||"")
-      : a.dateStart.localeCompare(b.dateStart));
+  const ALL_TIMES = ["9:00","9:30","10:00","10:30","11:00","11:30",
+    "12:00","12:30","13:00","13:30","14:00","14:30",
+    "15:00","15:30","16:00","16:30","17:00","17:30","18:00"];
+
+  const weekDates = getWeekDates(weekOffset);
+  const todayD = todayStr();
+  const myBlocks = normalizeBlocks(appts).filter(b=>b.employeeId===emp.id);
+
+  const visibleBlocks = (date,time) => myBlocks.filter(b=>blockCoversSlot(b,date,time));
+  const isBlocked = (date,time) => visibleBlocks(date,time).length > 0;
+
+  // Clicking a cell only toggles a single-slot block. Bigger ranges/absences
+  // covering this cell must be removed from the sidebar list instead.
+  const toggleSlot = (date,time) => {
+    const covering = visibleBlocks(date,time);
+    const exact = covering.find(b=>
+      b.dateStart===date && b.dateEnd===date && !b.allDay && b.timeStart===time
+    );
+    if (exact) {
+      setAppts(s=>removeBlock(s, exact.id));
+      return;
+    }
+    if (covering.length>0) {
+      alert("Esta hora está cubierta por un bloqueo de rango. Elimínalo desde la lista de la derecha.");
+      return;
+    }
+    const endMin = timeToMin(time)+BLOCK_SLOT_MIN;
+    const newRange = {
+      id:genId(), dateStart:date, dateEnd:date, allDay:false,
+      timeStart:time, timeEnd:minToTime(endMin),
+      employeeId: emp.id,
+      reason: reason||"No disponible", type:"block", createdAt:Date.now(),
+    };
+    setAppts(s=>({...s, blockRanges:[...(s.blockRanges||[]),newRange]}));
+  };
+
+  const clearDay = (date) => {
+    if (!confirm(`¿Desbloquear todas las horas del ${fmtDateShort(date)}?`)) return;
+    setAppts(s=>({
+      ...s,
+      blockedSlots:(s.blockedSlots||[]).filter(b=>!(b.date===date && b.employeeId===emp.id)),
+      blockRanges:(s.blockRanges||[]).filter(b=>!(b.dateStart===date && b.dateEnd===date && b.employeeId===emp.id)),
+    }));
+  };
+
+  const blockedForDay = (date) => myBlocks.filter(b=>date>=b.dateStart && date<=(b.dateEnd||b.dateStart));
+  const selectedBlocked = blockedForDay(selectedDate);
+
+  const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+
+  const weekLabel = () => {
+    const first = weekDates[0]; const last = weekDates[weekDates.length-1];
+    const f = new Date(first+"T12:00"); const l = new Date(last+"T12:00");
+    return `${f.getDate()} – ${l.getDate()} ${l.toLocaleDateString("es-CO",{month:"long",year:"numeric"})}`;
+  };
 
   return (
     <div>
-      <PageHeader title="Mis ausencias" subtitle="Bloquea horas o días en tu agenda"
-        action={<Btn small onClick={()=>setShowRangeModal(true)}>+ Bloquear rango / ausencia</Btn>} />
+      <PageHeader title="Mis ausencias" subtitle="Bloquea horas o días en tu agenda" />
+      <div style={{padding:"24px 32px",display:"grid",gridTemplateColumns:"1fr 280px",gap:24}}>
 
-      {showRangeModal && (
-        <BlockRangeModal
-          employees={[]}
-          lockedEmpId={emp.id}
-          onSave={(range)=>setAppts(s=>({...s, blockRanges:[...(s.blockRanges||[]),range]}))}
-          onClose={()=>setShowRangeModal(false)}
-        />
-      )}
+        {/* Weekly grid */}
+        <Card style={{padding:0,overflow:"hidden"}}>
+          {/* Week nav header */}
+          <div style={{
+            display:"flex",alignItems:"center",justifyContent:"space-between",
+            padding:"16px 20px",borderBottom:`1px solid ${C.bdr}`,
+          }}>
+            <button onClick={()=>setWeekOffset(o=>o-1)} style={{
+              background:"transparent",border:`1px solid ${C.bdr}`,color:C.text,
+              cursor:"pointer",padding:"6px 12px",fontSize:14,
+            }}>←</button>
+            <div style={{textAlign:"center"}}>
+              <Mono style={{color:C.gold,fontSize:10}}>{weekLabel()}</Mono>
+              {weekOffset!==0 && (
+                <button onClick={()=>setWeekOffset(0)} style={{
+                  background:"transparent",border:"none",color:C.muted,
+                  cursor:"pointer",fontSize:10,marginTop:4,display:"block",
+                  fontFamily:"'Outfit',sans-serif",
+                }}>Volver a esta semana</button>
+              )}
+            </div>
+            <button onClick={()=>setWeekOffset(o=>o+1)} style={{
+              background:"transparent",border:`1px solid ${C.bdr}`,color:C.text,
+              cursor:"pointer",padding:"6px 12px",fontSize:14,
+            }}>→</button>
+          </div>
 
-      <div style={{padding:"24px 32px"}}>
-        {myBlocks.length===0 ? (
-          <Card>
-            <div style={{color:C.muted,fontSize:12}}>No tienes horas ni días bloqueados próximamente.</div>
-          </Card>
-        ) : (
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {myBlocks.map(b=>{
-              const multiDay = b.dateStart!==b.dateEnd;
-              const whenLabel = b.allDay
-                ? (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día` : `${fmtDateMed(b.dateStart)} · Todo el día`)
-                : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${b.timeStart}–${b.timeEnd}` : `${fmtDateMed(b.dateStart)} · ${b.timeStart}–${b.timeEnd}`);
-              return (
-                <Card key={b.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px"}}>
-                  <div>
-                    <Mono style={{color:C.gold,fontSize:10,display:"block"}}>{whenLabel}</Mono>
-                    {b.reason && b.reason!=="No disponible" && (
-                      <div style={{fontSize:12,color:C.muted,marginTop:4}}>{b.reason}</div>
+          {/* Reason input */}
+          <div style={{padding:"12px 20px",borderBottom:`1px solid ${C.bdr}`,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+            <Mono style={{color:C.muted,fontSize:8,whiteSpace:"nowrap"}}>Motivo</Mono>
+            <input value={reason} onChange={e=>setReason(e.target.value)}
+              placeholder="Almuerzo, descanso… (opcional)"
+              style={{
+                flex:1,background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,
+                padding:"6px 10px",fontFamily:"'Outfit',sans-serif",fontSize:12,
+                outline:"none",minWidth:160,
+              }} />
+            <button onClick={()=>setShowRangeModal(true)} style={{
+              background:"transparent",border:`1px solid ${C.gold+"60"}`,color:C.gold,
+              cursor:"pointer",padding:"6px 12px",fontSize:10,whiteSpace:"nowrap",
+              fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.08em",
+            }}>+ Bloquear rango / ausencia</button>
+          </div>
+
+          {showRangeModal && (
+            <BlockRangeModal
+              employees={[]}
+              lockedEmpId={emp.id}
+              onSave={(range)=>setAppts(s=>({...s, blockRanges:[...(s.blockRanges||[]),range]}))}
+              onClose={()=>setShowRangeModal(false)}
+            />
+          )}
+
+          {/* Calendar grid */}
+          <div style={{overflowX:"auto"}}>
+            <div style={{
+              display:"grid",
+              gridTemplateColumns:`52px repeat(${weekDates.length},1fr)`,
+              gridAutoRows:"32px",
+              minWidth:520,
+            }}>
+              {/* Header row: day names */}
+              <div style={{
+                background:C.s1,borderBottom:`1px solid ${C.bdr}`,
+                borderRight:`1px solid ${C.bdr}`,
+              }} />
+              {weekDates.map((d,i)=>{
+                const isToday = d===todayD;
+                const isSelected = d===selectedDate;
+                const cnt = blockedForDay(d).length;
+                return (
+                  <button key={d} onClick={()=>setSelectedDate(d)} style={{
+                    background:isToday?`rgba(194,158,102,0.07)`:isSelected?C.s2:C.s1,
+                    borderBottom:`1px solid ${C.bdr}`,
+                    borderRight:`1px solid ${C.bdr}`,
+                    borderLeft:"none",borderTop:"none",
+                    padding:"10px 4px",cursor:"pointer",
+                    textAlign:"center",
+                    outline:isSelected?`1px solid ${C.gold+"50"}`:"none",
+                    outlineOffset:-1,
+                  }}>
+                    <Mono style={{
+                      color:isToday?C.gold:C.muted,
+                      fontSize:8,display:"block",
+                    }}>{DAY_LABELS[i]}</Mono>
+                    <span style={{
+                      color:isToday?C.gold:C.text,
+                      fontSize:13,fontFamily:"'Outfit',sans-serif",
+                      fontWeight:isToday?600:400,
+                    }}>
+                      {new Date(d+"T12:00").getDate()}
+                    </span>
+                    {cnt>0 && (
+                      <Mono style={{
+                        display:"block",fontSize:7,
+                        color:C.red,marginTop:2,
+                      }}>{cnt}✕</Mono>
                     )}
-                  </div>
-                  <button onClick={()=>setAppts(s=>removeBlock(s,b.id))} style={{
-                    background:"transparent",border:`1px solid ${C.red}40`,color:C.red,
-                    cursor:"pointer",padding:"6px 12px",fontSize:11,
-                    fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.08em",
-                  }}>Quitar</button>
-                </Card>
+                  </button>
+                );
+              })}
+
+              {/* Time rows */}
+              {ALL_TIMES.map(t=>{
+                const isBookingTime = TIMES.includes(t);
+                return (
+                  <React.Fragment key={t}>
+                    {/* Time label */}
+                    <div style={{
+                      background:C.s1,
+                      borderBottom:`1px solid ${C.bdr}`,
+                      borderRight:`1px solid ${C.bdr}`,
+                      display:"flex",alignItems:"center",justifyContent:"flex-end",
+                      padding:"0 8px",
+                    }}>
+                      <Mono style={{
+                        color:isBookingTime?C.gold+"90":C.muted,
+                        fontSize:8,
+                      }}>{t}</Mono>
+                    </div>
+                    {/* Day cells */}
+                    {weekDates.map(d=>{
+                      const blocked = isBlocked(d,t);
+                      const isHov = hovered&&hovered.date===d&&hovered.time===t;
+                      const isToday = d===todayD;
+                      const blockTitle = blocked
+                        ? (visibleBlocks(d,t)[0]?.reason || "No disponible")
+                        : "Haz clic para bloquear";
+                      return (
+                        <button key={d} onClick={()=>toggleSlot(d,t)}
+                          onMouseEnter={()=>setHovered({date:d,time:t})}
+                          onMouseLeave={()=>setHovered(null)}
+                          title={blockTitle}
+                          style={{
+                            background:blocked?C.red+"22":
+                                       isHov?"rgba(194,158,102,0.08)":
+                                       isToday?"rgba(194,158,102,0.03)":"transparent",
+                            border:"none",
+                            borderBottom:`1px solid ${C.bdr}`,
+                            borderRight:`1px solid ${C.bdr}`,
+                            cursor:"pointer",
+                            display:"flex",alignItems:"center",justifyContent:"center",
+                            transition:"background 0.1s",
+                          }}>
+                          {blocked
+                            ? <div style={{width:7,height:7,borderRadius:"50%",background:C.red,opacity:0.9}}/>
+                            : isBookingTime && !isHov
+                              ? <div style={{width:3,height:3,borderRadius:"50%",background:C.gold,opacity:0.25}}/>
+                              : isHov
+                                ? <span style={{fontSize:12,color:C.muted,lineHeight:1}}>+</span>
+                                : null
+                          }
+                        </button>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div style={{padding:"12px 20px",display:"flex",gap:16,flexWrap:"wrap",borderTop:`1px solid ${C.bdr}`,alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:7,height:7,borderRadius:"50%",background:C.red,opacity:0.9}}/>
+              <Mono style={{color:C.muted,fontSize:8}}>Bloqueado</Mono>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:5}}>
+              <div style={{width:4,height:4,borderRadius:"50%",background:C.gold,opacity:0.5}}/>
+              <Mono style={{color:C.muted,fontSize:8}}>Hora de reserva</Mono>
+            </div>
+            <Mono style={{color:C.muted,fontSize:8,marginLeft:"auto"}}>Clic para bloquear/desbloquear</Mono>
+          </div>
+        </Card>
+
+        {/* Sidebar: selected day details */}
+        <div style={{display:"flex",flexDirection:"column",gap:16}}>
+          <Card>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+              <div>
+                <Mono style={{color:C.gold,display:"block",fontSize:9}}>
+                  {fmtDateMed(selectedDate)}
+                </Mono>
+                <Mono style={{color:C.muted,fontSize:8,display:"block",marginTop:2}}>
+                  {selectedBlocked.length} bloqueado{selectedBlocked.length!==1?"s":""}
+                </Mono>
+              </div>
+              {selectedBlocked.length>0 && (
+                <button onClick={()=>clearDay(selectedDate)} style={{
+                  background:"transparent",border:`1px solid ${C.red+"50"}`,
+                  color:C.red,cursor:"pointer",fontSize:9,padding:"4px 8px",
+                  fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.1em",
+                }}>Limpiar</button>
+              )}
+            </div>
+            {selectedBlocked.length===0 ? (
+              <div style={{color:C.muted,fontSize:12}}>Sin bloqueos para este día.</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:4}}>
+                {selectedBlocked
+                  .sort((a,b)=>(a.timeStart||"")<(b.timeStart||"")?-1:(a.timeStart||"")>(b.timeStart||"")?1:0)
+                  .map(b=>{
+                  const multiDay = b.dateStart!==b.dateEnd;
+                  const whenLabel = b.allDay
+                    ? (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día` : "Todo el día")
+                    : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${b.timeStart}–${b.timeEnd}` : `${b.timeStart}–${b.timeEnd}`);
+                  return (
+                    <div key={b.id} style={{
+                      display:"flex",justifyContent:"space-between",alignItems:"center",
+                      padding:"6px 10px",background:C.s2,
+                      borderLeft:`2px solid ${C.red}50`,
+                    }}>
+                      <div>
+                        <Mono style={{color:C.red,fontSize:10}}>{whenLabel}</Mono>
+                        {b.reason && b.reason!=="No disponible" && (
+                          <div style={{fontSize:10,color:C.muted,marginTop:2}}>{b.reason}</div>
+                        )}
+                      </div>
+                      <button onClick={()=>setAppts(s=>removeBlock(s, b.id))} style={{
+                        background:"transparent",border:"none",color:C.muted,
+                        cursor:"pointer",fontSize:13,padding:"2px 6px",
+                      }}>✕</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+
+          <Card>
+            <Mono style={{color:C.muted,display:"block",marginBottom:10,fontSize:8}}>
+              Semana actual — total bloqueado
+            </Mono>
+            {weekDates.map(d=>{
+              const cnt = blockedForDay(d).length;
+              const isToday = d===todayD;
+              const isSelected = d===selectedDate;
+              return (
+                <button key={d} onClick={()=>setSelectedDate(d)} style={{
+                  display:"flex",justifyContent:"space-between",alignItems:"center",
+                  width:"100%",padding:"7px 0",background:"transparent",border:"none",
+                  borderBottom:`1px solid ${C.bdr}`,cursor:"pointer",
+                  color:isSelected?C.gold:isToday?C.gold+"90":C.text,
+                  fontFamily:"'Outfit',sans-serif",fontSize:12,
+                }}>
+                  <span style={{fontWeight:isSelected?600:400}}>{fmtDateMed(d)}</span>
+                  <Mono style={{color:cnt>0?C.red:C.muted,fontSize:9}}>{cnt>0?`${cnt} bloq.`:"Libre"}</Mono>
+                </button>
               );
             })}
-          </div>
-        )}
+          </Card>
+        </div>
       </div>
     </div>
   );
