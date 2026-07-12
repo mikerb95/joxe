@@ -440,21 +440,17 @@ const fmtDateSub = (d) => {
 const fmtCOP = (n) => n == null ? "" : "$" + Number(n).toLocaleString("es-CO");
 
 // Business hours — JS getDay(): 0=dom, 1=lun, 2=mar, ..., 6=sab
-// JOXE: Mar—Vie 9-21, Sáb 8-19, Dom—Lun cerrado
+// El salón no tiene días cerrados fijos: la disponibilidad real la define
+// cada empleado en su workHours y sus ausencias (blockRanges).
+const ALL_DAY_SLOTS = ["8:00","9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
 const BUSINESS_HOURS = {
-  0: null,  // dom — cerrado
-  1: null,  // lun — cerrado
-  2: ["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],  // mar
-  3: ["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],  // mie
-  4: ["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],  // jue
-  5: ["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],  // vie
-  6: ["8:00","9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"],           // sab
+  0: ALL_DAY_SLOTS, 1: ALL_DAY_SLOTS, 2: ALL_DAY_SLOTS, 3: ALL_DAY_SLOTS,
+  4: ALL_DAY_SLOTS, 5: ALL_DAY_SLOTS, 6: ALL_DAY_SLOTS,
 };
 
 // Closing time per day in minutes — upper bound for service duration fit check
 const CLOSE_TIME_MIN = {
-  2: 21 * 60, 3: 21 * 60, 4: 21 * 60, 5: 21 * 60,  // mar—vie
-  6: 19 * 60,                                         // sab
+  0: 21 * 60, 1: 21 * 60, 2: 21 * 60, 3: 21 * 60, 4: 21 * 60, 5: 21 * 60, 6: 21 * 60,
 };
 
 const dayOfWeek = (dateStr) => new Date(dateStr + "T12:00").getDay();
