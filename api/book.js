@@ -36,6 +36,20 @@ async function sendPushNotifications(appt) {
   await Promise.allSettled(targets.map(sub => webpush.sendNotification(sub, payload)));
 }
 
+// Notifica al admin vía ntfy.sh (canal independiente del push por dispositivo).
+async function sendNtfyNotification(appt) {
+  const topic = process.env.NTFY_TOPIC;
+  if (!topic) return;
+  await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
+    method: "POST",
+    headers: {
+      Title: "Nuevo turno reservado",
+      Tags: "calendar",
+    },
+    body: `${appt.name ?? "Cliente"} · ${appt.service ?? ""} · ${appt.stylist ?? ""} · ${appt.date ?? ""} ${appt.time ?? ""}`,
+  });
+}
+
 function validateAppt(raw) {
   if (!raw || typeof raw !== "object") return { error: "Invalid body" };
   if (!ID_RE.test(String(raw.id ?? ""))) return { error: "Invalid id" };
@@ -150,6 +164,7 @@ export default async function handler(req, res) {
       const written = await kvCas("turno_store", next, rec ? rec.updatedAt : null);
       if (written) {
         sendPushNotifications(appt).catch(() => {});
+        sendNtfyNotification(appt).catch(() => {});
         return res.status(200).json({ ok: true });
       }
       // Lost the race — loop and re-read the fresh state.
