@@ -358,6 +358,21 @@ const fmtDateMed = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("
 const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
 
 const PENDING_EXPIRE_MS = 60 * 60 * 1000; // 1 hora
+const OVERNIGHT_REVIEW_HOUR = 8;
+const OVERNIGHT_REVIEW_MINUTE = 15;
+
+// Si la solicitud se creó entre 22:00 y 08:00 (jornada de descanso del barbero),
+// no vence en 1 hora: queda pendiente hasta las 08:15am para revisión manual.
+const getPendingDeadline = (createdAt) => {
+  const created = new Date(createdAt || 0);
+  const hour = created.getHours();
+  const isOvernight = hour >= 22 || hour < OVERNIGHT_REVIEW_HOUR;
+  if (!isOvernight) return (createdAt || 0) + PENDING_EXPIRE_MS;
+  const deadline = new Date(created);
+  if (hour >= 22) deadline.setDate(deadline.getDate() + 1);
+  deadline.setHours(OVERNIGHT_REVIEW_HOUR, OVERNIGHT_REVIEW_MINUTE, 0, 0);
+  return deadline.getTime();
+};
 
 const getAllAppts = (store, cancelledIds=[], noShowIds=[]) => {
   const activeIds = new Set(store.active.map(a=>a.id));
@@ -365,7 +380,7 @@ const getAllAppts = (store, cancelledIds=[], noShowIds=[]) => {
   const resolveStatus = (a, fallback) => {
     if (noShowIds.includes(a.id)) return "no-show";
     if (cancelledIds.includes(a.id)) return "cancelled";
-    if (fallback === "pending" && (Date.now() - (a.createdAt||0)) > PENDING_EXPIRE_MS) return "expired";
+    if (fallback === "pending" && Date.now() > getPendingDeadline(a.createdAt)) return "expired";
     return fallback;
   };
   const result = [];
