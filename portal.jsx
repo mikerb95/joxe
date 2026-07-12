@@ -372,7 +372,22 @@ const QRCode = ({ value, size = 220, fg = "#0C0C0C", bg = "#F5F1EA" }) => {
 // ============================================================
 
 const PENDING_EXPIRE_MS = 60 * 60 * 1000; // 1 hora
-const isPendingExpired = (a) => a.status === "pending" && (Date.now() - (a.createdAt || 0)) > PENDING_EXPIRE_MS;
+const OVERNIGHT_REVIEW_HOUR = 8;
+const OVERNIGHT_REVIEW_MINUTE = 15;
+
+// Si la solicitud se creó entre 22:00 y 08:00 (jornada de descanso del barbero),
+// no vence en 1 hora: queda pendiente hasta las 08:15am para revisión manual.
+const getPendingDeadline = (createdAt) => {
+  const created = new Date(createdAt || 0);
+  const hour = created.getHours();
+  const isOvernight = hour >= 22 || hour < OVERNIGHT_REVIEW_HOUR;
+  if (!isOvernight) return (createdAt || 0) + PENDING_EXPIRE_MS;
+  const deadline = new Date(created);
+  if (hour >= 22) deadline.setDate(deadline.getDate() + 1);
+  deadline.setHours(OVERNIGHT_REVIEW_HOUR, OVERNIGHT_REVIEW_MINUTE, 0, 0);
+  return deadline.getTime();
+};
+const isPendingExpired = (a) => a.status === "pending" && Date.now() > getPendingDeadline(a.createdAt);
 
 // Helpers — hora Colombia (COT = UTC-5)
 const nowCOT = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
