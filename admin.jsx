@@ -270,16 +270,15 @@ const AGENDA_HOURS = ["10:00","11:00","12:00","13:00","14:00","15:00","16:00","1
 // ---- Booking availability helpers (mirror booking portal) ----
 const timeToMin = (t) => { const [h,m]=String(t).split(":").map(Number); return h*60+(m||0); };
 const minToTime = (mins) => `${Math.floor(mins/60)}:${String(mins%60).padStart(2,"0")}`;
-// Salon business hours by JS getDay(): 0=dom … 6=sab (mar–vie 9-20, sáb 8-18, dom/lun cerrado)
+// Salon business hours by JS getDay(): 0=dom … 6=sab.
+// El salón no tiene días cerrados fijos: la disponibilidad real la define
+// cada empleado en su workHours y sus ausencias (blockRanges).
+const ALL_DAY_SLOTS = ["8:00","9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
 const BUSINESS_HOURS = {
-  0:null, 1:null,
-  2:["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],
-  3:["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],
-  4:["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],
-  5:["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"],
-  6:["8:00","9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00"],
+  0:ALL_DAY_SLOTS, 1:ALL_DAY_SLOTS, 2:ALL_DAY_SLOTS, 3:ALL_DAY_SLOTS,
+  4:ALL_DAY_SLOTS, 5:ALL_DAY_SLOTS, 6:ALL_DAY_SLOTS,
 };
-const CLOSE_TIME_MIN = { 2:21*60, 3:21*60, 4:21*60, 5:21*60, 6:19*60 };
+const CLOSE_TIME_MIN = { 0:21*60, 1:21*60, 2:21*60, 3:21*60, 4:21*60, 5:21*60, 6:21*60 };
 const WORK_DAY_KEYS  = ["dom","lun","mar","mie","jue","vie","sab"];
 const dayOfWeekIdx = (dateStr) => new Date(dateStr+"T12:00").getDay();
 const isClosedDay  = (dateStr) => !BUSINESS_HOURS[dayOfWeekIdx(dateStr)];
