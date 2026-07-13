@@ -261,7 +261,13 @@ const useAppts = () => {
 };
 
 // ==================== HELPERS ====================
-const todayStr = () => new Date().toISOString().split("T")[0];
+// Hora Colombia (COT = UTC-5) — evita que el servidor/navegador en UTC
+// muestre el día equivocado durante la noche en Bogotá.
+const nowCOT = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
+const todayStr = () => {
+  const d = nowCOT();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+};
 const genId    = () => Math.random().toString(36).slice(2, 10);
 const TIMES    = ["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
 // Rango horario que muestra la vista diaria vertical de la agenda (10am a 10pm)
