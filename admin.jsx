@@ -405,7 +405,7 @@ const getAllAppts = (store, cancelledIds=[], noShowIds=[]) => {
 };
 
 const getWeekDates = (offset=0) => {
-  const now = new Date();
+  const now = nowCOT();
   const day = now.getDay();
   const monday = new Date(now);
   monday.setDate(now.getDate() - (day===0?6:day-1) + offset*7);
@@ -1182,7 +1182,7 @@ const AgendaView = () => {
                   const isBlocked  = blocked.some(b=>b.time===time);
                   const [h,m]      = time.split(":").map(Number);
                   const slotMin    = h*60+(m||0);
-                  const nowMin     = new Date().getHours()*60+new Date().getMinutes();
+                  const nowMin     = nowCOT().getHours()*60+nowCOT().getMinutes();
                   const isPast     = isToday && slotMin < nowMin-30;
 
                   return (
@@ -2617,7 +2617,7 @@ const RevenueView = () => {
   const expenses  = (admin.expenses||[]).filter(r=>!r.deleted);
   const employees = (admin.employees||[]).filter(e=>e.active);
   const todayD    = todayStr();
-  const now       = new Date();
+  const now       = nowCOT();
   const weekStart = (() => {
     const d=new Date(now); d.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1));
     return d.toISOString().split("T")[0];
@@ -3150,7 +3150,7 @@ const CommissionsView = () => {
   const payouts   = admin.payouts||[];
 
   const todayD = todayStr();
-  const now = new Date();
+  const now = nowCOT();
   const weekStart = (()=>{ const d=new Date(now); d.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1)); return d.toISOString().split("T")[0]; })();
   const monthStart = todayD.slice(0,7)+"-01";
   const periodStart = period==="week"?weekStart:period==="month"?monthStart:"";
@@ -5716,7 +5716,7 @@ const EmpAgendaView = ({emp, onNav}) => {
             const slotAppts = byTime[time]||[];
             const [h,m]     = time.split(":").map(Number);
             const slotMin   = h*60+(m||0);
-            const nowMin    = new Date().getHours()*60+new Date().getMinutes();
+            const nowMin    = nowCOT().getHours()*60+nowCOT().getMinutes();
             const isPast    = isToday && slotMin < nowMin-30;
 
             return (
@@ -6331,7 +6331,7 @@ const EmpBookingView = ({emp, onNav}) => {
   const dayAppts = allAppts.filter(a=> a.stylist===emp.name && a.date===form.date && !["cancelled","no-show"].includes(a.computedStatus));
   const blocked  = (appts.blockedSlots||[]).filter(b=>b.date===form.date);
 
-  const nowMin = new Date().getHours()*60 + new Date().getMinutes();
+  const nowMin = nowCOT().getHours()*60 + nowCOT().getMinutes();
   const isPastSlot = (time) => form.date===todayD && timeToMin(time) < nowMin;
 
   // ¿El bloque [inicio, inicio+dur) cabe sin chocar con otra cita / bloqueo / cierre?
