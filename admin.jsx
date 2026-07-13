@@ -264,10 +264,10 @@ const useAppts = () => {
 // Hora Colombia (COT = UTC-5) — evita que el servidor/navegador en UTC
 // muestre el día equivocado durante la noche en Bogotá.
 const nowCOT = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }));
-const todayStr = () => {
-  const d = nowCOT();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-};
+// Formatea un Date a "YYYY-MM-DD" usando sus campos locales (no UTC), para
+// no cruzar de día al convertir con toISOString() en horas de la tarde/noche.
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const todayStr = () => ymd(nowCOT());
 const genId    = () => Math.random().toString(36).slice(2, 10);
 const TIMES    = ["9:00","10:00","11:00","12:00","13:00","14:00","15:00","16:00","17:00","18:00","19:00","20:00"];
 // Rango horario que muestra la vista diaria vertical de la agenda (10am a 10pm)
@@ -411,7 +411,7 @@ const getWeekDates = (offset=0) => {
   monday.setDate(now.getDate() - (day===0?6:day-1) + offset*7);
   return Array.from({length:6},(_,i)=>{
     const d = new Date(monday); d.setDate(monday.getDate()+i);
-    return d.toISOString().split("T")[0];
+    return ymd(d);
   });
 };
 
@@ -2620,7 +2620,7 @@ const RevenueView = () => {
   const now       = nowCOT();
   const weekStart = (() => {
     const d=new Date(now); d.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1));
-    return d.toISOString().split("T")[0];
+    return ymd(d);
   })();
   const monthStart = todayD.slice(0,7)+"-01";
 
@@ -3151,7 +3151,7 @@ const CommissionsView = () => {
 
   const todayD = todayStr();
   const now = nowCOT();
-  const weekStart = (()=>{ const d=new Date(now); d.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1)); return d.toISOString().split("T")[0]; })();
+  const weekStart = (()=>{ const d=new Date(now); d.setDate(now.getDate()-(now.getDay()===0?6:now.getDay()-1)); return ymd(d); })();
   const monthStart = todayD.slice(0,7)+"-01";
   const periodStart = period==="week"?weekStart:period==="month"?monthStart:"";
 
