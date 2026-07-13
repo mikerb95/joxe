@@ -55,7 +55,8 @@ export default async function handler(req, res) {
 
     if (action === "summary") {
       const store = await kvGet("turno_store");
-      const today = new Date().toISOString().slice(0, 10);
+      const today = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Bogota" }))
+        .toISOString().slice(0, 10);
 
       const slim = a => ({
         id: a.id, name: a.name, service: a.service, serviceDur: a.serviceDur,

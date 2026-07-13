@@ -3253,7 +3253,7 @@ const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
         )}
 
         <PMono style={{ color: "rgba(245,241,234,0.4)", display: "block", marginBottom: 24 }}>
-          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long' })}
+          {new Date().toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Bogota' })}
         </PMono>
 
         {todayAppts.length === 0 ? (
@@ -3683,7 +3683,7 @@ const AgendaPortal = () => {
     catch { return d; }
   };
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
 
   // Citas pendientes del empleado logueado (todas las fechas — para confirmar)
   const myPending = React.useMemo(() => {
