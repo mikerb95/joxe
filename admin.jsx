@@ -409,7 +409,7 @@ const getWeekDates = (offset=0) => {
   const day = now.getDay();
   const monday = new Date(now);
   monday.setDate(now.getDate() - (day===0?6:day-1) + offset*7);
-  return Array.from({length:6},(_,i)=>{
+  return Array.from({length:7},(_,i)=>{
     const d = new Date(monday); d.setDate(monday.getDate()+i);
     return ymd(d);
   });
@@ -2295,7 +2295,7 @@ const BlockSlotsView = () => {
   };
   const selectedBlocked = blockedForDay(selectedDate);
 
-  const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
   const weekLabel = () => {
     const first = weekDates[0]; const last = weekDates[weekDates.length-1];
@@ -4389,7 +4389,7 @@ const StylistSettingsView = ({ empId, onNav }) => {
   const weekDates    = getWeekDates(weekOffset);
   const todayD       = todayStr();
   const myAllBlocks  = normalizeBlocks(appts).filter(b => b.employeeId === empId);
-  const DAY_LABELS   = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const DAY_LABELS   = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
   const myBlocks   = (date, time) => myAllBlocks.filter(b => blockCoversSlot(b, date, time));
   const isBlocked  = (date, time) => myBlocks(date, time).length > 0;
@@ -6020,7 +6020,7 @@ const EmpAbsencesView = ({emp}) => {
   const blockedForDay = (date) => myBlocks.filter(b=>date>=b.dateStart && date<=(b.dateEnd||b.dateStart));
   const selectedBlocked = blockedForDay(selectedDate);
 
-  const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb"];
+  const DAY_LABELS = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
 
   const weekLabel = () => {
     const first = weekDates[0]; const last = weekDates[weekDates.length-1];
