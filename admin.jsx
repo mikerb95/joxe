@@ -3495,18 +3495,19 @@ const EmployeesView = () => {
     if (!newEmp.name.trim()) return;
     const emp = { id:genId(), name:newEmp.name.trim(), role:newEmp.role, services:newEmp.services,
       pin:newEmp.pin||"", commissionPct:Number(newEmp.commissionPct)||0,
+      ntfyTopic:newEmp.ntfyTopic?.trim()||"",
       workHours:newEmp.workHours||DEFAULT_WORK_HOURS(), active:true };
     // Also sync to stylists list for booking portal
     const stylists = [...(admin.stylists||[])];
     if (!stylists.includes(emp.name)) stylists.push(emp.name);
     setAdmin(a=>({...a, employees:[...(a.employees||[]),emp], stylists}));
-    setNewEmp({name:"",role:"Estilista",services:[],pin:"",commissionPct:"",workHours:DEFAULT_WORK_HOURS()});
+    setNewEmp({name:"",role:"Estilista",services:[],pin:"",commissionPct:"",ntfyTopic:"",workHours:DEFAULT_WORK_HOURS()});
     setShowAdd(false);
   };
 
   const startEdit = (e) => {
     setEditId(e.id);
-    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",commissionPct:e.commissionPct||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})}});
+    setEditForm({name:e.name,role:e.role,services:[...(e.services||[])],pin:e.pin||"",commissionPct:e.commissionPct||"",ntfyTopic:e.ntfyTopic||"",workHours:{...DEFAULT_WORK_HOURS(),...(e.workHours||{})}});
   };
 
   const saveEdit = (id) => {
@@ -3565,6 +3566,13 @@ const EmployeesView = () => {
               value={newEmp.commissionPct}
               placeholder="0"
               onChange={e=>setNewEmp({...newEmp,commissionPct:e.target.value})} />
+            <div>
+              <FieldInput label="Tópico ntfy (opcional)"
+                value={newEmp.ntfyTopic||""}
+                placeholder="ej: joxe-laura-7f2a"
+                onChange={e=>setNewEmp({...newEmp,ntfyTopic:e.target.value.replace(/\s/g,"")})} />
+              <div style={{fontSize:10,color:C.muted,marginTop:4}}>El empleado se suscribe a este tópico en la app ntfy para recibir solo sus citas</div>
+            </div>
           </div>
           <div style={{marginBottom:14}}>
             <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios que ofrece</Mono>
@@ -3743,6 +3751,13 @@ const EmployeesView = () => {
                         value={editForm.commissionPct ?? ""}
                         placeholder="0"
                         onChange={e=>setEditForm({...editForm,commissionPct:e.target.value})} />
+                      <div>
+                        <FieldInput label="Tópico ntfy (opcional)"
+                          value={editForm.ntfyTopic||""}
+                          placeholder="ej: joxe-laura-7f2a"
+                          onChange={e=>setEditForm({...editForm,ntfyTopic:e.target.value.replace(/\s/g,"")})} />
+                        <div style={{fontSize:10,color:C.muted,marginTop:4}}>Notificaciones ntfy solo para sus citas</div>
+                      </div>
                     </div>
                     <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:10}}>Servicios</Mono>
                     <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:14}}>

@@ -36,10 +36,7 @@ async function sendPushNotifications(appt) {
   await Promise.allSettled(targets.map(sub => webpush.sendNotification(sub, payload)));
 }
 
-// Notifica al admin vía ntfy.sh (canal independiente del push por dispositivo).
-async function sendNtfyNotification(appt) {
-  const topic = process.env.NTFY_TOPIC;
-  if (!topic) return;
+async function publishNtfy(topic, appt) {
   await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
     method: "POST",
     headers: {
@@ -48,6 +45,18 @@ async function sendNtfyNotification(appt) {
     },
     body: `${appt.name ?? "Cliente"} · ${appt.service ?? ""} · ${appt.stylist ?? ""} · ${appt.date ?? ""} ${appt.time ?? ""}`,
   });
+}
+
+// Notifica al admin (canal general) vía ntfy.sh, y al tópico propio del
+// estilista asignado si tiene uno configurado — así cada empleado solo
+// recibe avisos de sus propias citas.
+async function sendNtfyNotification(appt) {
+  const adminTopic = process.env.NTFY_TOPIC;
+  const admin = await kvGet("admin_store");
+  const empTopic = (admin?.employees || []).find(e => e.name === appt.stylist)?.ntfyTopic || null;
+
+  const topics = new Set([adminTopic, empTopic].filter(Boolean));
+  await Promise.allSettled([...topics].map(t => publishNtfy(t, appt)));
 }
 
 function validateAppt(raw) {
