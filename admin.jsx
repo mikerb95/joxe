@@ -7068,6 +7068,7 @@ const AdminPortal = () => {
       reservar:       (p)=><EmpBookingView         {...p} emp={empSes} onNav={nav}/>,
       confirmaciones: (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="confirmaciones"/>,
       todas:          (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="todas"/>,
+      horario:        (p)=><EmpWorkHoursView       {...p} emp={empSes}/>,
       ausencias:      (p)=><EmpAbsencesView        {...p} emp={empSes}/>,
       ayuda:          (p)=><EmpHelpView            {...p} onNav={nav}/>,
     }[view] || ((p)=><EmpAgendaView {...p} emp={empSes} onNav={nav}/>);
