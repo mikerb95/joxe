@@ -6847,9 +6847,67 @@ const EMP_VIEWS = [
   {id:"reservar",      label:"Reservar turno",  icon:"＋"},
   {id:"confirmaciones",label:"Confirmar citas", icon:"◉"},
   {id:"todas",         label:"Mis Citas",       icon:"≡"},
+  {id:"horario",       label:"Mi Horario",      icon:"◷"},
   {id:"ausencias",     label:"Mis ausencias",   icon:"⊘"},
   {id:"ayuda",         label:"Ayuda",           icon:"?"},
 ];
+
+// Empleado edita su propio horario laboral desde /staff. Se guarda vía
+// /api/work-hours (endpoint acotado: solo puede tocar su propio workHours),
+// a diferencia de StylistSettingsView que usa /api/admin y es solo-admin.
+const EmpWorkHoursView = ({ emp }) => {
+  const [workHours, setWorkHours] = React.useState(null);
+  const [saving, setSaving]       = React.useState(false);
+  const [saved, setSaved]         = React.useState(false);
+  const [err, setErr]             = React.useState("");
+
+  React.useEffect(() => {
+    fetch("/api/catalog").then(r => r.ok ? r.json() : null).then(d => {
+      const me = (d?.employees || []).find(e => e.id === emp.id);
+      setWorkHours({ ...DEFAULT_WORK_HOURS(), ...(me?.workHours || {}) });
+    }).catch(() => setWorkHours(DEFAULT_WORK_HOURS()));
+  }, [emp.id]);
+
+  const save = async () => {
+    setSaving(true); setErr(""); setSaved(false);
+    try {
+      const res = await fetch("/api/work-hours", {
+        method: "POST",
+        headers: staffHeaders(),
+        body: JSON.stringify({ workHours }),
+      });
+      if (!res.ok) throw new Error();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setErr("No se pudo guardar. Intenta de nuevo.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <PageHeader title="Mi Horario" subtitle="Define los días y horas en que trabajas" />
+      <div style={{ padding: "24px 32px", maxWidth: 520 }}>
+        <Card>
+          {!workHours ? (
+            <Mono style={{ fontSize: 10, color: C.muted }}>Cargando…</Mono>
+          ) : (
+            <>
+              <WorkHoursEditor value={workHours} onChange={setWorkHours} />
+              <div style={{ marginTop: 16, display: "flex", gap: 10, alignItems: "center" }}>
+                <Btn onClick={save} disabled={saving}>{saving ? "Guardando…" : "Guardar horario"}</Btn>
+                {saved && <Mono style={{ color: C.green, fontSize: 9 }}>✓ Guardado</Mono>}
+                {err && <Mono style={{ color: C.red, fontSize: 9 }}>{err}</Mono>}
+              </div>
+            </>
+          )}
+        </Card>
+      </div>
+    </div>
+  );
+};
 
 const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
   const [mobileOpen,setMobileOpen] = React.useState(false);
