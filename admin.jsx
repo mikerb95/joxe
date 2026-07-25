@@ -3462,7 +3462,7 @@ const WorkHoursSummary = ({ workHours }) => {
             fontFamily: "'JetBrains Mono',monospace", letterSpacing: "0.06em",
             background: "rgba(194,158,102,0.08)", color: C.gold,
             border: `1px solid ${C.gold}25`,
-          }} title={`${d.start} – ${d.end}`}>{label}</span>
+          }} title={`${formatTime12h(d.start)} – ${formatTime12h(d.end)}`}>{label}</span>
         );
       })}
     </div>
