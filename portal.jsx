@@ -1993,7 +1993,7 @@ const CuentaPortal = () => {
     const msg = [
       `Hola 👋 Quiero *reagendar* mi cita:`,
       `✂️ ${a.service}${a.stylist ? ` con ${a.stylist}` : ""}`,
-      `📅 ${a.date} a las ${a.time}`,
+      `📅 ${a.date} a las ${formatTime12h(a.time)}`,
       a.code ? `Código: ${a.code}` : "",
       ``,
       `¿Qué otros horarios tienen disponibles?`,
@@ -2004,7 +2004,7 @@ const CuentaPortal = () => {
   const cancelAppt = async (a) => {
     const ok = await dialog.confirm({
       title: "Cancelar cita",
-      body: `¿Seguro que quieres cancelar tu cita de ${a.service} el ${fmtDate(a.date)}${a.time ? ` a las ${a.time}` : ""}?`,
+      body: `¿Seguro que quieres cancelar tu cita de ${a.service} el ${fmtDate(a.date)}${a.time ? ` a las ${formatTime12h(a.time)}` : ""}?`,
       confirmLabel: "Sí, cancelar", cancelLabel: "No", danger: true,
     });
     if (!ok) return;
@@ -2367,7 +2367,7 @@ const CuentaPortal = () => {
                         <div style={{ fontSize: 13, opacity: 0.55, lineHeight: 1.6 }}>
                           {a.stylist && <>{a.stylist} · </>}
                           {fmtDate(a.date)}
-                          {a.time && <> · {a.time}</>}
+                          {a.time && <> · {formatTime12h(a.time)}</>}
                         </div>
                       </div>
 
@@ -2479,7 +2479,7 @@ const CuentaPortal = () => {
                       )}
                     </div>
                     <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.3)" }}>
-                      {a.time}
+                      {formatTime12h(a.time)}
                     </PMono>
                     <span style={{
                       padding: "3px 10px", fontSize: 9,
@@ -3839,7 +3839,7 @@ const AgendaPortal = () => {
         background: "rgba(245,241,234,0.04)",
         border: "1px solid rgba(245,241,234,0.08)",
       }}>
-        <PMono style={{ fontSize: 12, color: "#F5F1EA", minWidth: 42 }}>{a.time}</PMono>
+        <PMono style={{ fontSize: 12, color: "#F5F1EA", minWidth: 42 }}>{formatTime12h(a.time)}</PMono>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontFamily: "'Outfit', sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name || "—"}</div>
           <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.4)", display: "block", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.service}</PMono>
@@ -3982,7 +3982,7 @@ const AgendaPortal = () => {
                       transition: "all 0.3s",
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isDone ? 0 : 10 }}>
-                        <PMono style={{ fontSize: 12, color: "#F5F1EA", minWidth: 42 }}>{a.time}</PMono>
+                        <PMono style={{ fontSize: 12, color: "#F5F1EA", minWidth: 42 }}>{formatTime12h(a.time)}</PMono>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 14, fontFamily: "'Outfit', sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name || "—"}</div>
                           <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.4)", display: "block", marginTop: 2 }}>{a.service}</PMono>
@@ -4170,7 +4170,7 @@ const AgendaPortal = () => {
                       <PMono style={{ color: "rgba(245,241,234,0.5)", fontSize: 10, display: "block" }}>
                         {fmtDate(a.date)}
                       </PMono>
-                      <PMono style={{ color: "#F5F1EA", fontSize: 13 }}>{a.time}</PMono>
+                      <PMono style={{ color: "#F5F1EA", fontSize: 13 }}>{formatTime12h(a.time)}</PMono>
                     </div>
                   </div>
 
