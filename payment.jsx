@@ -12,6 +12,15 @@ const adminHeaders = () => ({
   "Authorization": `Bearer ${getToken()}`,
 });
 
+// Convierte "HH:MM" (24h, formato interno) a "h:MM AM/PM" para mostrar en la UI.
+const formatTime12h = (t) => {
+  if (!t) return "—";
+  const [h, m] = String(t).split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m || 0).padStart(2, "0")} ${period}`;
+};
+
 const C = {
   bg: "#0C0C0C", s1: "#111", s2: "#181818",
   bdr: "rgba(245,241,234,0.1)",
