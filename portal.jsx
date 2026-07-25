@@ -1014,7 +1014,7 @@ const BookingPortal = () => {
                     Turno seleccionado
                   </PMono>
                   <div style={{ fontFamily: "'Marcellus', serif", fontSize: 18 }}>
-                    {fmtDateLabel(form.date)} · {form.time}
+                    {fmtDateLabel(form.date)} · {formatTime12h(form.time)}
                   </div>
                   <div style={{ fontSize: 12, opacity: 0.6, marginTop: 2 }}>{fmtDateSub(form.date)}</div>
                 </div>
@@ -1107,7 +1107,7 @@ const BookingPortal = () => {
                 </PMono>
                 <div style={{ fontFamily: "'Marcellus', serif", fontSize: 22, lineHeight: 1.4 }}>{form.service}</div>
                 <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, opacity: 0.7, marginTop: 6, letterSpacing: "0.05em" }}>
-                  {fmtDateLabel(form.date)} {fmtDateSub(form.date)} · {form.time}
+                  {fmtDateLabel(form.date)} {fmtDateSub(form.date)} · {formatTime12h(form.time)}
                 </div>
                 <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
                   {form.stylist}
@@ -1180,7 +1180,7 @@ const BookingPortal = () => {
                   ["Servicio", ticket.service],
                   ["Estilista", ticket.stylist],
                   ["Fecha", ticket.date],
-                  ["Hora", ticket.time],
+                  ["Hora", formatTime12h(ticket.time)],
                 ].map(([k, v]) => (
                   <div key={k}>
                     <PMono style={{ color: "rgba(245,241,234,0.4)", fontSize: 9, display: "block", marginBottom: 4 }}>{k}</PMono>
@@ -1227,7 +1227,7 @@ const BookingPortal = () => {
                 {/* Botón WhatsApp */}
                 <a
                   href={`https://wa.me/${waAdminRaw}?text=${encodeURIComponent(
-                    `Hola, quiero confirmar mi cita 🗓️\n\nNombre: ${ticket.name}\nServicio: ${ticket.service}\nFecha: ${ticket.date} a las ${ticket.time}\nEstilista: ${ticket.stylist}\nCódigo: ${ticket.code}\n\nAdjunto comprobante de abono de $10.000 a Nequi/DaviPlata 3124499862.`
+                    `Hola, quiero confirmar mi cita 🗓️\n\nNombre: ${ticket.name}\nServicio: ${ticket.service}\nFecha: ${ticket.date} a las ${formatTime12h(ticket.time)}\nEstilista: ${ticket.stylist}\nCódigo: ${ticket.code}\n\nAdjunto comprobante de abono de $10.000 a Nequi/DaviPlata 3124499862.`
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -3288,7 +3288,7 @@ const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
                 }}>
                   {/* Hora */}
                   <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 15,
-                    color: "#C29E66", letterSpacing: "0.08em" }}>{appt.time || "—"}</div>
+                    color: "#C29E66", letterSpacing: "0.08em" }}>{appt.time ? formatTime12h(appt.time) : "—"}</div>
 
                   {/* Info cliente */}
                   <div>
