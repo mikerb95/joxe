@@ -454,6 +454,15 @@ const fmtDateSub = (d) => {
 
 const fmtCOP = (n) => n == null ? "" : "$" + Number(n).toLocaleString("es-CO");
 
+// Convierte "HH:MM" (24h, formato interno) a "h:MM AM/PM" para mostrar en la UI.
+const formatTime12h = (t) => {
+  if (!t) return "—";
+  const [h, m] = String(t).split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m || 0).padStart(2, "0")} ${period}`;
+};
+
 // Business hours — JS getDay(): 0=dom, 1=lun, 2=mar, ..., 6=sab
 // El salón no tiene días cerrados fijos: la disponibilidad real la define
 // cada empleado en su workHours y sus ausencias (blockRanges).
