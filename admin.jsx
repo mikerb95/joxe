@@ -1046,7 +1046,7 @@ const DashboardView = ({onNav}) => {
                     display:"grid",gridTemplateColumns:"56px 1fr auto",gap:12,
                     padding:"12px 14px",background:C.s2,alignItems:"center",
                   }}>
-                    <Mono style={{color:C.gold,fontSize:12}}>{a.time}</Mono>
+                    <Mono style={{color:C.gold,fontSize:12}}>{formatTime12h(a.time)}</Mono>
                     <div>
                       <div style={{fontSize:14,marginBottom:2}}>{a.name}</div>
                       <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
@@ -1077,7 +1077,7 @@ const DashboardView = ({onNav}) => {
                       </div>
                       <div style={{textAlign:"right"}}>
                         <Mono style={{color:C.gold,fontSize:10}}>{fmtDateShort(a.date)}</Mono>
-                        <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.time}</div>
+                        <div style={{fontSize:11,color:C.muted,marginTop:2}}>{formatTime12h(a.time)}</div>
                       </div>
                     </div>
                   ))}
@@ -1373,7 +1373,7 @@ const AppointmentsView = () => {
     const msg = [
       `Hola ${(appt.name||"").split(" ")[0]} 👋 Soy de ${salonName}.`,
       `Recibimos tu solicitud de cita:`,
-      `📅 ${appt.date} a las ${appt.time}`,
+      `📅 ${appt.date} a las ${formatTime12h(appt.time)}`,
       `✂️ ${appt.service} con ${appt.stylist}`,
       ``,
       `Para confirmar tu reserva, realiza un abono de $10.000 y envíanos la captura:`,
@@ -1480,7 +1480,7 @@ const AppointmentsView = () => {
                       gap:12,padding:"14px 18px",cursor:"pointer",alignItems:"center",
                     }}
                   >
-                    <Mono style={{color:C.gold,fontSize:10}}>{a.time||"—"}</Mono>
+                    <Mono style={{color:C.gold,fontSize:10}}>{a.time ? formatTime12h(a.time) : "—"}</Mono>
                     <Mono className="adm-hide-mobile" style={{color:C.muted,fontSize:9}}>{fmtDateShort(a.date)}</Mono>
                     <div>
                       <div style={{fontSize:14}}>{a.name}</div>
@@ -5506,7 +5506,7 @@ const EmpDashboardView = ({emp, onNav}) => {
                     display:"grid",gridTemplateColumns:"50px 1fr auto",gap:10,
                     padding:"12px 14px",background:C.s2,alignItems:"center",
                   }}>
-                    <Mono style={{color:C.gold,fontSize:12}}>{a.time}</Mono>
+                    <Mono style={{color:C.gold,fontSize:12}}>{formatTime12h(a.time)}</Mono>
                     <div>
                       <div style={{fontSize:14}}>{a.name}</div>
                       <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
@@ -5531,7 +5531,7 @@ const EmpDashboardView = ({emp, onNav}) => {
                       padding:"10px 12px",background:C.s2,border:`1px solid ${C.gold}20`,
                     }}>
                       <div style={{fontSize:13}}>{a.name}</div>
-                      <div style={{fontSize:11,color:C.muted}}>{fmtDateShort(a.date)} · {a.time} · {a.service}</div>
+                      <div style={{fontSize:11,color:C.muted}}>{fmtDateShort(a.date)} · {formatTime12h(a.time)} · {a.service}</div>
                     </div>
                   ))}
                 </div>
@@ -5561,7 +5561,7 @@ const EmpDashboardView = ({emp, onNav}) => {
                       </div>
                       <div style={{textAlign:"right"}}>
                         <Mono style={{color:C.gold,fontSize:10}}>{fmtDateShort(a.date)}</Mono>
-                        <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.time}</div>
+                        <div style={{fontSize:11,color:C.muted,marginTop:2}}>{formatTime12h(a.time)}</div>
                       </div>
                     </div>
                   ))}
@@ -5933,7 +5933,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
                 display:"grid",gridTemplateColumns:"50px 60px 1fr 120px auto",
                 gap:12,padding:"14px 18px",alignItems:"center",
               }}>
-                <Mono style={{color:C.gold,fontSize:11}}>{a.time||"—"}</Mono>
+                <Mono style={{color:C.gold,fontSize:11}}>{a.time ? formatTime12h(a.time) : "—"}</Mono>
                 <Mono style={{color:C.muted,fontSize:9}}>{fmtDateShort(a.date)}</Mono>
                 <div>
                   <div style={{fontSize:14}}>{a.name}</div>
@@ -6444,7 +6444,7 @@ const EmpBookingView = ({emp, onNav}) => {
       const overlapping = freshDayAppts.find(a=>{ const as=timeToMin(a.time), ae=as+(a.serviceDur||60); return as<e && s<ae; });
       if (overlapping) {
         const withEnd = minToTime(timeToMin(overlapping.time)+(overlapping.serviceDur||60));
-        setErr(`Mientras reservabas, ${overlapping.name} agendó ${overlapping.time}–${withEnd}. Elige otro bloque.`);
+        setErr(`Mientras reservabas, ${overlapping.name} agendó ${formatTime12h(overlapping.time)}–${formatTime12h(withEnd)}. Elige otro bloque.`);
         const warning = {
           id: genId(), stylist: emp.name, date: form.date,
           time: form.time, end: minToTime(e),
@@ -6491,7 +6491,7 @@ const EmpBookingView = ({emp, onNav}) => {
     setSaving(false);
     if (conflict) {
       const withEnd = minToTime(timeToMin(conflict.time)+(conflict.serviceDur||60));
-      setErr(`Mientras reservabas, ${conflict.name} agendó ${conflict.time}–${withEnd}. Elige otro bloque.`);
+      setErr(`Mientras reservabas, ${conflict.name} agendó ${formatTime12h(conflict.time)}–${formatTime12h(withEnd)}. Elige otro bloque.`);
       return;
     }
     setDone(appt);
@@ -6520,7 +6520,7 @@ const EmpBookingView = ({emp, onNav}) => {
                 ["Celular", done.phone],
                 ["Servicio", `${done.service} · ${done.serviceDur} min`],
                 ["Fecha", new Date(done.date+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"})],
-                ["Bloque", `${done.time} – ${endT}`],
+                ["Bloque", `${formatTime12h(done.time)} – ${formatTime12h(endT)}`],
               ].map(([k,v])=>(
                 <div key={k} style={{display:"flex",justifyContent:"space-between",gap:16,padding:"10px 0",borderBottom:`1px solid ${C.bdr}`}}>
                   <Mono style={{color:C.muted,fontSize:9}}>{k}</Mono>
@@ -6632,7 +6632,7 @@ const EmpBookingView = ({emp, onNav}) => {
                 border:`1px solid ${C.green}40`,display:"inline-flex",gap:10,alignItems:"center",
               }}>
                 <Mono style={{color:C.green,fontSize:10}}>Bloque</Mono>
-                <span style={{fontSize:14,color:C.text}}>{form.time} – {minToTime(timeToMin(form.time)+dur)}</span>
+                <span style={{fontSize:14,color:C.text}}>{formatTime12h(form.time)} – {formatTime12h(minToTime(timeToMin(form.time)+dur))}</span>
                 <Mono style={{color:C.muted,fontSize:9}}>{dur} min</Mono>
               </div>
             )}
@@ -7006,7 +7006,7 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
                 fontSize:12,color:C.text,lineHeight:1.5,
               }}>
                 <span>
-                  ⚠ <strong style={{color:C.red}}>Sobredemanda</strong> · {w.stylist}: {w.time}–{w.end} ({fmtDateShort(w.date)}) se
+                  ⚠ <strong style={{color:C.red}}>Sobredemanda</strong> · {w.stylist}: {formatTime12h(w.time)}–{formatTime12h(w.end)} ({fmtDateShort(w.date)}) se
                   cruza con el turno de {w.withName} ({w.withTime}–{w.withEnd}).
                 </span>
                 <button onClick={()=>dismissWarning(w.id)} style={{
