@@ -2447,7 +2447,7 @@ const BlockSlotsView = () => {
                       <Mono style={{
                         color:isBookingTime?C.gold+"90":C.muted,
                         fontSize:8,
-                      }}>{t}</Mono>
+                      }}>{formatTime12h(t)}</Mono>
                     </div>
                     {/* Day cells */}
                     {weekDates.map(d=>{
@@ -6177,7 +6177,7 @@ const EmpAbsencesView = ({emp}) => {
                       <Mono style={{
                         color:isBookingTime?C.gold+"90":C.muted,
                         fontSize:8,
-                      }}>{t}</Mono>
+                      }}>{formatTime12h(t)}</Mono>
                     </div>
                     {/* Day cells */}
                     {weekDates.map(d=>{
