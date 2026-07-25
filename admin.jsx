@@ -276,6 +276,14 @@ const AGENDA_HOURS = ["10:00","11:00","12:00","13:00","14:00","15:00","16:00","1
 // ---- Booking availability helpers (mirror booking portal) ----
 const timeToMin = (t) => { const [h,m]=String(t).split(":").map(Number); return h*60+(m||0); };
 const minToTime = (mins) => `${Math.floor(mins/60)}:${String(mins%60).padStart(2,"0")}`;
+// Convierte "HH:MM" (24h, formato interno) a "h:MM AM/PM" para mostrar en la UI.
+const formatTime12h = (t) => {
+  if (!t) return "—";
+  const [h, m] = String(t).split(":").map(Number);
+  const period = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${String(m || 0).padStart(2, "0")} ${period}`;
+};
 // Salon business hours by JS getDay(): 0=dom … 6=sab.
 // El salón no tiene días cerrados fijos: la disponibilidad real la define
 // cada empleado en su workHours y sus ausencias (blockRanges).
@@ -361,7 +369,7 @@ const PAY_COLORS = { Efectivo:"#C29E66", Transferencia:"#8ab0ff", Datáfono:"#C4
 const fmtCOP = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("es-CO");
 const fmtDateShort = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{day:"numeric",month:"short"});
 const fmtDateMed = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"});
-const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"2-digit",minute:"2-digit"});
+const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-digit",hour12:true});
 
 const PENDING_EXPIRE_MS = 60 * 60 * 1000; // 1 hora
 const OVERNIGHT_REVIEW_HOUR = 8;
