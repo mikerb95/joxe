@@ -312,7 +312,7 @@ const empWorksOnSlot = (emp, date, timeStr, dur) => {
 // flexible date/time ranges, optionally multi-day or spanning the whole day
 // (absences). Legacy entries are read and converted on the fly so old data
 // keeps working; anything created going forward is written as a blockRange.
-const BLOCK_SLOT_MIN = 30;
+const BLOCK_SLOT_MIN = 60;
 const legacySlotToRange = (s) => {
   const endMin = timeToMin(s.time) + BLOCK_SLOT_MIN;
   return {
