@@ -312,9 +312,13 @@ const empWorksOnSlot = (emp, date, timeStr, dur) => {
 // flexible date/time ranges, optionally multi-day or spanning the whole day
 // (absences). Legacy entries are read and converted on the fly so old data
 // keeps working; anything created going forward is written as a blockRange.
+// LEGACY_SLOT_MIN is fixed at 30: that is what old blockedSlots actually mean,
+// and it must stay in sync with lib/blocks.js and portal.jsx. BLOCK_SLOT_MIN is
+// the size of a block created today — one hour, matching the hourly grid.
+const LEGACY_SLOT_MIN = 30;
 const BLOCK_SLOT_MIN = 60;
 const legacySlotToRange = (s) => {
-  const endMin = timeToMin(s.time) + BLOCK_SLOT_MIN;
+  const endMin = timeToMin(s.time) + LEGACY_SLOT_MIN;
   return {
     id: s.id, dateStart: s.date, dateEnd: s.date, allDay: false,
     timeStart: s.time, timeEnd: minToTime(endMin),
