@@ -2552,7 +2552,7 @@ const BlockSlotsView = () => {
                   const multiDay = b.dateStart!==b.dateEnd;
                   const whenLabel = b.allDay
                     ? (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día` : "Todo el día")
-                    : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${b.timeStart}–${b.timeEnd}` : `${b.timeStart}–${b.timeEnd}`);
+                    : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${formatTime12h(b.timeStart)}–${formatTime12h(b.timeEnd)}` : `${formatTime12h(b.timeStart)}–${formatTime12h(b.timeEnd)}`);
                   return (
                     <div key={b.id} style={{
                       display:"flex",justifyContent:"space-between",alignItems:"center",
@@ -4679,7 +4679,7 @@ const StylistSettingsView = ({ empId, onNav }) => {
                     const multiDay = b.dateStart !== b.dateEnd;
                     const whenLabel = b.allDay
                       ? (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día` : "Todo el día")
-                      : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${b.timeStart}–${b.timeEnd}` : `${b.timeStart}–${b.timeEnd}`);
+                      : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${formatTime12h(b.timeStart)}–${formatTime12h(b.timeEnd)}` : `${formatTime12h(b.timeStart)}–${formatTime12h(b.timeEnd)}`);
                     return (
                       <div key={b.id} style={{
                         display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -6259,7 +6259,7 @@ const EmpAbsencesView = ({emp}) => {
                   const multiDay = b.dateStart!==b.dateEnd;
                   const whenLabel = b.allDay
                     ? (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día` : "Todo el día")
-                    : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${b.timeStart}–${b.timeEnd}` : `${b.timeStart}–${b.timeEnd}`);
+                    : (multiDay ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${formatTime12h(b.timeStart)}–${formatTime12h(b.timeEnd)}` : `${formatTime12h(b.timeStart)}–${formatTime12h(b.timeEnd)}`);
                   return (
                     <div key={b.id} style={{
                       display:"flex",justifyContent:"space-between",alignItems:"center",

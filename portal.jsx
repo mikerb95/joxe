@@ -1637,7 +1637,7 @@ const ScanPortal = () => {
                   <div>
                     <PMono style={{ color: "rgba(245,241,234,0.5)", fontSize: 9, display: "block", marginBottom: 6 }}>Agendado</PMono>
                     <div style={{ fontSize: 14, fontFamily: "'JetBrains Mono', monospace" }}>
-                      {scanned.date} · {scanned.time}
+                      {scanned.date} · {formatTime12h(scanned.time)}
                     </div>
                   </div>
                   <div>
@@ -4065,7 +4065,7 @@ const AgendaPortal = () => {
               <PMono style={{ color: "#C29E66", display: "block", marginBottom: 10 }}>Confirmar identidad</PMono>
               <div style={{ fontFamily: "'Marcellus', serif", fontSize: 22, marginBottom: 6 }}>{pinPrompt.name}</div>
               <div style={{ fontSize: 13, opacity: 0.55, marginBottom: 24 }}>
-                {pinPrompt.service} · {pinPrompt.date} {pinPrompt.time}
+                {pinPrompt.service} · {pinPrompt.date} {formatTime12h(pinPrompt.time)}
               </div>
               <label htmlFor="agenda-pin-confirm">
                 <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 8 }}>Tu PIN para aprobar</PMono>
@@ -4226,7 +4226,7 @@ const AgendaPortal = () => {
               {pinPrompt.name}
             </div>
             <div style={{ fontSize: 13, opacity: 0.55, marginBottom: 24 }}>
-              {pinPrompt.service} · {pinPrompt.date} {pinPrompt.time}
+              {pinPrompt.service} · {pinPrompt.date} {formatTime12h(pinPrompt.time)}
             </div>
             <label htmlFor="agenda-pin-confirm">
               <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", marginBottom: 8 }}>
