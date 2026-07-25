@@ -991,8 +991,8 @@ const BookingPortal = () => {
                               letterSpacing: "0.05em",
                             }}>
                             {blocked
-                              ? <><span>{t}</span> <span style={{ fontSize: 9 }}>NO DISP.</span></>
-                              : t
+                              ? <><span>{formatTime12h(t)}</span> <span style={{ fontSize: 9 }}>NO DISP.</span></>
+                              : formatTime12h(t)
                             }
                           </button>
                         );
@@ -1739,7 +1739,7 @@ const LobbyPortal = () => {
     if (ok) setStore(s => ({ ...s, active: [], completed: [] }));
   };
 
-  const timeStr = now.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" });
+  const timeStr = now.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true });
 
   return (
     <PortalShell tone="noir" header={
