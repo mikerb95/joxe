@@ -1995,7 +1995,7 @@ const CrmView = () => {
                                 display:"grid",gridTemplateColumns:"50px 76px 1fr auto",
                                 gap:8,padding:"8px 10px",background:C.s1,alignItems:"center",
                               }}>
-                                <Mono style={{color:C.gold,fontSize:9}}>{a.time}</Mono>
+                                <Mono style={{color:C.gold,fontSize:9}}>{formatTime12h(a.time)}</Mono>
                                 <Mono style={{fontSize:9,color:C.muted}}>{fmtDateShort(a.date)}</Mono>
                                 <div style={{fontSize:12}}>{a.service}</div>
                                 <Badge status={a.computedStatus}/>
