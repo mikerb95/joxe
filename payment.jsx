@@ -366,7 +366,7 @@ const PaymentScreen = ({ paymentId }) => {
                   ["Servicio", appt.service],
                   ["Estilista", appt.stylist || "Sin asignar"],
                   ["Fecha", fmtDate(appt.date)],
-                  ["Hora", appt.time],
+                  ["Hora", formatTime12h(appt.time)],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <Mono style={{ color: C.muted, fontSize: 9, display: "block", marginBottom: 6 }}>
