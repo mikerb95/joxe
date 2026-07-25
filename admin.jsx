@@ -3395,7 +3395,8 @@ const ArchivedEmployeesSection = ({ archived, revenue }) => {
 // ==================== EMPLOYEES ====================
 const HOUR_OPTIONS = Array.from({ length: 17 }, (_, i) => {
   const h = i + 6;
-  return { value: `${String(h).padStart(2, "0")}:00`, label: `${h}:00` };
+  const value = `${String(h).padStart(2, "0")}:00`;
+  return { value, label: formatTime12h(value) };
 });
 
 const HourSelect = ({ value, onChange }) => (
