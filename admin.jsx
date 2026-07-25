@@ -4630,7 +4630,7 @@ const StylistSettingsView = ({ empId, onNav }) => {
                       borderBottom: `1px solid ${C.bdr}`, borderRight: `1px solid ${C.bdr}`,
                       display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 8px",
                     }}>
-                      <Mono style={{ color: isBookingTime ? C.gold + "90" : C.muted, fontSize: 8 }}>{t}</Mono>
+                      <Mono style={{ color: isBookingTime ? C.gold + "90" : C.muted, fontSize: 8 }}>{formatTime12h(t)}</Mono>
                     </div>
                     {weekDates.map(d => {
                       const blocked = isBlocked(d, t);
