@@ -123,6 +123,21 @@ const useStore = () => {
   return [store, update];
 };
 
+// Id de cita. crypto.randomUUID solo existe en contextos seguros y navegadores
+// recientes (falta en Safari iOS < 15.4, WebViews in-app y en http://), así que
+// el fallback debe producir siempre algo que pase la validación del servidor:
+// /^[A-Za-z0-9_-]{6,64}$/ — sin puntos ni otros caracteres.
+const genApptId = () => {
+  try {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      const b = crypto.getRandomValues(new Uint8Array(16));
+      return Array.from(b, x => x.toString(16).padStart(2, "0")).join("");
+    }
+  } catch {}
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+};
+
 const genTicket = () => {
   const n = Math.floor(Math.random() * 9000) + 1000;
   return `JX-${n}`;
@@ -692,7 +707,7 @@ const BookingPortal = () => {
       }
       assignedStylist = free.sort((a, b) => a.count - b.count)[0].name;
     }
-    const id = crypto.randomUUID ? crypto.randomUUID() : String(Math.random());
+    const id = genApptId();
     const code = genTicket();
     const appt = {
       id, code,
