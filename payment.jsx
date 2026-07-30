@@ -384,7 +384,7 @@ const PaymentScreen = ({ paymentId }) => {
                 }}>
                   Confirmado el{" "}
                   {new Date(appt.paymentConfirmedAt).toLocaleString("es-CO", {
-                    day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
+                    day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true,
                   })}
                 </div>
               )}
