@@ -6659,7 +6659,7 @@ const EmpBookingView = ({emp, onNav}) => {
                     opacity:past?0.4:1,
                   }}>
                     <div style={{padding:"12px 0 12px 16px",borderRight:`1px solid ${C.bdr}`}}>
-                      <Mono style={{color:inSel?C.gold:past?C.muted2:C.gold,fontSize:11}}>{time}</Mono>
+                      <Mono style={{color:inSel?C.gold:past?C.muted2:C.gold,fontSize:11}}>{formatTime12h(time)}</Mono>
                     </div>
                     <div style={{padding:"8px 14px",display:"flex",alignItems:"center",minHeight:42}}>
                       {occ ? (
