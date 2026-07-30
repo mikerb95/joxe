@@ -5747,7 +5747,7 @@ const EmpAgendaView = ({emp, onNav}) => {
 
             return (
               <div key={time} style={{
-                display:"grid",gridTemplateColumns:"64px 1fr",
+                display:"grid",gridTemplateColumns:"76px 1fr",
                 borderBottom:`1px solid ${C.bdr}`,
                 opacity:isPast?0.4:1,
               }}>
