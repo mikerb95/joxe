@@ -1199,7 +1199,7 @@ const AgendaView = () => {
 
                   return (
                     <div key={time} style={{
-                      display:"grid",gridTemplateColumns:"64px 1fr",
+                      display:"grid",gridTemplateColumns:"76px 1fr",
                       borderBottom:`1px solid ${C.bdr}`,
                       opacity:isPast?0.4:1,
                     }}>
@@ -1208,7 +1208,7 @@ const AgendaView = () => {
                         padding:"14px 0 14px 16px",borderRight:`1px solid ${C.bdr}`,
                         display:"flex",alignItems:"flex-start",
                       }}>
-                        <Mono style={{color:isPast?C.muted2:C.gold,fontSize:11}}>{time}</Mono>
+                        <Mono style={{color:isPast?C.muted2:C.gold,fontSize:11}}>{formatTime12h(time)}</Mono>
                       </div>
 
                       {/* Slot content */}
