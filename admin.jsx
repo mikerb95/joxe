@@ -5755,7 +5755,7 @@ const EmpAgendaView = ({emp, onNav}) => {
                   padding:"14px 0 14px 16px",borderRight:`1px solid ${C.bdr}`,
                   display:"flex",alignItems:"flex-start",
                 }}>
-                  <Mono style={{color:isPast?C.muted2:C.gold,fontSize:11}}>{time}</Mono>
+                  <Mono style={{color:isPast?C.muted2:C.gold,fontSize:11}}>{formatTime12h(time)}</Mono>
                 </div>
 
                 <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:5}}>
@@ -6652,7 +6652,7 @@ const EmpBookingView = ({emp, onNav}) => {
                 const onClick = selectable ? ()=>setF("time", time) : undefined;
                 return (
                   <div key={time} onClick={onClick} style={{
-                    display:"grid",gridTemplateColumns:"64px 1fr",
+                    display:"grid",gridTemplateColumns:"76px 1fr",
                     borderBottom:`1px solid ${C.bdr}`,
                     cursor:selectable?"pointer":"default",
                     background:inSel?"rgba(194,158,102,0.16)":"transparent",
