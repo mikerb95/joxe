@@ -112,7 +112,7 @@
   .blockchip .min{font-family:'JetBrains Mono',monospace;color:var(--muted);font-size:9px}
 
   .timeline{border:1px solid var(--bdr);background:var(--s1);margin-bottom:22px}
-  .slot{display:grid;grid-template-columns:60px 1fr;border-bottom:1px solid var(--bdr);
+  .slot{display:grid;grid-template-columns:76px 1fr;border-bottom:1px solid var(--bdr);
     transition:background .25s}
   .slot:last-child{border-bottom:none}
   .slot .t{padding:11px 0 11px 14px;border-right:1px solid var(--bdr);
@@ -241,7 +241,7 @@
 
         <span class="seclabel">4 · Bloque en el calendario</span>
         <div class="blockchip" id="blockChip">
-          <span class="lbl">Bloque</span><span class="rng" id="blockRng">14:00 – 15:00</span><span class="min" id="blockMin">60 min</span>
+          <span class="lbl">Bloque</span><span class="rng" id="blockRng">2:00 PM – 3:00 PM</span><span class="min" id="blockMin">60 min</span>
         </div>
         <div class="timeline" id="timeline"></div>
       </div>
@@ -260,7 +260,7 @@
         <div class="sumrow"><span class="k">Cliente</span><span class="v">María L.</span></div>
         <div class="sumrow"><span class="k">Servicio</span><span class="v">Corte + Barba</span></div>
         <div class="sumrow"><span class="k">Día</span><span class="v">Jue 25 jun</span></div>
-        <div class="sumrow"><span class="k">Hora</span><span class="v">14:00 – 15:00</span></div>
+        <div class="sumrow"><span class="k">Hora</span><span class="v">2:00 PM – 3:00 PM</span></div>
       </div>
     </div>
   </div>
@@ -354,7 +354,7 @@ function buildTimeline(){
     if(s.occ) body=`<div><div class="occn">${s.occ}</div><div class="occs">Ocupado · ${s.svc}</div></div>`;
     else if(s.short) body=`<span class="short">No alcanza</span>`;
     else body=`<span class="free">Libre · tocar para apartar</span>`;
-    row.innerHTML=`<div class="t">${s.t}</div><div class="body">${body}</div>`;
+    row.innerHTML=`<div class="t">${formatTime12h(s.t)}</div><div class="body">${body}</div>`;
     tl.appendChild(row);
   });
 }
