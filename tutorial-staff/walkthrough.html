@@ -325,6 +325,16 @@ async function typeInto(input, text, ph){
 
 function setProgress(p){ $('#progress').style.width = p+'%'; }
 
+// Convierte "HH:MM" (24h, formato interno) a "h:MM AM/PM" para mostrar en la UI.
+function formatTime12h(t){
+  if(!t || !t.includes(':')) return t || '';
+  const [hh,mm] = t.split(':');
+  const h = parseInt(hh,10);
+  const period = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${mm} ${period}`;
+}
+
 // ---- build timeline slots ----
 const SLOTS = [
   {t:'12:00', occ:'Juan P.', svc:'Corte clásico'},
