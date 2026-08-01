@@ -64,17 +64,18 @@ export default async function handler(req, res) {
         confirmedAt: a.confirmedAt, completedAt: a.completedAt,
       });
 
-      const myAppts = (store?.appointments || [])
-        .filter(a => a.stylist === emp.name && a.date === today)
-        .map(slim);
+      // Las cancelaciones viven en admin_store.cancelledIds (no en appt.status),
+      // por eso hay que filtrarlas aparte para que no ensucien el resumen.
+      const cancelledIds = new Set(admin?.cancelledIds || []);
+      const mine = a =>
+        a.stylist === emp.name && a.date === today &&
+        !cancelledIds.has(a.id) && a.status !== "cancelled";
 
-      const activeToday = (store?.active || [])
-        .filter(a => a.stylist === emp.name && a.date === today)
-        .map(slim);
+      const myAppts = (store?.appointments || []).filter(mine).map(slim);
 
-      const completedToday = (store?.completed || [])
-        .filter(a => a.stylist === emp.name && a.date === today)
-        .map(slim);
+      const activeToday = (store?.active || []).filter(mine).map(slim);
+
+      const completedToday = (store?.completed || []).filter(mine).map(slim);
 
       const revenueToday = (admin?.revenue || []).filter(
         r => !r.deleted && r.stylist === emp.name && r.date === today
