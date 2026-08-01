@@ -172,8 +172,13 @@ export default async function handler(req, res) {
       const next = { ...store, appointments: [...appointments, appt] };
       const written = await kvCas("turno_store", next, rec ? rec.updatedAt : null);
       if (written) {
-        sendPushNotifications(appt).catch(() => {});
-        sendNtfyNotification(appt).catch(() => {});
+        // Esperamos las notificaciones antes de responder: en serverless la
+        // invocación se congela al enviar la respuesta, así que el trabajo
+        // fire-and-forget se pierde antes de llegar a salir.
+        await Promise.allSettled([
+          sendPushNotifications(appt).catch(e => console.error("[book:push]", e.message)),
+          sendNtfyNotification(appt).catch(e => console.error("[book:ntfy]", e.message)),
+        ]);
         return res.status(200).json({ ok: true });
       }
       // Lost the race — loop and re-read the fresh state.
