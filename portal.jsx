@@ -3692,7 +3692,9 @@ const AgendaPortal = () => {
   // Load summary when tab is opened. También se carga una vez al iniciar sesión
   // (si el PIN está en memoria) para conocer las citas canceladas desde la agenda.
   React.useEffect(() => {
-    if (session && pin && (view === "resumen" || !summaryData)) fetchSummary();
+    if (!session) return;
+    if (view === "resumen") fetchSummary();          // pide PIN si no está en memoria
+    else if (pin && !summaryData) fetchSummary();    // precarga silenciosa de cancelledIds
   }, [view, session, pin]);
 
   // Auto-refresh summary every 30s while on that tab
