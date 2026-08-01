@@ -3709,29 +3709,40 @@ const AgendaPortal = () => {
 
   const today = todayStr();
 
+  // Las cancelaciones se guardan en admin_store.cancelledIds, no en appt.status;
+  // el endpoint de resumen las devuelve para poder filtrarlas también en vivo.
+  const cancelledIds = React.useMemo(
+    () => new Set(summaryData?.cancelledIds || []),
+    [summaryData]
+  );
+  const notCancelled = React.useCallback(
+    a => !cancelledIds.has(a.id) && a.status !== "cancelled",
+    [cancelledIds]
+  );
+
   // Citas pendientes del empleado logueado (todas las fechas — para confirmar)
   const myPending = React.useMemo(() => {
     if (!session) return [];
     return (store.appointments || []).filter(
-      a => a.stylist === session.name && a.status === "pending"
+      a => a.stylist === session.name && a.status === "pending" && notCancelled(a)
     ).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
-  }, [store.appointments, session]);
+  }, [store.appointments, session, notCancelled]);
 
   // Datos en vivo para la vista Resumen (desde el store que se actualiza cada 5s)
   const myTodayScheduled = React.useMemo(() => {
     if (!session) return [];
     return (store.appointments || []).filter(
       a => a.stylist === session.name && a.date === today &&
-           (a.status === "scheduled" || a.status === "confirmed")
+           (a.status === "scheduled" || a.status === "confirmed") && notCancelled(a)
     ).sort((a, b) => a.time.localeCompare(b.time));
-  }, [store.appointments, session, today]);
+  }, [store.appointments, session, today, notCancelled]);
 
   const myTodayPending = React.useMemo(() => {
     if (!session) return [];
     return (store.appointments || []).filter(
-      a => a.stylist === session.name && a.date === today && a.status === "pending"
+      a => a.stylist === session.name && a.date === today && a.status === "pending" && notCancelled(a)
     ).sort((a, b) => a.time.localeCompare(b.time));
-  }, [store.appointments, session, today]);
+  }, [store.appointments, session, today, notCancelled]);
 
   // ── LOGIN ──
   if (!session) {
