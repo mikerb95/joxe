@@ -5635,7 +5635,8 @@ const EmpAgendaView = ({emp, onNav}) => {
 
   const date     = dates[activeDay];
   const isToday  = date===todayD;
-  const dayAppts = myAppts.filter(a=>a.date===date);
+  // Las canceladas no se listan: solo hacen ruido en la agenda del día.
+  const dayAppts = myAppts.filter(a=>a.date===date&&a.computedStatus!=="cancelled");
 
   const byTime = {};
   AGENDA_HOURS.forEach(t=>{ byTime[t]=[]; });
@@ -5643,7 +5644,7 @@ const EmpAgendaView = ({emp, onNav}) => {
   const toMin = (t)=>{ const [hh,mm]=t.split(":").map(Number); return hh*60+(mm||0); };
   const slots = Object.keys(byTime).sort((a,b)=>toMin(a)-toMin(b));
 
-  const activeCount = dayAppts.filter(a=>a.computedStatus!=="cancelled").length;
+  const activeCount = dayAppts.length;
 
   return (
     <div>
