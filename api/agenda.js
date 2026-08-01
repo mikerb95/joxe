@@ -94,6 +94,7 @@ export default async function handler(req, res) {
           service: r.service, amount: r.amount, method: r.method, client: r.client,
         })),
         workHours: emp.workHours || null,
+        cancelledIds: [...cancelledIds],
       });
     }
 
