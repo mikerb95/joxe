@@ -6353,6 +6353,12 @@ const EmpBookingView = ({emp, onNav}) => {
   // así el staff puede agendar más allá de los próximos 7 días.
   const MAX_WEEKS = 8;
   const [weekPage, setWeekPage] = React.useState(0);
+  const weekNavStyle = (disabled)=>({
+    width:28,height:28,lineHeight:1,padding:0,
+    background:"transparent",border:`1px solid ${C.bdr}`,
+    color:disabled?C.muted2:C.gold,cursor:disabled?"default":"pointer",
+    fontFamily:"'Outfit',sans-serif",fontSize:14,opacity:disabled?0.5:1,
+  });
   const weekStart = addDay(todayD, weekPage*7);
   const weekEnd   = addDay(weekStart, 6);
   const openDays = React.useMemo(()=>{
