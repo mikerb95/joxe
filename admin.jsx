@@ -6628,7 +6628,7 @@ const EmpBookingView = ({emp, onNav}) => {
               <div style={{display:"flex",alignItems:"center",gap:8}}>
                 <button onClick={()=>setWeekPage(p=>Math.max(0,p-1))} disabled={weekPage===0} style={weekNavStyle(weekPage===0)}>‹</button>
                 <Mono style={{color:C.muted,fontSize:9,minWidth:112,textAlign:"center"}}>
-                  {weekPage===0 ? "Esta semana" : fmtDayMonth(weekStart)+" – "+fmtDayMonth(weekEnd)}
+                  {weekPage===0 ? "Esta semana" : fmtDateShort(weekStart)+" – "+fmtDateShort(weekEnd)}
                 </Mono>
                 <button onClick={()=>setWeekPage(p=>Math.min(MAX_WEEKS-1,p+1))} disabled={weekPage>=MAX_WEEKS-1} style={weekNavStyle(weekPage>=MAX_WEEKS-1)}>›</button>
               </div>
