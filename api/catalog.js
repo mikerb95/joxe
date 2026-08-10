@@ -1,4 +1,4 @@
-import { initTables, kvGet } from "../lib/db.js";
+import { initTables, kvGetCached } from "../lib/db.js";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -29,7 +29,9 @@ export default async function handler(req, res) {
 
   try {
     await initTables();
-    const admin = await kvGet("admin_store");
+    // El catálogo es público y se pide en cada carga de página; la config del
+    // salón cambia como mucho un par de veces al día.
+    const admin = await kvGetCached("admin_store", 60000);
 
     const services = (admin?.services || DEFAULT_SERVICES)
       .filter(s => s.active)

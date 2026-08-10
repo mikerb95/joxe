@@ -59,19 +59,18 @@ const useStore = () => {
     } catch {}
   }, []);
 
+  // Los cambios hechos en este mismo dispositivo llegan al instante por
+  // BroadcastChannel; el sondeo sólo cubre cambios hechos desde otro equipo.
+  usePolling(pull, 30000);
+
   React.useEffect(() => {
-    pull();
-    const interval = setInterval(pull, 5000); // live sync every 5 s
     let bc;
     try {
       bc = new BroadcastChannel("joxe_turnos");
       bc.addEventListener("message", pull);
     } catch {}
     window.addEventListener("storage", () => setStore(loadCache()));
-    return () => {
-      clearInterval(interval);
-      try { bc?.close(); } catch {}
-    };
+    return () => { try { bc?.close(); } catch {} };
   }, [pull]);
 
   // Persist to Turso. Returns { ok, status, error } so booking callers can
@@ -1988,11 +1987,11 @@ const CuentaPortal = () => {
     if (saved) { setCedula(saved); fetchData(saved, true); }
   }, [fetchData]);
 
-  React.useEffect(() => {
+  const pollAccount = React.useCallback(() => {
     if (!cedula) return;
-    const t = setInterval(() => fetchData(cedula, true), 8000);
-    return () => clearInterval(t);
+    fetchData(cedula, true);
   }, [cedula, fetchData]);
+  usePolling(pollAccount, 60000);
 
   const login = async () => {
     const clean = input.replace(/\D/g, "");
@@ -3719,12 +3718,12 @@ const AgendaPortal = () => {
     else if (pin && !summaryData) fetchSummary();    // precarga silenciosa de cancelledIds
   }, [view, session, pin]);
 
-  // Auto-refresh summary every 30s while on that tab
-  React.useEffect(() => {
+  // Auto-refresh summary while on that tab (en pausa si la pestaña está oculta)
+  const pollSummary = React.useCallback(() => {
     if (view !== "resumen" || !session || !pin) return;
-    const t = setInterval(() => fetchSummary(), 30000);
-    return () => clearInterval(t);
-  }, [view, session, pin]);
+    fetchSummary();
+  }, [view, session, pin, fetchSummary]);
+  usePolling(pollSummary, 60000);
 
   const fmtDate = (d) => {
     if (!d) return "—";
