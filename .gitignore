@@ -2,3 +2,9 @@
 node_modules/
 package-lock.json
 .vercel
+
+# Snapshots de rescate: contienen PINs y datos de clientes
+joxe-cache-*.json
+joxe-backup-*.json
+.env.local
+.env.*.local
