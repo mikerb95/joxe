@@ -6623,8 +6623,20 @@ const EmpBookingView = ({emp, onNav}) => {
         {/* 3 · Día + 4 · Bloque */}
         {form.serviceId && (
           <>
-            <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>3 · Día</Mono>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12}}>
+              <Mono style={{color:C.gold,fontSize:9}}>3 · Día</Mono>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <button onClick={()=>setWeekPage(p=>Math.max(0,p-1))} disabled={weekPage===0} style={weekNavStyle(weekPage===0)}>‹</button>
+                <Mono style={{color:C.muted,fontSize:9,minWidth:112,textAlign:"center"}}>
+                  {weekPage===0 ? "Esta semana" : fmtDayMonth(weekStart)+" – "+fmtDayMonth(weekEnd)}
+                </Mono>
+                <button onClick={()=>setWeekPage(p=>Math.min(MAX_WEEKS-1,p+1))} disabled={weekPage>=MAX_WEEKS-1} style={weekNavStyle(weekPage>=MAX_WEEKS-1)}>›</button>
+              </div>
+            </div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:24}}>
+              {openDays.length===0 && (
+                <Mono style={{color:C.muted2,fontSize:10}}>Sin días abiertos esta semana</Mono>
+              )}
               {openDays.map((d,i)=>{
                 const sel = form.date===d;
                 return (
