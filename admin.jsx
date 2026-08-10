@@ -39,6 +39,29 @@ const staffHeaders = () => ({
   "Authorization": `Bearer ${storeToken()}`,
 });
 
+// ---- Polling ----
+// Sondeo periódico que se detiene mientras la pestaña está oculta. Las pestañas
+// de recepción quedan abiertas todo el día en segundo plano; sin esta pausa
+// seguían golpeando la base de datos cada pocos segundos sin que nadie mirara,
+// que fue lo que agotó la cuota de lecturas de Turso. Al volver al primer plano
+// se hace un pull inmediato, así que la vista sigue estando al día.
+const usePolling = (fn, ms) => {
+  React.useEffect(() => {
+    if (!ms) return;
+    let timer = null;
+    const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+    const start = () => { if (!timer) timer = setInterval(fn, ms); };
+    const sync = () => {
+      if (document.hidden) { stop(); return; }
+      fn();
+      start();
+    };
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => { stop(); document.removeEventListener("visibilitychange", sync); };
+  }, [fn, ms]);
+};
+
 // ---- Admin store (services, revenue, settings) ----
 const DEFAULT_ADMIN = () => ({
   salonName: "JOXE",
@@ -88,6 +111,7 @@ const useAdmin = () => {
   }, []);
 
   const pull = React.useCallback(async () => {
+    if (!isAuthed()) return;
     try {
       const res = await fetch("/api/admin", { headers: adminHeaders() });
       if (res.status === 401) { doLogout(); return; }
@@ -100,12 +124,8 @@ const useAdmin = () => {
     } catch {}
   }, [setAWithRef]);
 
-  React.useEffect(() => {
-    if (!isAuthed()) return;
-    pull();
-    const t = setInterval(pull, 8000);
-    return () => clearInterval(t);
-  }, [pull]);
+  // Configuración del salón: cambia muy rara vez, no necesita sondeo rápido.
+  usePolling(pull, 60000);
 
   const setAdmin = React.useCallback(async (fn) => {
     // Use in-memory ref (fresh state) instead of stale localStorage
@@ -152,12 +172,8 @@ const useCrm = () => {
     } catch {}
   }, []);
 
-  React.useEffect(() => {
-    if (!isAuthed()) return;
-    pull();
-    const t = setInterval(pull, 10000);
-    return () => clearInterval(t);
-  }, [pull]);
+  // Fichas de clientes: sólo cambian cuando alguien las edita desde el panel.
+  usePolling(pull, 60000);
 
   const setCrmData = React.useCallback(async (fn) => {
     const current = loadCrmCache();
@@ -206,18 +222,18 @@ const useAppts = () => {
     } catch {}
   }, []);
 
+  // Turnos: es el dato vivo, pero el BroadcastChannel de abajo ya propaga al
+  // instante los cambios hechos en este mismo dispositivo. El sondeo sólo cubre
+  // cambios hechos desde otro equipo, y para eso 30 s alcanza.
+  usePolling(pull, 30000);
+
   React.useEffect(() => {
-    pull();
-    const t = setInterval(pull, 5000);
     let bc;
     try {
       bc = new BroadcastChannel("joxe_turnos");
       bc.addEventListener("message", pull);
     } catch {}
-    return () => {
-      clearInterval(t);
-      try { bc?.close(); } catch {}
-    };
+    return () => { try { bc?.close(); } catch {} };
   }, [pull]);
 
   // Optimistic concurrency: send the version we based the edit on. If the store

@@ -18,6 +18,28 @@ const broadcastUpdate = () => {
   try { new BroadcastChannel("joxe_turnos").postMessage({ type: "update" }); } catch {}
 };
 
+// Sondeo periódico que se detiene mientras la pestaña está oculta. Las pantallas
+// del lobby y del portal quedan abiertas todo el día; sin esta pausa seguían
+// leyendo la base de datos cada pocos segundos aunque nadie las estuviera
+// mirando, que fue lo que agotó la cuota de lecturas de Turso. Al volver al
+// primer plano se hace una lectura inmediata, así que no se ve nada desfasado.
+const usePolling = (fn, ms) => {
+  React.useEffect(() => {
+    if (!ms) return;
+    let timer = null;
+    const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
+    const start = () => { if (!timer) timer = setInterval(fn, ms); };
+    const sync = () => {
+      if (document.hidden) { stop(); return; }
+      fn();
+      start();
+    };
+    sync();
+    document.addEventListener("visibilitychange", sync);
+    return () => { stop(); document.removeEventListener("visibilitychange", sync); };
+  }, [fn, ms]);
+};
+
 const useStore = () => {
   const [store, setStore] = React.useState(loadCache);
   // Version stamp of the store we last read, for optimistic-concurrency writes.
