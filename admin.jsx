@@ -6349,9 +6349,17 @@ const EmpBookingView = ({emp, onNav}) => {
   const selectedSvc = allServices.find(s=>s.id===form.serviceId) || null;
   const dur = selectedSvc?.dur || 60;
 
+  // El selector de día avanza de semana en semana (hasta 8 semanas hacia adelante),
+  // así el staff puede agendar más allá de los próximos 7 días.
+  const MAX_WEEKS = 8;
+  const [weekPage, setWeekPage] = React.useState(0);
+  const weekStart = addDay(todayD, weekPage*7);
+  const weekEnd   = addDay(weekStart, 6);
   const openDays = React.useMemo(()=>{
-    const out=[]; for(let i=0;i<21 && out.length<10;i++){ const d=addDay(todayD,i); if(!isClosedDay(d)) out.push(d); } return out;
-  },[todayD]);
+    const out=[];
+    for(let i=0;i<7;i++){ const d=addDay(weekStart,i); if(!isClosedDay(d)) out.push(d); }
+    return out;
+  },[weekStart]);
 
   const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const dayAppts = allAppts.filter(a=> a.stylist===emp.name && a.date===form.date && !["cancelled","no-show"].includes(a.computedStatus));
