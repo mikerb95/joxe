@@ -5851,6 +5851,251 @@ const EmpAgendaView = ({emp, onNav}) => {
   );
 };
 
+// Vista de mes: panorama de todo el mes para el empleado. Complementa a
+// EmpAgendaView (que solo cubre hoy + 2 días) para planear con antelación.
+const EmpCalendarView = ({emp, onNav}) => {
+  const [appts]  = useAppts();
+  const [admin]  = useAdmin();
+  const todayD   = todayStr();
+
+  const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
+  const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
+
+  // Mes visible: primer día del mes como ancla.
+  const [anchor, setAnchor] = React.useState(() => {
+    const [y,m] = todayD.split("-").map(Number);
+    return {y, m}; // m: 1-12
+  });
+  const [selected, setSelected] = React.useState(todayD);
+
+  const shiftMonth = (n) => setAnchor(({y,m}) => {
+    const d = new Date(y, m-1+n, 1);
+    return {y:d.getFullYear(), m:d.getMonth()+1};
+  });
+
+  const pad2 = (n) => String(n).padStart(2,"0");
+  const cellDate = (y,m,d) => `${y}-${pad2(m)}-${pad2(d)}`;
+
+  const monthLabel = new Date(anchor.y, anchor.m-1, 1)
+    .toLocaleDateString("es-CO",{month:"long",year:"numeric"});
+
+  // Semana que empieza en lunes.
+  const firstDow   = (new Date(anchor.y, anchor.m-1, 1).getDay() + 6) % 7;
+  const daysInMon  = new Date(anchor.y, anchor.m, 0).getDate();
+  const cells      = [];
+  for (let i=0;i<firstDow;i++) cells.push(null);
+  for (let d=1;d<=daysInMon;d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  // Índice date -> citas del mes (sin canceladas: solo ensucian el conteo).
+  const byDate = {};
+  myAppts.forEach(a=>{
+    if (a.computedStatus==="cancelled") return;
+    (byDate[a.date] = byDate[a.date] || []).push(a);
+  });
+
+  const toMin = (t)=>{ const [hh,mm]=String(t||"").split(":").map(Number); return hh*60+(mm||0); };
+  const statusColor = (s) =>
+    s==="cancelled"?C.red:s==="completed"?C.green:
+    s==="in-service"?C.green:s==="waiting"?C.blue:C.gold;
+  const statusLabel = (s) =>
+    s==="in-service"?"En silla":s==="waiting"?"En cola":
+    s==="completed"?"Completada":s==="cancelled"?"Cancelada":"Agendada";
+
+  const monthAppts   = Object.keys(byDate)
+    .filter(d=>d.startsWith(`${anchor.y}-${pad2(anchor.m)}`))
+    .reduce((n,d)=>n+byDate[d].length, 0);
+  const monthPending = myAppts.filter(a =>
+    a.date.startsWith(`${anchor.y}-${pad2(anchor.m)}`) && empNeedsConfirm(a)
+  ).length;
+
+  const selAppts = (byDate[selected]||[]).slice().sort((a,b)=>toMin(a.time)-toMin(b.time));
+  const selLabel = new Date(selected+"T12:00")
+    .toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
+
+  const DOW = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"];
+
+  return (
+    <div>
+      <PageHeader title="Calendario" subtitle={"Vista de mes · "+monthLabel}
+        action={onNav&&<Btn small onClick={()=>onNav("reservar")}>+ Reservar turno</Btn>} />
+
+      {/* Mini stats bar */}
+      <div style={{display:"flex",gap:24,padding:"0 32px",borderBottom:`1px solid ${C.bdr}`}}>
+        {[
+          ["Citas del mes", monthAppts, null],
+          ["Por confirmar", monthPending, monthPending>0?C.gold:null],
+        ].map(([label,val,color])=>(
+          <div key={label} style={{padding:"12px 0",display:"flex",gap:8,alignItems:"baseline"}}>
+            <span style={{fontFamily:"'Marcellus',serif",fontSize:22,color:color||C.text}}>{val}</span>
+            <Mono style={{color:C.muted,fontSize:9}}>{label}</Mono>
+          </div>
+        ))}
+      </div>
+
+      {/* Navegación de mes */}
+      <div style={{
+        display:"flex",alignItems:"center",gap:12,padding:"16px 32px 0",
+      }}>
+        {[["‹",-1],["›",1]].map(([txt,delta])=>(
+          <button key={txt} onClick={()=>shiftMonth(delta)} style={{
+            padding:"6px 14px",background:"transparent",border:`1px solid ${C.bdr}`,
+            color:C.muted,cursor:"pointer",fontFamily:"'Outfit',sans-serif",fontSize:16,lineHeight:1,
+            order: delta<0 ? 0 : 2,
+          }}>{txt}</button>
+        ))}
+        <div style={{
+          flex:1,order:1,textAlign:"center",
+          fontFamily:"'Marcellus',serif",fontSize:20,textTransform:"capitalize",
+        }}>{monthLabel}</div>
+        <button onClick={()=>{
+          const [y,m] = todayD.split("-").map(Number);
+          setAnchor({y,m}); setSelected(todayD);
+        }} style={{
+          order:3,padding:"6px 14px",background:"transparent",
+          border:`1px solid ${C.gold}40`,color:C.gold,cursor:"pointer",
+          fontFamily:"'JetBrains Mono',monospace",fontSize:9,letterSpacing:"0.1em",textTransform:"uppercase",
+        }}>Hoy</button>
+      </div>
+
+      {/* Rejilla del mes */}
+      <div style={{padding:"16px 32px 0"}}>
+        <div style={{
+          display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",
+          border:`1px solid ${C.bdr}`,background:C.s1,
+        }}>
+          {DOW.map(d=>(
+            <div key={d} style={{
+              padding:"10px 4px",textAlign:"center",background:C.s2,
+              borderBottom:`1px solid ${C.bdr}`,
+            }}>
+              <Mono style={{fontSize:9,color:C.muted}}>{d}</Mono>
+            </div>
+          ))}
+
+          {cells.map((d,i)=>{
+            if (d===null) return (
+              <div key={"e"+i} style={{
+                minHeight:74,background:"rgba(245,241,234,0.02)",
+                borderBottom:`1px solid ${C.bdr}`,borderRight:`1px solid ${C.bdr}`,
+              }}/>
+            );
+            const ds        = cellDate(anchor.y, anchor.m, d);
+            const dayAppts  = byDate[ds]||[];
+            const isToday   = ds===todayD;
+            const isSel     = ds===selected;
+            const isPast    = ds<todayD;
+            const hasPending= dayAppts.some(empNeedsConfirm);
+
+            return (
+              <button key={ds} onClick={()=>setSelected(ds)} style={{
+                minHeight:74,padding:"6px 6px 8px",textAlign:"left",cursor:"pointer",
+                background:isSel?"rgba(194,158,102,0.13)":isToday?"rgba(194,158,102,0.05)":"transparent",
+                border:"none",
+                borderBottom:`1px solid ${C.bdr}`,
+                borderRight:`1px solid ${C.bdr}`,
+                boxShadow:isSel?`inset 0 0 0 1px ${C.gold}`:"none",
+                opacity:isPast&&!isSel?0.45:1,
+                display:"flex",flexDirection:"column",gap:4,
+                fontFamily:"'Outfit',sans-serif",
+              }}>
+                <div style={{display:"flex",alignItems:"center",gap:5}}>
+                  <span style={{
+                    fontFamily:"'JetBrains Mono',monospace",fontSize:12,
+                    color:isToday?C.gold:C.text,fontWeight:isToday?500:400,
+                  }}>{d}</span>
+                  {isToday && <span style={{
+                    width:4,height:4,borderRadius:"50%",background:C.gold,flexShrink:0,
+                  }}/>}
+                </div>
+
+                {dayAppts.length>0 && (
+                  <>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:3}}>
+                      {dayAppts.slice(0,4).map(a=>(
+                        <span key={a.id} style={{
+                          width:5,height:5,borderRadius:"50%",
+                          background:empNeedsConfirm(a)?C.gold:statusColor(a.computedStatus),
+                        }}/>
+                      ))}
+                    </div>
+                    <Mono style={{
+                      fontSize:8,letterSpacing:"0.06em",
+                      color:hasPending?C.gold:C.muted,marginTop:"auto",
+                    }}>{dayAppts.length} cita{dayAppts.length>1?"s":""}</Mono>
+                  </>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Detalle del día elegido */}
+      <div style={{padding:"16px 32px 32px"}}>
+        <div style={{border:`1px solid ${C.bdr}`,background:C.s1}}>
+          <div style={{
+            padding:"14px 20px",borderBottom:`1px solid ${C.bdr}`,background:C.s2,
+            display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",
+          }}>
+            <div style={{
+              fontFamily:"'Marcellus',serif",fontSize:18,
+              color:selected===todayD?C.gold:C.text,textTransform:"capitalize",flex:1,
+            }}>{selLabel}</div>
+            <span style={{
+              fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.gold,
+              background:"rgba(194,158,102,0.1)",padding:"3px 10px",border:`1px solid ${C.gold}30`,
+            }}>{selAppts.length} cita{selAppts.length!==1?"s":""}</span>
+          </div>
+
+          {selAppts.length===0 ? (
+            <div style={{padding:"28px 20px",textAlign:"center"}}>
+              <Mono style={{fontSize:10,color:C.muted2}}>Sin citas este día</Mono>
+            </div>
+          ) : selAppts.map(a=>(
+            <div key={a.id} style={{
+              display:"grid",gridTemplateColumns:"76px 1fr",
+              borderBottom:`1px solid ${C.bdr}`,
+            }}>
+              <div style={{padding:"14px 0 14px 16px",borderRight:`1px solid ${C.bdr}`}}>
+                <Mono style={{fontSize:11,color:C.gold}}>{formatTime12h(a.time)}</Mono>
+              </div>
+              <div style={{
+                padding:"12px 16px",display:"flex",justifyContent:"space-between",
+                alignItems:"flex-start",gap:10,
+                background:empNeedsConfirm(a)?"rgba(194,158,102,0.06)":"transparent",
+              }}>
+                <div style={{minWidth:0,flex:1}}>
+                  <div style={{fontSize:13,color:C.text}}>{a.name}</div>
+                  <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.service}</div>
+                  {a.phone && (
+                    <a href={`https://wa.me/57${a.phone.replace(/\D/g,"")}`}
+                      target="_blank" rel="noopener"
+                      style={{fontSize:11,color:C.gold,textDecoration:"none",display:"inline-block",marginTop:6}}>
+                      {a.phone} ↗
+                    </a>
+                  )}
+                </div>
+                <div style={{textAlign:"right",flexShrink:0}}>
+                  <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
+                    {statusLabel(a.computedStatus)}
+                  </Mono>
+                  {empNeedsConfirm(a) && (
+                    <Mono style={{fontSize:8,color:C.gold,display:"block",marginTop:3}}>Por confirmar</Mono>
+                  )}
+                  {a.confirmedBy && (
+                    <Mono style={{fontSize:8,color:C.green,display:"block",marginTop:3}}>✓ confirmada</Mono>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   const [appts,setAppts] = useAppts();
   const [admin]          = useAdmin();
@@ -6894,6 +7139,7 @@ const EmpHelpView = ({onNav}) => {
 // ---- Employee Shell ----
 const EMP_VIEWS = [
   {id:"agenda",        label:"Mi Agenda",       icon:"▦"},
+  {id:"calendario",    label:"Calendario",      icon:"▥"},
   {id:"reservar",      label:"Reservar turno",  icon:"＋"},
   {id:"confirmaciones",label:"Confirmar citas", icon:"◉"},
   {id:"todas",         label:"Mis Citas",       icon:"≡"},
