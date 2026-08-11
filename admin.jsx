@@ -6076,9 +6076,7 @@ const EmpCalendarView = ({emp, onNav}) => {
                   )}
                 </div>
                 <div style={{textAlign:"right",flexShrink:0}}>
-                  <Mono style={{fontSize:9,color:statusColor(a.computedStatus)}}>
-                    {statusLabel(a.computedStatus)}
-                  </Mono>
+                  <Badge status={a.computedStatus} />
                   {empNeedsConfirm(a) && (
                     <Mono style={{fontSize:8,color:C.gold,display:"block",marginTop:3}}>Por confirmar</Mono>
                   )}
