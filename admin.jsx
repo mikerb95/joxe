@@ -7362,7 +7362,7 @@ const AdminPortal = () => {
     const EmpViewComponent = {
       agenda:         (p)=><EmpAgendaView          {...p} emp={empSes} onNav={nav}/>,
       calendario:     (p)=><EmpCalendarView        {...p} emp={empSes} onNav={nav}/>,
-      reservar:     (p)=><EmpBookingView         {...p} emp={empSes} onNav={nav}/>,
+      reservar:       (p)=><EmpBookingView         {...p} emp={empSes} onNav={nav}/>,
       confirmaciones: (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="confirmaciones"/>,
       todas:          (p)=><EmpAppointmentsView    {...p} emp={empSes} tab="todas"/>,
       horario:        (p)=><EmpWorkHoursView       {...p} emp={empSes}/>,
