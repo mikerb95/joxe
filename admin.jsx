@@ -609,18 +609,21 @@ const FieldSelect = ({label,value,onChange,options,style}) => (
   </div>
 );
 
+// Fuente única de etiqueta/color por estado. La usan Badge y las vistas que
+// pintan el estado sin badge (p.ej. los puntos del calendario mensual).
+const STATUS_META = {
+  pending:     {label:"Solicitud",  bg:"rgba(138,176,255,0.12)",color:"#8ab0ff"},
+  scheduled:   {label:"Agendada",   bg:"rgba(194,158,102,0.12)",color:C.gold},
+  waiting:     {label:"En cola",    bg:"rgba(138,176,255,0.12)",color:C.blue},
+  "in-service":{label:"En silla",   bg:"rgba(102,196,153,0.15)",color:C.green},
+  completed:   {label:"Completada", bg:"rgba(102,196,153,0.08)",color:C.green},
+  cancelled:   {label:"Cancelada",  bg:"rgba(196,102,102,0.12)",color:C.red},
+  "no-show":   {label:"Incumplida", bg:"rgba(196,102,102,0.18)",color:"#e07070"},
+  expired:     {label:"Expirada",   bg:"rgba(196,102,102,0.08)",color:"rgba(196,102,102,0.7)"},
+};
+
 const Badge = ({status}) => {
-  const map = {
-    pending:     {label:"Solicitud",  bg:"rgba(138,176,255,0.12)",color:"#8ab0ff"},
-    scheduled:   {label:"Agendada",   bg:"rgba(194,158,102,0.12)",color:C.gold},
-    waiting:     {label:"En cola",    bg:"rgba(138,176,255,0.12)",color:C.blue},
-    "in-service":{label:"En silla",   bg:"rgba(102,196,153,0.15)",color:C.green},
-    completed:   {label:"Completada", bg:"rgba(102,196,153,0.08)",color:C.green},
-    cancelled:   {label:"Cancelada",  bg:"rgba(196,102,102,0.12)",color:C.red},
-    "no-show":   {label:"Incumplida", bg:"rgba(196,102,102,0.18)",color:"#e07070"},
-    expired:     {label:"Expirada",   bg:"rgba(196,102,102,0.08)",color:"rgba(196,102,102,0.7)"},
-  };
-  const m = map[status]||map.scheduled;
+  const m = STATUS_META[status]||STATUS_META.scheduled;
   return (
     <span style={{padding:"3px 10px",fontSize:10,fontFamily:"'JetBrains Mono',monospace",
       letterSpacing:"0.1em",textTransform:"uppercase",background:m.bg,color:m.color,
@@ -5890,23 +5893,19 @@ const EmpCalendarView = ({emp, onNav}) => {
   // Índice date -> citas del mes (sin canceladas: solo ensucian el conteo).
   const byDate = {};
   myAppts.forEach(a=>{
-    if (a.computedStatus==="cancelled") return;
+    if (!a.date || a.computedStatus==="cancelled") return;
     (byDate[a.date] = byDate[a.date] || []).push(a);
   });
 
   const toMin = (t)=>{ const [hh,mm]=String(t||"").split(":").map(Number); return hh*60+(mm||0); };
-  const statusColor = (s) =>
-    s==="cancelled"?C.red:s==="completed"?C.green:
-    s==="in-service"?C.green:s==="waiting"?C.blue:C.gold;
-  const statusLabel = (s) =>
-    s==="in-service"?"En silla":s==="waiting"?"En cola":
-    s==="completed"?"Completada":s==="cancelled"?"Cancelada":"Agendada";
+  const statusColor = (s) => (STATUS_META[s]||STATUS_META.scheduled).color;
 
+  const monthPrefix  = `${anchor.y}-${pad2(anchor.m)}`;
   const monthAppts   = Object.keys(byDate)
-    .filter(d=>d.startsWith(`${anchor.y}-${pad2(anchor.m)}`))
+    .filter(d=>d.startsWith(monthPrefix))
     .reduce((n,d)=>n+byDate[d].length, 0);
   const monthPending = myAppts.filter(a =>
-    a.date.startsWith(`${anchor.y}-${pad2(anchor.m)}`) && empNeedsConfirm(a)
+    (a.date||"").startsWith(monthPrefix) && empNeedsConfirm(a)
   ).length;
 
   const selAppts = (byDate[selected]||[]).slice().sort((a,b)=>toMin(a.time)-toMin(b.time));
