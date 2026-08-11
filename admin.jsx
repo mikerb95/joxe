@@ -5959,7 +5959,7 @@ const EmpCalendarView = ({emp, onNav}) => {
       </div>
 
       {/* Rejilla del mes */}
-      <div style={{padding:"16px 32px 0"}}>
+      <div className="adm-section-pad" style={{padding:"16px 32px 0"}}>
         <div style={{
           display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",
           border:`1px solid ${C.bdr}`,background:C.s1,
