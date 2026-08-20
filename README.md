@@ -20,6 +20,7 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - `CheckIn.html`, `Lobby.html`, `Scan.html` — operación en salón.
 - `Staff.html` — acceso del equipo.
 - `Payment.html`, `Cuenta.html`, `Showcase.html`, `Agenda.html` — vistas auxiliares.
+  Mi Cuenta (`Cuenta.html`) no usa contraseña: el cliente entra con su cédula más los últimos 4 dígitos del celular con el que reservó.
 - `Resena.html` / `resena.jsx` — formulario de reseña del cliente (solo con link firmado).
 - `api/` — funciones backend.
 - `lib/` — utilidades compartidas.

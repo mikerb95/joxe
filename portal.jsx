@@ -2131,6 +2131,7 @@ const CuentaPortal = () => {
 
   // ── LOGIN SCREEN ──────────────────────────────────────────
   if (!cedula || !data) {
+    const canSubmit = input.length >= 6 && input4.length === 4;
     return (
       <PortalShell tone="noir" header={
         <PortalHeader subtitle="Portal · Cliente" title="Mi Cuenta"
@@ -2154,7 +2155,7 @@ const CuentaPortal = () => {
               letterSpacing: "-0.01em", lineHeight: 1.1,
             }}>Consulta tus visitas.</h1>
             <p style={{ fontSize: 15, opacity: 0.6, lineHeight: 1.6, marginBottom: 40 }}>
-              Ingresa tu cédula de ciudadanía para ver tus citas, historial de visitas y puntos de lealtad.
+              Ingresa tu cédula y los últimos 4 dígitos de tu celular para ver tus citas, historial de visitas y puntos de lealtad.
             </p>
 
             <div style={{
@@ -2180,19 +2181,44 @@ const CuentaPortal = () => {
                   fontSize: 16, letterSpacing: "0.1em",
                 }}
               />
+              <label htmlFor="cuenta-phone4">
+                <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", margin: "22px 0 10px" }}>
+                  Últimos 4 dígitos de tu celular
+                </PMono>
+              </label>
+              <input id="cuenta-phone4" name="phone4" autoComplete="off"
+                value={input4}
+                onChange={e => { setInput4(e.target.value.replace(/\D/g, "").slice(0, 4)); setError(""); }}
+                onKeyDown={e => e.key === "Enter" && login()}
+                placeholder="4567"
+                inputMode="numeric"
+                aria-invalid={!!error}
+                aria-describedby={error ? "cuenta-cedula-err" : "cuenta-phone4-hint"}
+                style={{
+                  width: "100%", padding: "18px 20px",
+                  background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
+                  color: "#F5F1EA", fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 16, letterSpacing: "0.3em",
+                }}
+              />
+              <div id="cuenta-phone4-hint" style={{
+                marginTop: 8, fontSize: 11, lineHeight: 1.5, color: "rgba(245,241,234,0.4)",
+              }}>
+                El celular con el que reservaste tu cita.
+              </div>
               {error && (
                 <div id="cuenta-cedula-err" role="alert" style={{ marginTop: 10, fontSize: 12, color: "#C46666" }}>{error}</div>
               )}
               <button
                 onClick={login}
-                disabled={loading || input.length < 6}
+                disabled={loading || !canSubmit}
                 style={{
                   width: "100%", marginTop: 16, padding: "18px",
-                  background: loading || input.length < 6 ? "rgba(194,158,102,0.2)" : "#C29E66",
+                  background: loading || !canSubmit ? "rgba(194,158,102,0.2)" : "#C29E66",
                   color: "#0C0C0C", border: "none",
                   fontFamily: "'Outfit', sans-serif", fontSize: 12,
                   letterSpacing: "0.2em", textTransform: "uppercase",
-                  cursor: loading || input.length < 6 ? "not-allowed" : "pointer",
+                  cursor: loading || !canSubmit ? "not-allowed" : "pointer",
                 }}>
                 {loading ? "Buscando…" : "Ver mis visitas →"}
               </button>

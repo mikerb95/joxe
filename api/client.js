@@ -60,8 +60,11 @@ export default async function handler(req, res) {
       if (!appt || (appt.cedula || "").replace(/\D/g, "") !== cedula) {
         return res.status(404).json({ error: "Appointment not found" });
       }
+      // Se compara contra todos los celulares de esa cédula: quien cambió de
+      // número sigue entrando con el último que registró.
       const phone4 = last4(rawPhone4);
-      if (!phoneMatches([appt], phone4)) {
+      const mine = all.filter(a => (a.cedula || "").replace(/\D/g, "") === cedula);
+      if (!phoneMatches(mine, phone4)) {
         if (await tooManyFailures(req, res)) return;
         return res.status(401).json({ error: "auth_failed" });
       }
