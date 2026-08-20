@@ -41,6 +41,10 @@
       "destination": "/Cuenta.html"
     },
     {
+      "source": "/resena",
+      "destination": "/Resena.html"
+    },
+    {
       "source": "/showcase",
       "destination": "/Showcase.html"
     },

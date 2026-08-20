@@ -66,6 +66,7 @@ function App() {
       <Marquee />
       <Services />
       <Gallery />
+      <Reviews />
       <LocationMap />
       <Footer />
       <WhatsAppBlob />

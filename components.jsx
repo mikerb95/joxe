@@ -76,6 +76,7 @@ const Nav = ({ onReserveClick, scrolled }) => {
           {[
             ["Servicios", "#servicios"],
             ["Galería", "#galeria"],
+            ["Reseñas", "#resenas"],
             ["Ubicación", "#ubicacion"],
           ].map(([label, href]) => (
             <a key={href} href={href} style={{
@@ -120,6 +121,7 @@ const Nav = ({ onReserveClick, scrolled }) => {
           {[
             ["Servicios", "#servicios"],
             ["Galería", "#galeria"],
+            ["Reseñas", "#resenas"],
             ["Ubicación", "#ubicacion"],
           ].map(([label, href]) => (
             <a key={href} href={href} onClick={() => setOpen(false)} style={{
@@ -532,6 +534,158 @@ const Gallery = () => {
 // TESTIMONIOS
 // ——————————————————————————————————————————————
 
+
+// ——————————————————————————————————————————————
+// RESEÑAS
+// Alimentadas por /api/reviews. Solo llegan aquí las que el salón aprobó
+// desde el panel, y solo puede escribirlas quien tuvo una cita completada.
+// Si todavía no hay ninguna aprobada, la sección no se pinta.
+// ——————————————————————————————————————————————
+const StarRow = ({ value, size = 15, color = "var(--bronze)" }) => (
+  <div style={{ display: "inline-flex", gap: 2 }} aria-label={`${value} de 5 estrellas`}>
+    {[1, 2, 3, 4, 5].map(n => (
+      <svg key={n} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"
+        fill={n <= value ? color : "none"} stroke={color}
+        strokeWidth="1.2" opacity={n <= value ? 1 : 0.3}>
+        <path d="M12 2.6l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.45l-5.81 3.05 1.11-6.47-4.7-4.58 6.5-.95z" />
+      </svg>
+    ))}
+  </div>
+);
+
+const reviewDate = (ms) => {
+  try {
+    return new Date(ms).toLocaleDateString("es-CO", {
+      day: "numeric", month: "long", year: "numeric",
+    });
+  } catch { return ""; }
+};
+
+const ReviewCard = ({ r }) => (
+  <article style={{
+    background: "rgba(20,18,18,0.035)",
+    padding: "28px 26px",
+    display: "flex", flexDirection: "column", gap: 14,
+  }}>
+    <StarRow value={r.rating} />
+    {r.text && (
+      <p style={{
+        fontFamily: "var(--display)", fontSize: 19, lineHeight: 1.55,
+        margin: 0, letterSpacing: "-0.01em",
+      }}>
+        {r.text}
+      </p>
+    )}
+    {r.reply?.text && (
+      <div style={{
+        marginTop: 2, paddingTop: 14,
+        borderTop: "1px solid rgba(20,18,18,0.1)",
+      }}>
+        <Mono style={{ fontSize: 9, color: "var(--bronze)" }}>Respuesta de JOXE</Mono>
+        <p style={{
+          fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.6,
+          margin: "8px 0 0", opacity: 0.7,
+        }}>{r.reply.text}</p>
+      </div>
+    )}
+    <div style={{
+      marginTop: "auto", paddingTop: 8,
+      display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap",
+    }}>
+      <span style={{
+        fontFamily: "var(--sans)", fontSize: 14, letterSpacing: "0.04em",
+      }}>{r.name}</span>
+      <span style={{ fontFamily: "var(--sans)", fontSize: 12, opacity: 0.45 }}>
+        {[r.service, reviewDate(r.createdAt)].filter(Boolean).join(" · ")}
+      </span>
+    </div>
+  </article>
+);
+
+const Reviews = () => {
+  const [data, setData] = React.useState(null);
+  const [showAll, setShowAll] = React.useState(false);
+
+  React.useEffect(() => {
+    fetch("/api/reviews")
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  if (!data || !data.count) return null;
+
+  const visible = showAll ? data.reviews : data.reviews.slice(0, 6);
+
+  return (
+    <section id="resenas" style={{
+      background: "var(--ivory)", color: "var(--noir)",
+      padding: "120px 64px",
+    }} className="section">
+      <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "flex-end",
+          marginBottom: 64, flexWrap: "wrap", gap: 32,
+        }}>
+          <div>
+            <Mono style={{ color: "var(--bronze)" }}>03 — Reseñas</Mono>
+            <h2 style={{
+              fontFamily: "var(--display)", fontWeight: 400,
+              fontSize: "clamp(36px, 4vw, 58px)", lineHeight: 1.05,
+              margin: "24px 0 0", letterSpacing: "-0.01em",
+            }}>
+              Lo que dicen<br />
+              <em style={{ color: "var(--bronze)" }}>quienes ya vinieron.</em>
+            </h2>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <div style={{
+              fontFamily: "var(--display)", fontSize: 64, lineHeight: 1,
+              letterSpacing: "-0.02em",
+            }}>
+              {data.avg.toLocaleString("es-CO", { minimumFractionDigits: 1 })}
+            </div>
+            <div>
+              <StarRow value={Math.round(data.avg)} size={17} />
+              <div style={{
+                fontFamily: "var(--sans)", fontSize: 13, opacity: 0.5, marginTop: 8,
+              }}>
+                {data.count} {data.count === 1 ? "reseña" : "reseñas"} verificadas
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="reviews-grid" style={{
+          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24,
+          alignItems: "stretch",
+        }}>
+          {visible.map(r => <ReviewCard key={r.id} r={r} />)}
+        </div>
+
+        {data.reviews.length > 6 && !showAll && (
+          <button onClick={() => setShowAll(true)} style={{
+            marginTop: 40, background: "transparent",
+            border: "1px solid rgba(20,18,18,0.25)", color: "var(--noir)",
+            padding: "15px 32px", cursor: "pointer",
+            fontFamily: "var(--sans)", fontSize: 12,
+            letterSpacing: "0.2em", textTransform: "uppercase",
+          }}>
+            Ver las {data.reviews.length} reseñas
+          </button>
+        )}
+
+        <p style={{
+          marginTop: 40, fontFamily: "var(--sans)", fontSize: 12,
+          opacity: 0.45, lineHeight: 1.6, maxWidth: 520,
+        }}>
+          Solo puede dejar reseña quien tuvo una cita atendida en el salón.
+          Te enviamos el enlace por WhatsApp después de tu visita.
+        </p>
+      </div>
+    </section>
+  );
+};
 
 // ——————————————————————————————————————————————
 // MAPA DE UBICACIÓN
