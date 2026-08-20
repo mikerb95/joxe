@@ -766,6 +766,16 @@ const BookingPortal = () => {
 
     setTicket(appt);
     setStep(5);
+    // El cliente acaba de escribir su cédula y su celular, así que Mi Cuenta
+    // queda lista: al entrar ve su cita sin volver a identificarse.
+    try {
+      const cc = String(appt.cedula || "").replace(/\D/g, "");
+      const p4 = String(appt.phone  || "").replace(/\D/g, "").slice(-4);
+      if (cc && p4.length === 4) {
+        localStorage.setItem(ACCT_KEY, cc);
+        localStorage.setItem(ACCT_P4_KEY, p4);
+      }
+    } catch {}
     try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch {}
   };
 
@@ -1291,9 +1301,24 @@ const BookingPortal = () => {
               </>
             )}
 
+            {/* Mi Cuenta */}
+            <a href="Cuenta.html" style={{
+              display: "block", textAlign: "center", marginTop: 32,
+              padding: "16px 0",
+              background: "#0C0C0C", color: "#F5F1EA", textDecoration: "none",
+              fontFamily: "'Outfit', sans-serif", fontSize: 12,
+              letterSpacing: "0.18em", textTransform: "uppercase",
+            }}>Ver mi cuenta →</a>
+            <p style={{
+              margin: "12px 0 0", fontSize: 12, lineHeight: 1.6, textAlign: "center",
+              color: "rgba(12,12,12,0.45)",
+            }}>
+              Ahí ves el estado de esta cita, tu historial de visitas y las reseñas que dejes.
+            </p>
+
             {/* Volver al inicio */}
             <a href="Asesores de Imagen.html" style={{
-              display: "block", textAlign: "center", marginTop: 32,
+              display: "block", textAlign: "center", marginTop: 16,
               padding: "14px 0",
               border: "1px solid rgba(12,12,12,0.15)",
               color: "rgba(12,12,12,0.55)", textDecoration: "none",
@@ -1960,6 +1985,14 @@ const LobbyPortal = () => {
 // ============================================================
 // PAGE 4 — MI CUENTA (cliente)
 // ============================================================
+// Qué se le dice al cliente sobre la reseña que ya dejó. Una reseña oculta
+// por el salón se reporta como recibida: la moderación no se le comunica.
+const REVIEW_LABEL = {
+  pending:  "Reseña en revisión",
+  approved: "Reseña publicada",
+  hidden:   "Reseña recibida",
+};
+
 const ACCT_KEY   = "joxe_cuenta_cedula";
 const ACCT_P4_KEY = "joxe_cuenta_phone4";
 
@@ -2649,6 +2682,12 @@ const CuentaPortal = () => {
                       <div style={{ fontSize: 14 }}>{a.service}</div>
                       {a.stylist && (
                         <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>{a.stylist}</div>
+                      )}
+                      {REVIEW_LABEL[a.reviewStatus] && (
+                        <PMono style={{
+                          color: a.reviewStatus === "approved" ? "#C29E66" : "rgba(245,241,234,0.35)",
+                          fontSize: 9, display: "block", marginTop: 6,
+                        }}>{REVIEW_LABEL[a.reviewStatus]}</PMono>
                       )}
                     </div>
                     <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.3)" }}>

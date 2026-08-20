@@ -138,9 +138,11 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: "auth_failed" });
     }
 
-    // Citas que ya tienen reseña: la cuenta no vuelve a pedirla.
-    const reviewedSet = new Set(
-      ((await kvGetCached("reviews_store", 30000))?.reviews || []).map(r => r.apptId)
+    // Estado de la reseña de cada cita: la cuenta no la vuelve a pedir y le
+    // cuenta al cliente en qué va la que ya dejó.
+    const reviewStatusByAppt = new Map(
+      ((await kvGetCached("reviews_store", 30000))?.reviews || [])
+        .map(r => [r.apptId, r.status])
     );
 
     const appointments = all.map(a => {
@@ -151,7 +153,11 @@ export default async function handler(req, res) {
         const live = store.active.find(x => x.id === a.id);
         computedStatus = live?.status || "waiting";
       }
-      return { ...a, computedStatus, reviewed: reviewedSet.has(a.id) };
+      return {
+        ...a, computedStatus,
+        reviewed: reviewStatusByAppt.has(a.id),
+        reviewStatus: reviewStatusByAppt.get(a.id) || null,
+      };
     });
 
     // CRM data is keyed by cedula (primary). Fall back to phone for legacy records.
