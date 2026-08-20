@@ -10,6 +10,7 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - **Check-in / Lobby / Scan**: acceso y control operativo en sala.
 - **Staff portal**: acceso de empleados.
 - **PWA**: manifiesto y service worker para experiencia instalable.
+- **Reseñas**: calificaciones de clientes con cita completada, moderadas desde el panel y publicadas en el home.
 
 ## Estructura principal
 
@@ -19,6 +20,7 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - `CheckIn.html`, `Lobby.html`, `Scan.html` — operación en salón.
 - `Staff.html` — acceso del equipo.
 - `Payment.html`, `Cuenta.html`, `Showcase.html`, `Agenda.html` — vistas auxiliares.
+- `Resena.html` / `resena.jsx` — formulario de reseña del cliente (solo con link firmado).
 - `api/` — funciones backend.
 - `lib/` — utilidades compartidas.
 - `manifest.json` y `sw.js` — soporte PWA.
@@ -37,6 +39,7 @@ Rutas disponibles en `api/`:
 - `payment.js`
 - `push.js`
 - `reminders.js`
+- `reviews.js`
 - `store.js`
 - `work-hours.js`
 
@@ -56,6 +59,7 @@ El proyecto está preparado para Vercel con rewrites definidos en `vercel.json`.
 - `/lobby` → `Lobby.html`
 - `/cuenta` → `Cuenta.html`
 - `/showcase` → `Showcase.html`
+- `/resena` → `Resena.html`
 - `/` → `Asesores de Imagen.html`
 
 ## Tecnologías
