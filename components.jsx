@@ -589,7 +589,7 @@ const ReviewCard = ({ r }) => (
       </div>
     )}
     <div style={{
-      marginTop: "auto", paddingTop: 8,
+      paddingTop: 8,
       display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap",
     }}>
       <span style={{
@@ -658,7 +658,7 @@ const Reviews = () => {
 
         <div className="reviews-grid" style={{
           display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24,
-          alignItems: "stretch",
+          alignItems: "start",
         }}>
           {visible.map(r => <ReviewCard key={r.id} r={r} />)}
         </div>

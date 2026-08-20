@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   initTables, kvGet, kvGetCached, kvGetWithMeta, kvCas, kvInvalidate,
   applyCors, clientIp, rateLimit, sanitizeStr,
@@ -192,7 +193,9 @@ export default async function handler(req, res) {
     const { appt } = found;
 
     const review = {
-      id: `rv_${apptId.slice(0, 12)}`,
+      // Id derivado del apptId: único por cita (truncar el apptId hacía colisionar
+      // dos citas distintas) y sin exponer el id real de la cita en el home.
+      id: `rv_${createHash("sha256").update(apptId).digest("hex").slice(0, 16)}`,
       apptId,
       name: firstName(appt.name),
       rating,
