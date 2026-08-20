@@ -656,6 +656,7 @@ const VIEWS = [
   {id:"agenda",      label:"Agenda",           icon:"▦", tooltip:"Vista semanal de citas por estilista"},
   {id:"appointments",label:"Citas",            icon:"≡", tooltip:"Listado y gestión de todas las citas"},
   {id:"clients",     label:"CRM · Clientes",   icon:"◯", tooltip:"Perfiles, historial y fidelización de clientes"},
+  {id:"reviews",     label:"Reseñas",          icon:"★", tooltip:"Modera las opiniones que aparecen en la web"},
   {id:"blockslots",  label:"Bloquear horas",   icon:"⊘", tooltip:"Bloquear horarios para evitar reservas"},
   {id:"revenue",     label:"Caja",             icon:"◎", tooltip:"Ingresos, gastos y utilidad"},
   {id:"commissions", label:"Comisiones",       icon:"%", tooltip:"Comisiones por empleado y liquidaciones"},
@@ -7327,6 +7328,303 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
   );
 };
 
+// ==================== RESEÑAS ====================
+// Moderación de las reseñas que dejan los clientes y envío del link para
+// pedirlas. Nada se publica en la web hasta que se aprueba aquí.
+const RVSTATUS = {
+  pending:  {label:"Pendiente", bg:"rgba(138,176,255,0.12)", color:C.blue},
+  approved: {label:"Publicada", bg:"rgba(102,196,153,0.10)", color:C.green},
+  hidden:   {label:"Oculta",    bg:"rgba(196,102,102,0.10)", color:C.red},
+};
+
+const AdmStars = ({value,size=13}) => (
+  <span style={{display:"inline-flex",gap:2}} title={`${value} de 5`}>
+    {[1,2,3,4,5].map(n=>(
+      <svg key={n} width={size} height={size} viewBox="0 0 24 24"
+        fill={n<=value?C.gold:"none"} stroke={C.gold} strokeWidth="1.3"
+        opacity={n<=value?1:0.3}>
+        <path d="M12 2.6l2.9 5.9 6.5.95-4.7 4.58 1.11 6.47L12 17.45l-5.81 3.05 1.11-6.47-4.7-4.58 6.5-.95z"/>
+      </svg>
+    ))}
+  </span>
+);
+
+const ReviewsView = () => {
+  const [appts]  = useAppts();
+  const [admin]  = useAdmin();
+  const [data,setData]       = React.useState({reviews:[],avg:0,count:0,byStylist:{}});
+  const [loading,setLoading] = React.useState(true);
+  const [err,setErr]         = React.useState("");
+  const [filter,setFilter]   = React.useState("pending");
+  const [replyId,setReplyId] = React.useState(null);
+  const [replyTxt,setReplyTxt] = React.useState("");
+  const [linkFor,setLinkFor] = React.useState(null); // {apptId, url}
+  const [busy,setBusy]       = React.useState(false);
+
+  const load = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/reviews?action=all", { headers: adminHeaders() });
+      if (!res.ok) throw new Error("No se pudieron cargar las reseñas");
+      setData(await res.json());
+      setErr("");
+    } catch (e) { setErr(e.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  React.useEffect(() => { load(); }, [load]);
+
+  const moderate = async (id, op, reply) => {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/reviews?action=moderate", {
+        method:"POST", headers: adminHeaders(),
+        body: JSON.stringify({ id, op, reply }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(()=>({}))).error || "Error al guardar");
+      await load();
+      setReplyId(null); setReplyTxt("");
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const askLink = async (apptId) => {
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/reviews?action=link&apptId=${encodeURIComponent(apptId)}`,
+        { headers: adminHeaders() });
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "No se pudo generar el link");
+      setLinkFor({ apptId, url: `${window.location.origin}/resena?t=${j.token}` });
+      setErr("");
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const reviewed = new Set(data.reviews.map(r=>r.apptId));
+  // Citas completadas de los últimos 30 días que aún no tienen reseña.
+  const cutoff = Date.now() - 30*24*3600*1000;
+  const pendientesDePedir = (appts.completed||[])
+    .filter(a => !reviewed.has(a.id))
+    .filter(a => {
+      const t = a.completedAt ? new Date(a.completedAt).getTime()
+                              : new Date(`${a.date}T${a.time||"00:00"}`).getTime();
+      return !Number.isNaN(t) && t >= cutoff;
+    })
+    .sort((a,b)=>(b.date||"").localeCompare(a.date||""))
+    .slice(0, 20);
+
+  const shown = data.reviews
+    .filter(r => filter==="all" ? true : r.status===filter)
+    .sort((a,b)=>b.createdAt-a.createdAt);
+
+  const pendingCount = data.reviews.filter(r=>r.status==="pending").length;
+  const stylistRows  = Object.entries(data.byStylist||{})
+    .sort((a,b)=>b[1].avg-a[1].avg);
+
+  const waLink = (a, url) => {
+    const num = `57${String(a.phone||"").replace(/\D/g,"")}`;
+    const first = String(a.name||"").trim().split(/\s+/)[0] || "";
+    const msg = `Hola ${first}, gracias por tu visita a JOXE. ¿Nos dejas tu opinión? Solo toma un minuto: ${url}`;
+    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  };
+
+  return (
+    <div>
+      <PageHeader title="Reseñas" subtitle="Opiniones · Moderación"
+        action={<Btn variant="ghost" small onClick={load}>Actualizar</Btn>} />
+
+      {err && (
+        <div style={{margin:"16px 32px",padding:"12px 16px",border:`1px solid ${C.red}40`,
+          background:"rgba(196,102,102,0.07)",color:C.red,fontSize:13}}>{err}</div>
+      )}
+
+      <div style={{padding:"24px 32px",display:"grid",
+        gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14}}>
+        <StatCard label="Nota pública" small
+          value={data.count ? data.avg.toFixed(1).replace(".",",") : "—"}
+          sub={`${data.count} publicada${data.count!==1?"s":""}`} />
+        <StatCard label="Por revisar" small color={pendingCount?C.blue:C.muted}
+          value={String(pendingCount).padStart(2,"0")}
+          sub={pendingCount?"Esperan tu aprobación":"Todo al día"} />
+        <StatCard label="Sin pedir" small color={C.gold}
+          value={String(pendientesDePedir.length).padStart(2,"0")}
+          sub="Citas completadas sin reseña" />
+      </div>
+
+      {stylistRows.length > 0 && (
+        <div style={{padding:"0 32px 24px"}}>
+          <Mono style={{color:C.muted,fontSize:9}}>Nota por estilista (interna)</Mono>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:12}}>
+            {stylistRows.map(([name,s])=>(
+              <div key={name} style={{background:C.s1,border:`1px solid ${C.bdr}`,
+                padding:"12px 18px",display:"flex",alignItems:"center",gap:12}}>
+                <div>
+                  <div style={{fontSize:13}}>{name}</div>
+                  <div style={{fontSize:11,color:C.muted,marginTop:2}}>
+                    {s.count} reseña{s.count!==1?"s":""}
+                  </div>
+                </div>
+                <div style={{fontFamily:"'Marcellus',serif",fontSize:26,color:C.gold,lineHeight:1}}>
+                  {s.avg.toFixed(1).replace(".",",")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ---- Pedir reseña ---- */}
+      <div style={{padding:"0 32px 28px"}}>
+        <Mono style={{color:C.muted,fontSize:9}}>Pedir reseña</Mono>
+        <Card style={{marginTop:12,padding:0}}>
+          {pendientesDePedir.length === 0 ? (
+            <div style={{padding:"22px 24px",fontSize:13,color:C.muted}}>
+              No hay citas completadas recientes pendientes de pedir reseña.
+            </div>
+          ) : pendientesDePedir.map((a,i)=>(
+            <div key={a.id} style={{
+              padding:"14px 22px",display:"flex",alignItems:"center",gap:14,flexWrap:"wrap",
+              borderTop: i===0 ? "none" : `1px solid ${C.bdr}`,
+            }}>
+              <div style={{flex:1,minWidth:200}}>
+                <div style={{fontSize:14}}>{a.name}</div>
+                <div style={{fontSize:11,color:C.muted,marginTop:3}}>
+                  {[a.service, a.stylist, a.date].filter(Boolean).join(" · ")}
+                </div>
+              </div>
+              {linkFor?.apptId === a.id ? (
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <input readOnly value={linkFor.url}
+                    onFocus={e=>e.target.select()}
+                    style={{background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,
+                      padding:"9px 12px",fontFamily:"'JetBrains Mono',monospace",
+                      fontSize:11,width:280}} />
+                  <Btn small variant="ghost"
+                    onClick={()=>navigator.clipboard?.writeText(linkFor.url)}>Copiar</Btn>
+                  {a.phone && (
+                    <a href={waLink(a, linkFor.url)} target="_blank" rel="noopener noreferrer"
+                      style={{textDecoration:"none"}}>
+                      <Btn small>WhatsApp ↗</Btn>
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <Btn small variant="subtle" disabled={busy}
+                  onClick={()=>askLink(a.id)}>Generar link</Btn>
+              )}
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      {/* ---- Moderación ---- */}
+      <div style={{padding:"0 32px 40px"}}>
+        <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+          {[
+            {value:"pending", label:`Pendientes (${pendingCount})`},
+            {value:"approved",label:"Publicadas"},
+            {value:"hidden",  label:"Ocultas"},
+            {value:"all",     label:"Todas"},
+          ].map(f=>(
+            <button key={f.value} onClick={()=>setFilter(f.value)} style={{
+              background: filter===f.value ? C.gold : "transparent",
+              color: filter===f.value ? "#0C0C0C" : C.text,
+              border:`1px solid ${filter===f.value ? C.gold : C.bdr}`,
+              padding:"8px 16px",cursor:"pointer",fontFamily:"'Outfit',sans-serif",
+              fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",
+            }}>{f.label}</button>
+          ))}
+        </div>
+
+        {loading ? (
+          <div style={{color:C.muted,fontSize:13,padding:"20px 0"}}>Cargando…</div>
+        ) : shown.length === 0 ? (
+          <Card><div style={{color:C.muted,fontSize:13}}>
+            {filter==="pending" ? "Ninguna reseña por revisar." : "Nada por aquí todavía."}
+          </div></Card>
+        ) : (
+          <div style={{display:"flex",flexDirection:"column",gap:12}}>
+            {shown.map(r=>{
+              const st = RVSTATUS[r.status] || RVSTATUS.pending;
+              return (
+                <Card key={r.id} style={{padding:"20px 24px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                    <AdmStars value={r.rating} />
+                    <span style={{padding:"3px 10px",fontSize:10,
+                      fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.1em",
+                      textTransform:"uppercase",background:st.bg,color:st.color,
+                      border:`1px solid ${st.color}30`}}>{st.label}</span>
+                    <span style={{flex:1}} />
+                    <span style={{fontSize:11,color:C.muted}}>
+                      {new Date(r.createdAt).toLocaleDateString("es-CO",
+                        {day:"numeric",month:"short",year:"numeric"})}
+                    </span>
+                  </div>
+
+                  {r.text && (
+                    <p style={{fontSize:15,lineHeight:1.65,margin:"14px 0 0"}}>{r.text}</p>
+                  )}
+
+                  <div style={{fontSize:11,color:C.muted,marginTop:12}}>
+                    {[r.name, r.service, r.stylist && `Atendió ${r.stylist}`]
+                      .filter(Boolean).join(" · ")}
+                  </div>
+
+                  {r.reply?.text && (
+                    <div style={{marginTop:14,padding:"12px 16px",background:C.s2,
+                      border:`1px solid ${C.bdr}`}}>
+                      <Mono style={{color:C.gold,fontSize:9}}>Tu respuesta</Mono>
+                      <p style={{fontSize:13,lineHeight:1.6,margin:"8px 0 0",color:C.muted}}>
+                        {r.reply.text}
+                      </p>
+                    </div>
+                  )}
+
+                  {replyId === r.id ? (
+                    <div style={{marginTop:14,display:"flex",flexDirection:"column",gap:10}}>
+                      <textarea value={replyTxt} maxLength={600}
+                        onChange={e=>setReplyTxt(e.target.value)}
+                        placeholder="Responde públicamente a esta reseña…"
+                        style={{background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,
+                          padding:"12px 14px",fontFamily:"'Outfit',sans-serif",
+                          fontSize:14,minHeight:90,resize:"vertical"}} />
+                      <div style={{display:"flex",gap:8}}>
+                        <Btn small disabled={busy}
+                          onClick={()=>moderate(r.id,"reply",replyTxt)}>Guardar respuesta</Btn>
+                        <Btn small variant="ghost"
+                          onClick={()=>{setReplyId(null);setReplyTxt("");}}>Cancelar</Btn>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{display:"flex",gap:8,marginTop:16,flexWrap:"wrap"}}>
+                      {r.status !== "approved" && (
+                        <Btn small disabled={busy}
+                          onClick={()=>moderate(r.id,"approve")}>Publicar</Btn>
+                      )}
+                      {r.status === "approved" && (
+                        <Btn small variant="ghost" disabled={busy}
+                          onClick={()=>moderate(r.id,"hide")}>Ocultar</Btn>
+                      )}
+                      <Btn small variant="subtle" disabled={busy}
+                        onClick={()=>{setReplyId(r.id);setReplyTxt(r.reply?.text||"");}}>
+                        {r.reply?.text ? "Editar respuesta" : "Responder"}
+                      </Btn>
+                      <Btn small variant="danger" disabled={busy}
+                        onClick={()=>{ if(confirm("¿Eliminar esta reseña? No se puede deshacer.")) moderate(r.id,"delete"); }}>
+                        Eliminar
+                      </Btn>
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ==================== ROOT ====================
 const AdminPortal = () => {
   const [authed,setAuthed]     = React.useState(isAuthed);
@@ -7379,6 +7677,7 @@ const AdminPortal = () => {
     agenda:              AgendaView,
     appointments:        AppointmentsView,
     clients:             CrmView,
+    reviews:             ReviewsView,
     blockslots:          BlockSlotsView,
     revenue:             RevenueView,
     commissions:         CommissionsView,
