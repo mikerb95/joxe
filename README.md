@@ -10,7 +10,7 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - **Check-in / Lobby / Scan**: acceso y control operativo en sala.
 - **Staff portal**: acceso de empleados.
 - **PWA**: manifiesto y service worker para experiencia instalable.
-- **Reseñas**: calificaciones de clientes con cita completada, moderadas desde el panel y publicadas en el home.
+- **Reseñas**: calificaciones de clientes con cita completada, moderadas desde el panel y publicadas en el home. El cliente llega al formulario desde el link que envía el salón o desde el botón "Deja tu reseña" en Mi Cuenta.
 
 ## Estructura principal
 

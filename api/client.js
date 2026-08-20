@@ -1,4 +1,7 @@
-import { initTables, kvGet, kvSet, applyCors, clientIp, rateLimit } from "../lib/db.js";
+import {
+  initTables, kvGet, kvGetCached, kvSet,
+  applyCors, clientIp, rateLimit, signReviewToken,
+} from "../lib/db.js";
 
 const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
 
@@ -9,10 +12,12 @@ export default async function handler(req, res) {
   try {
     await initTables();
 
-    // ---- Client self-service cancel ----
+    // ---- Client self-service: cancelar cita / pedir link de reseña ----
     if (req.method === "POST") {
       const { id, cedula: rawCedula, action } = req.body ?? {};
-      if (action !== "cancel") return res.status(400).json({ error: "Invalid action" });
+      if (!["cancel", "review-link"].includes(action)) {
+        return res.status(400).json({ error: "Invalid action" });
+      }
 
       const ip = clientIp(req);
       const rl = await rateLimit(`client:${ip}`, 15, 5 * 60 * 1000);
@@ -34,8 +39,21 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: "Appointment not found" });
       }
 
-      // Already finished/cancelled — nothing to do.
       const completedSet = new Set((store.completed || []).map(a => a.id));
+
+      // El cliente pide el link para reseñar su propia visita. La cédula ya
+      // demostró que la cita es suya, así que aquí solo falta que esté
+      // completada y que no haya reseñado antes.
+      if (action === "review-link") {
+        if (!completedSet.has(id)) return res.status(409).json({ error: "not_completed" });
+        const reviews = (await kvGet("reviews_store"))?.reviews || [];
+        if (reviews.some(r => r.apptId === id)) {
+          return res.status(200).json({ ok: true, already: true });
+        }
+        return res.status(200).json({ ok: true, token: signReviewToken(id) });
+      }
+
+      // Already finished/cancelled — nothing to do.
       if ((adminData.cancelledIds || []).includes(id) || completedSet.has(id)) {
         return res.status(200).json({ ok: true, alreadyCancelled: true });
       }
@@ -81,6 +99,11 @@ export default async function handler(req, res) {
       return (a.phone || "").replace(/\D/g, "") === phone;
     });
 
+    // Citas que ya tienen reseña: la cuenta no vuelve a pedirla.
+    const reviewedSet = new Set(
+      ((await kvGetCached("reviews_store", 30000))?.reviews || []).map(r => r.apptId)
+    );
+
     const appointments = all.map(a => {
       let computedStatus = "scheduled";
       if (cancelledIds.includes(a.id))    computedStatus = "cancelled";
@@ -89,7 +112,7 @@ export default async function handler(req, res) {
         const live = store.active.find(x => x.id === a.id);
         computedStatus = live?.status || "waiting";
       }
-      return { ...a, computedStatus };
+      return { ...a, computedStatus, reviewed: reviewedSet.has(a.id) };
     });
 
     // CRM data is keyed by cedula (primary). Fall back to phone for legacy records.

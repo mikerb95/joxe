@@ -2068,6 +2068,41 @@ const CuentaPortal = () => {
     }
   };
 
+  // ── Reseña de la última visita ────────────────────────────
+  const [reviewBusy, setReviewBusy] = React.useState(false);
+
+  // Pide a la API el link firmado de la cita y lleva al cliente al formulario.
+  const askReview = async (a) => {
+    setReviewBusy(true);
+    try {
+      const res = await fetch("/api/client", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: a.id, cedula, action: "review-link" }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.token) {
+        window.location.href = `/resena?t=${encodeURIComponent(d.token)}`;
+        return;
+      }
+      if (res.ok && d.already) {
+        await dialog.alert({
+          title: "Ya nos dejaste tu opinión",
+          body: "Gracias. Revisamos cada reseña antes de publicarla en la web.",
+        });
+        await fetchData(cedula, true);
+      } else {
+        await dialog.alert({
+          title: "No pudimos abrir el formulario",
+          body: "Intenta de nuevo en un momento o escríbenos por WhatsApp.",
+        });
+      }
+    } catch {
+      await dialog.alert({ title: "Sin conexión", body: "No pudimos conectarnos. Intenta de nuevo." });
+    } finally {
+      setReviewBusy(false);
+    }
+  };
+
   // ── LOGIN SCREEN ──────────────────────────────────────────
   if (!cedula || !data) {
     return (
@@ -2168,6 +2203,17 @@ const CuentaPortal = () => {
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 
   const liveAppt = appts.find(a => a.computedStatus === "waiting" || a.computedStatus === "in-service");
+
+  // Solo se ofrece reseñar la visita más reciente, y dentro de los 30 días
+  // siguientes: pasado ese tiempo el recuerdo ya no da para una opinión útil.
+  const REVIEW_WINDOW_MS = 30 * 24 * 3600 * 1000;
+  const reviewable = history
+    .filter(a => a.computedStatus === "completed" && !a.reviewed)
+    .find(a => {
+      const t = a.completedAt ? new Date(a.completedAt).getTime()
+                              : new Date(`${a.date}T${a.time || "00:00"}`).getTime();
+      return !Number.isNaN(t) && Date.now() - t <= REVIEW_WINDOW_MS;
+    });
 
   return (
     <PortalShell tone="noir" header={
@@ -2484,6 +2530,45 @@ const CuentaPortal = () => {
             </div>
           )}
         </div>
+
+        {/* Reseña pendiente de la última visita */}
+        {reviewable && (
+          <div style={{
+            background: "#141212", border: "1px solid rgba(194,158,102,0.25)",
+            padding: "26px 28px", display: "grid",
+            gridTemplateColumns: "1fr auto", gap: 20, alignItems: "center",
+          }} className="appt-grid">
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}>
+                <span style={{
+                  width: 7, height: 7, borderRadius: "50%", background: "#C29E66",
+                  display: "inline-block", flexShrink: 0,
+                }} />
+                <PMono style={{ color: "#C29E66", fontSize: 10 }}>Tu opinión</PMono>
+              </div>
+              <div style={{
+                fontFamily: "'Marcellus', serif", fontSize: "clamp(20px, 3.5vw, 26px)",
+                lineHeight: 1.15, marginBottom: 8,
+              }}>
+                ¿Cómo te fue en tu última visita?
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.55, lineHeight: 1.6 }}>
+                {reviewable.service}
+                {reviewable.stylist && <> con {reviewable.stylist}</>}
+                {" · "}{fmtDate(reviewable.date)}
+              </div>
+            </div>
+            <button onClick={() => askReview(reviewable)} disabled={reviewBusy} style={{
+              background: reviewBusy ? "rgba(194,158,102,0.2)" : "#C29E66",
+              color: reviewBusy ? "rgba(245,241,234,0.5)" : "#0C0C0C",
+              border: "none", cursor: reviewBusy ? "default" : "pointer",
+              padding: "15px 26px", fontFamily: "'Outfit', sans-serif", fontSize: 12,
+              letterSpacing: "0.18em", textTransform: "uppercase", whiteSpace: "nowrap",
+            }}>
+              {reviewBusy ? "Abriendo…" : "Deja tu reseña"}
+            </button>
+          </div>
+        )}
 
         {/* History */}
         {history.length > 0 && (

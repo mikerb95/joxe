@@ -9,6 +9,7 @@ const KEY = "reviews_store";
 const DEFAULT = () => ({ reviews: [] });
 
 const MAX_TEXT = 600;
+const MAX_NAME = 40;
 const CAS_RETRIES = 4;
 
 // Escritura con compare-and-swap: dos clientes pueden enviar su reseña en el
@@ -44,7 +45,14 @@ function publicReview(r) {
 
 // Solo el nombre de pila, para no publicar el nombre completo de nadie.
 function firstName(full) {
-  return sanitizeStr(String(full || "").trim().split(/\s+/)[0] || "Cliente", 40);
+  return sanitizeStr(String(full || "").trim().split(/\s+/)[0] || "Cliente", MAX_NAME);
+}
+
+// El cliente puede corregir cómo quiere que aparezca su nombre. Si lo deja
+// vacío o solo con símbolos, se cae al nombre de pila de la cita.
+function displayName(input, apptName) {
+  const clean = sanitizeStr(String(input || "").replace(/\s+/g, " ").trim(), MAX_NAME);
+  return /\p{L}/u.test(clean || "") ? clean : firstName(apptName);
 }
 
 function summarize(reviews) {
@@ -178,7 +186,7 @@ export default async function handler(req, res) {
       return res.status(429).json({ error: "Too many requests" });
     }
 
-    const { token, rating: rawRating, text: rawText } = req.body ?? {};
+    const { token, rating: rawRating, text: rawText, name: rawName } = req.body ?? {};
     const apptId = verifyReviewToken(String(token || ""));
     if (!apptId) return res.status(401).json({ error: "invalid_token" });
 
@@ -197,7 +205,7 @@ export default async function handler(req, res) {
       // dos citas distintas) y sin exponer el id real de la cita en el home.
       id: `rv_${createHash("sha256").update(apptId).digest("hex").slice(0, 16)}`,
       apptId,
-      name: firstName(appt.name),
+      name: displayName(rawName, appt.name),
       rating,
       text,
       service: sanitizeStr(appt.service, 120) || "",

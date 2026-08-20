@@ -99,6 +99,7 @@ function ResenaPortal() {
   const token = new URLSearchParams(window.location.search).get("t") || "";
   const [state, setState] = useState({ phase: "loading" });
   const [rating, setRating] = useState(0);
+  const [name, setName] = useState("");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -110,19 +111,23 @@ function ResenaPortal() {
         const data = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(data.error || "error");
         if (data.already) setState({ phase: "already", appt: data.appt, review: data.review });
-        else setState({ phase: "form", appt: data.appt });
+        else {
+          setName(data.appt?.name || "");
+          setState({ phase: "form", appt: data.appt });
+        }
       })
       .catch(err => setState({ phase: err.message === "not_found" ? "notfound" : "invalid" }));
   }, [token]);
 
   const submit = async () => {
     if (rating === 0) { setError("Elige cuántas estrellas nos das."); return; }
+    if (!name.trim()) { setError("Escribe el nombre con el que quieres aparecer."); return; }
     setSending(true); setError("");
     try {
       const r = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, rating, text: text.trim() }),
+        body: JSON.stringify({ token, name: name.trim(), rating, text: text.trim() }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || "No pudimos guardar tu reseña.");
@@ -173,7 +178,23 @@ function ResenaPortal() {
 
       <StarPicker value={rating} onChange={n => { setRating(n); setError(""); }} />
 
-      <label htmlFor="rv-text" style={{ display: "block", margin: "32px 0 10px" }}>
+      <label htmlFor="rv-name" style={{ display: "block", margin: "32px 0 10px" }}>
+        <RMono style={{ opacity: 0.55 }}>Tu nombre</RMono>
+      </label>
+      <input id="rv-name" value={name} maxLength={40} autoComplete="given-name"
+        onChange={e => { setName(e.target.value); setError(""); }}
+        placeholder="Así aparecerás en la web"
+        style={{
+          width: "100%", padding: "15px 16px",
+          background: "rgba(245,241,234,0.04)", color: C.ivory,
+          border: "1px solid rgba(245,241,234,0.15)", borderRadius: 0,
+          fontFamily: "'Outfit', sans-serif", fontSize: 15,
+        }} />
+      <div style={{ marginTop: 6, opacity: 0.4, fontSize: 11, lineHeight: 1.5 }}>
+        Puedes dejar solo tu nombre de pila o cambiarlo si prefieres otro.
+      </div>
+
+      <label htmlFor="rv-text" style={{ display: "block", margin: "28px 0 10px" }}>
         <RMono style={{ opacity: 0.55 }}>Cuéntanos (opcional)</RMono>
       </label>
       <textarea id="rv-text" value={text} maxLength={600}
@@ -210,7 +231,7 @@ function ResenaPortal() {
       </button>
 
       <p style={{ marginTop: 18, opacity: 0.4, fontSize: 12, lineHeight: 1.6, textAlign: "center" }}>
-        Publicamos tu nombre de pila y tu comentario. Nada más.
+        Publicamos el nombre que escribas aquí y tu comentario. Nada más.
       </p>
     </Shell>
   );
