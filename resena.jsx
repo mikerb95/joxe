@@ -70,7 +70,7 @@ function Shell({ children }) {
   );
 }
 
-function Notice({ title, body, tone = "neutral" }) {
+function Notice({ title, body, tone = "neutral", account = false }) {
   const color = tone === "error" ? C.red : tone === "ok" ? C.green : C.bronze;
   return (
     <div style={{ textAlign: "center", paddingTop: 40 }}>
@@ -86,11 +86,23 @@ function Notice({ title, body, tone = "neutral" }) {
       <p style={{ opacity: 0.65, fontSize: 15, lineHeight: 1.7, margin: "0 auto", maxWidth: 380 }}>
         {body}
       </p>
-      <a href="/" style={{
-        display: "inline-block", marginTop: 36, padding: "13px 30px",
-        border: `1px solid ${C.bronze}`, color: C.bronze, textDecoration: "none",
-        fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase",
-      }}>Volver al inicio</a>
+      <div style={{
+        display: "flex", gap: 12, justifyContent: "center",
+        flexWrap: "wrap", marginTop: 36,
+      }}>
+        {account && (
+          <a href="/cuenta" style={{
+            padding: "13px 30px", background: C.bronze, color: C.noir,
+            textDecoration: "none", fontSize: 12,
+            letterSpacing: "0.2em", textTransform: "uppercase",
+          }}>Ver mi cuenta</a>
+        )}
+        <a href="/" style={{
+          padding: "13px 30px",
+          border: `1px solid ${C.bronze}`, color: C.bronze, textDecoration: "none",
+          fontSize: 12, letterSpacing: "0.2em", textTransform: "uppercase",
+        }}>Volver al inicio</a>
+      </div>
     </div>
   );
 }
@@ -151,14 +163,14 @@ function ResenaPortal() {
       body="El enlace apunta a una cita que ya no está registrada. Escríbenos y lo revisamos." /></Shell>;
   }
   if (state.phase === "already") {
-    return <Shell><Notice tone="ok" title="Ya nos dejaste tu opinión"
+    return <Shell><Notice tone="ok" account title="Ya nos dejaste tu opinión"
       body={state.review?.status === "approved"
         ? "Tu reseña ya está publicada en nuestra web. Gracias por tomarte el tiempo."
         : "La recibimos y está en revisión. Aparecerá en la web muy pronto. Gracias."} /></Shell>;
   }
   if (state.phase === "thanks") {
-    return <Shell><Notice tone="ok" title="Gracias por escribirnos"
-      body="Revisamos cada reseña antes de publicarla, así que la tuya aparecerá en la web en poco tiempo." /></Shell>;
+    return <Shell><Notice tone="ok" account title="Gracias por escribirnos"
+      body="Revisamos cada reseña antes de publicarla, así que la tuya aparecerá en la web en poco tiempo. Puedes seguir su estado en Mi Cuenta, junto a tu historial de visitas." /></Shell>;
   }
 
   const { appt } = state;
