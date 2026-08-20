@@ -1960,51 +1960,77 @@ const LobbyPortal = () => {
 // ============================================================
 // PAGE 4 — MI CUENTA (cliente)
 // ============================================================
-const ACCT_KEY = "joxe_cuenta_cedula";
+const ACCT_KEY   = "joxe_cuenta_cedula";
+const ACCT_P4_KEY = "joxe_cuenta_phone4";
 
 const CuentaPortal = () => {
   const [cedula,   setCedula]   = React.useState(() => localStorage.getItem(ACCT_KEY) || "");
+  const [phone4,   setPhone4]   = React.useState(() => localStorage.getItem(ACCT_P4_KEY) || "");
   const [input,    setInput]    = React.useState("");
+  const [input4,   setInput4]   = React.useState("");
   const [data,     setData]     = React.useState(null);
   const [loading,  setLoading]  = React.useState(false);
   const [error,    setError]    = React.useState("");
   const [showQR,   setShowQR]   = React.useState(null);
 
-  const fetchData = React.useCallback(async (cc, silent = false) => {
+  // Devuelve "ok" | "auth" | "net" para que quien llama decida qué mostrar.
+  const fetchData = React.useCallback(async (cc, p4, silent = false) => {
     try {
-      const res = await fetch(`/api/client?cedula=${encodeURIComponent(cc)}`);
+      const res = await fetch(
+        `/api/client?cedula=${encodeURIComponent(cc)}&phone4=${encodeURIComponent(p4)}`);
+      if (res.status === 401 || res.status === 429) {
+        setData(null);
+        localStorage.removeItem(ACCT_KEY);
+        localStorage.removeItem(ACCT_P4_KEY);
+        setCedula(""); setPhone4("");
+        setError(res.status === 429
+          ? "Demasiados intentos. Espera unos minutos e intenta de nuevo."
+          : "Los datos no coinciden. Revisa tu cédula y los últimos 4 dígitos de tu celular.");
+        return "auth";
+      }
       if (!res.ok) throw new Error("error");
-      const d = await res.json();
-      setData(d);
+      setData(await res.json());
+      return "ok";
     } catch {
       if (!silent) setError("No pudimos conectarnos. Intenta de nuevo.");
+      return "net";
     }
   }, []);
 
   // Auto-load + live poll
   React.useEffect(() => {
-    const saved = localStorage.getItem(ACCT_KEY);
-    if (saved) { setCedula(saved); fetchData(saved, true); }
+    const cc = localStorage.getItem(ACCT_KEY);
+    const p4 = localStorage.getItem(ACCT_P4_KEY);
+    // Sesiones viejas guardaban solo la cédula: se piden los dos datos de nuevo.
+    if (cc && p4) { setCedula(cc); setPhone4(p4); fetchData(cc, p4, true); }
+    else if (cc)  { localStorage.removeItem(ACCT_KEY); setCedula(""); }
   }, [fetchData]);
 
   const pollAccount = React.useCallback(() => {
-    if (!cedula) return;
-    fetchData(cedula, true);
-  }, [cedula, fetchData]);
+    if (!cedula || !phone4) return;
+    fetchData(cedula, phone4, true);
+  }, [cedula, phone4, fetchData]);
   usePolling(pollAccount, 60000);
 
   const login = async () => {
     const clean = input.replace(/\D/g, "");
-    if (clean.length < 6) { setError("Ingresa una cédula válida."); return; }
+    const clean4 = input4.replace(/\D/g, "");
+    if (clean.length < 6)  { setError("Ingresa una cédula válida."); return; }
+    if (clean4.length !== 4) { setError("Ingresa los últimos 4 dígitos de tu celular."); return; }
     setLoading(true); setError("");
-    await fetchData(clean);
-    setCedula(clean);
-    localStorage.setItem(ACCT_KEY, clean);
+    const outcome = await fetchData(clean, clean4);
+    if (outcome === "ok") {
+      setCedula(clean); setPhone4(clean4);
+      localStorage.setItem(ACCT_KEY, clean);
+      localStorage.setItem(ACCT_P4_KEY, clean4);
+    }
     setLoading(false);
   };
 
   const logout = () => {
-    setCedula(""); setData(null); setInput(""); localStorage.removeItem(ACCT_KEY);
+    setCedula(""); setPhone4(""); setData(null); setInput(""); setInput4("");
+    localStorage.removeItem(ACCT_KEY);
+    localStorage.removeItem(ACCT_P4_KEY);
   };
 
   const todayStr  = (() => { const d = nowCOT(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
@@ -2048,7 +2074,7 @@ const CuentaPortal = () => {
     try {
       const res = await fetch("/api/client", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: a.id, cedula, action: "cancel" }),
+        body: JSON.stringify({ id: a.id, cedula, phone4, action: "cancel" }),
       });
       if (res.status === 409) {
         const d = await res.json().catch(() => ({}));
@@ -2059,7 +2085,7 @@ const CuentaPortal = () => {
       } else if (!res.ok) {
         await dialog.alert({ title: "Error", body: "No pudimos cancelar la cita. Intenta de nuevo." });
       } else {
-        await fetchData(cedula, true);
+        await fetchData(cedula, phone4, true);
       }
     } catch {
       await dialog.alert({ title: "Sin conexión", body: "No pudimos conectarnos. Intenta de nuevo." });
@@ -2077,7 +2103,7 @@ const CuentaPortal = () => {
     try {
       const res = await fetch("/api/client", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: a.id, cedula, action: "review-link" }),
+        body: JSON.stringify({ id: a.id, cedula, phone4, action: "review-link" }),
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok && d.token) {
@@ -2089,7 +2115,7 @@ const CuentaPortal = () => {
           title: "Ya nos dejaste tu opinión",
           body: "Gracias. Revisamos cada reseña antes de publicarla en la web.",
         });
-        await fetchData(cedula, true);
+        await fetchData(cedula, phone4, true);
       } else {
         await dialog.alert({
           title: "No pudimos abrir el formulario",

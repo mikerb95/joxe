@@ -5,6 +5,28 @@ import {
 
 const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
 
+// Mi Cuenta no tiene contraseña: la cédula sola sería una llave demasiado
+// débil (no es un dato secreto), así que se exige además los últimos 4 dígitos
+// del celular con el que quedó registrada la cita.
+const last4 = v => String(v ?? "").replace(/\D/g, "").slice(-4);
+
+function phoneMatches(appts, phone4) {
+  return appts.some(a => {
+    const d = last4(a.phone);
+    return d.length === 4 && d === phone4;
+  });
+}
+
+// Los intentos fallidos se cuentan aparte: así se puede frenar a quien pruebe
+// combinaciones sin castigar al cliente que solo está consultando sus citas.
+async function tooManyFailures(req, res) {
+  const rl = await rateLimit(`client-auth:${clientIp(req)}`, 12, 15 * 60 * 1000);
+  if (rl.ok) return false;
+  res.setHeader("Retry-After", String(rl.retryAfter));
+  res.status(429).json({ error: "Too many requests" });
+  return true;
+}
+
 export default async function handler(req, res) {
   applyCors(req, res, "GET, POST, OPTIONS");
   if (req.method === "OPTIONS") return res.status(200).end();
@@ -14,7 +36,7 @@ export default async function handler(req, res) {
 
     // ---- Client self-service: cancelar cita / pedir link de reseña ----
     if (req.method === "POST") {
-      const { id, cedula: rawCedula, action } = req.body ?? {};
+      const { id, cedula: rawCedula, phone4: rawPhone4, action } = req.body ?? {};
       if (!["cancel", "review-link"].includes(action)) {
         return res.status(400).json({ error: "Invalid action" });
       }
@@ -34,9 +56,14 @@ export default async function handler(req, res) {
 
       const all = [...(store.appointments || []), ...(store.active || []), ...(store.completed || [])];
       const appt = all.find(a => a.id === id);
-      // Ownership check: the appointment's cedula must match the requester's.
+      // Ownership check: cédula de la cita + últimos 4 del celular.
       if (!appt || (appt.cedula || "").replace(/\D/g, "") !== cedula) {
         return res.status(404).json({ error: "Appointment not found" });
+      }
+      const phone4 = last4(rawPhone4);
+      if (!phoneMatches([appt], phone4)) {
+        if (await tooManyFailures(req, res)) return;
+        return res.status(401).json({ error: "auth_failed" });
       }
 
       const completedSet = new Set((store.completed || []).map(a => a.id));
@@ -76,7 +103,9 @@ export default async function handler(req, res) {
 
     const cedula = (req.query.cedula || "").replace(/\D/g, "");
     const phone  = (req.query.phone  || "").replace(/\D/g, "");
+    const phone4 = last4(req.query.phone4);
     if (!cedula && !phone) return res.status(400).json({ error: "Missing cedula or phone" });
+    if (cedula && phone4.length !== 4) return res.status(400).json({ error: "missing_phone4" });
 
     const store     = await kvGet("turno_store") || { appointments: [], active: [], completed: [], blockedSlots: [] };
     const adminData = await kvGet("admin_store")  || {};
@@ -98,6 +127,13 @@ export default async function handler(req, res) {
       if (cedula) return (a.cedula || "").replace(/\D/g, "") === cedula;
       return (a.phone || "").replace(/\D/g, "") === phone;
     });
+
+    // Cédula y celular tienen que ir juntos. Una cédula sin citas responde
+    // igual que una con el celular equivocado: no se confirma si existe.
+    if (cedula && !phoneMatches(all, phone4)) {
+      if (await tooManyFailures(req, res)) return;
+      return res.status(401).json({ error: "auth_failed" });
+    }
 
     // Citas que ya tienen reseña: la cuenta no vuelve a pedirla.
     const reviewedSet = new Set(
