@@ -99,6 +99,11 @@ const Nav = ({ onReserveClick, scrolled, hasReviews }) => {
               opacity: 0.85,
             }}>{label}</a>
           ))}
+          <a href="Cuenta.html" style={{
+            color: "var(--ivory)", textDecoration: "none",
+            fontFamily: "var(--sans)", fontSize: 13, letterSpacing: "0.1em",
+            opacity: 0.85,
+          }}>Mi cuenta</a>
           <a href="CheckIn.html" style={{
             color: "var(--bronze)", textDecoration: "none",
             fontFamily: "var(--sans)", fontSize: 12, letterSpacing: "0.15em",
@@ -143,6 +148,10 @@ const Nav = ({ onReserveClick, scrolled, hasReviews }) => {
               fontFamily: "var(--display)", fontSize: 34, letterSpacing: "0.02em",
             }}>{label}</a>
           ))}
+          <a href="Cuenta.html" onClick={() => setOpen(false)} style={{
+            color: "var(--ivory)", textDecoration: "none",
+            fontFamily: "var(--display)", fontSize: 34, letterSpacing: "0.02em",
+          }}>Mi cuenta</a>
           <a href="CheckIn.html" onClick={() => setOpen(false)} style={{
             color: "var(--bronze)", textDecoration: "none",
             fontFamily: "var(--sans)", fontSize: 15, letterSpacing: "0.2em",
@@ -772,7 +781,8 @@ const Footer = () => (
       <div>
         <Mono style={{ color: "var(--bronze)", display: "block", marginBottom: 18 }}>Navegación</Mono>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[["Servicios", "#servicios"], ["Galería", "#galeria"]].map(([l, h]) => (
+          {[["Servicios", "#servicios"], ["Galería", "#galeria"],
+            ["Mi cuenta", "Cuenta.html"]].map(([l, h]) => (
             <a key={h} href={h} style={{
               color: "var(--ivory)", textDecoration: "none",
               fontFamily: "var(--sans)", fontSize: 14, opacity: 0.75,
