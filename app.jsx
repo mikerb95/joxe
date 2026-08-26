@@ -24,6 +24,7 @@ function App() {
   const [editMode, setEditMode] = useState(false);
   const goToBooking = () => { window.location.href = "/booking"; };
   const [scrolled, setScrolled] = useState(false);
+  const reviews = useReviewsFeed();
 
   useEffect(() => {
     const onMsg = (e) => {
@@ -61,12 +62,13 @@ function App() {
 
   return (
     <div style={{ background: "var(--ivory)", minHeight: "100vh" }}>
-      <Nav onReserveClick={goToBooking} scrolled={scrolled} />
+      <Nav onReserveClick={goToBooking} scrolled={scrolled}
+        hasReviews={!!(reviews && reviews.count)} />
       <Hero onReserveClick={goToBooking} />
       <Marquee />
       <Services />
       <Gallery />
-      <Reviews />
+      <Reviews data={reviews} />
       <LocationMap />
       <Footer />
       <WhatsAppBlob />

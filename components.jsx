@@ -53,7 +53,21 @@ const Mono = ({ children, style }) => (
 // ——————————————————————————————————————————————
 // NAV
 // ——————————————————————————————————————————————
-const Nav = ({ onReserveClick, scrolled }) => {
+// Un solo fetch de /api/reviews para toda la página: el nav también necesita
+// saber si hay reseñas publicadas, para no enlazar a una sección que no se
+// pinta cuando todavía no hay ninguna aprobada.
+const useReviewsFeed = () => {
+  const [data, setData] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/api/reviews")
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(setData)
+      .catch(() => {});
+  }, []);
+  return data;
+};
+
+const Nav = ({ onReserveClick, scrolled, hasReviews }) => {
   const [open, setOpen] = React.useState(false);
   return (
     <>
@@ -76,7 +90,7 @@ const Nav = ({ onReserveClick, scrolled }) => {
           {[
             ["Servicios", "#servicios"],
             ["Galería", "#galeria"],
-            ["Reseñas", "#resenas"],
+            ...(hasReviews ? [["Reseñas", "#resenas"]] : []),
             ["Ubicación", "#ubicacion"],
           ].map(([label, href]) => (
             <a key={href} href={href} style={{
@@ -121,7 +135,7 @@ const Nav = ({ onReserveClick, scrolled }) => {
           {[
             ["Servicios", "#servicios"],
             ["Galería", "#galeria"],
-            ["Reseñas", "#resenas"],
+            ...(hasReviews ? [["Reseñas", "#resenas"]] : []),
             ["Ubicación", "#ubicacion"],
           ].map(([label, href]) => (
             <a key={href} href={href} onClick={() => setOpen(false)} style={{
@@ -602,16 +616,8 @@ const ReviewCard = ({ r }) => (
   </article>
 );
 
-const Reviews = () => {
-  const [data, setData] = React.useState(null);
+const Reviews = ({ data }) => {
   const [showAll, setShowAll] = React.useState(false);
-
-  React.useEffect(() => {
-    fetch("/api/reviews")
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then(setData)
-      .catch(() => {});
-  }, []);
 
   if (!data || !data.count) return null;
 
@@ -680,7 +686,8 @@ const Reviews = () => {
           opacity: 0.45, lineHeight: 1.6, maxWidth: 520,
         }}>
           Solo puede dejar reseña quien tuvo una cita atendida en el salón.
-          Te enviamos el enlace por WhatsApp después de tu visita.
+          Te enviamos el enlace por WhatsApp después de tu visita, y también
+          lo encuentras en tu cuenta.
         </p>
       </div>
     </section>

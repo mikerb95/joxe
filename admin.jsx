@@ -7351,7 +7351,6 @@ const AdmStars = ({value,size=13}) => (
 
 const ReviewsView = () => {
   const [appts]  = useAppts();
-  const [admin]  = useAdmin();
   const [data,setData]       = React.useState({reviews:[],avg:0,count:0,byStylist:{}});
   const [loading,setLoading] = React.useState(true);
   const [err,setErr]         = React.useState("");
