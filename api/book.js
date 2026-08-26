@@ -1,7 +1,7 @@
 import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr } from "../lib/db.js";
 // kvGet: reads admin_store (catalog); kvGetWithMeta + kvCas: optimistic append.
 import { blocksFromStore, blockConflict } from "../lib/blocks.js";
-import webpush from "web-push";
+import { notifyStaff } from "../lib/notify.js";
 
 const MAX_APPOINTMENTS = 5000; // hard cap to bound storage / abuse
 const CAS_RETRIES = 6;         // retries for the optimistic append under contention
@@ -9,54 +9,15 @@ const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^\d{2}:\d{2}$/;
 
-async function sendPushNotifications(appt) {
-  const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
-  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) return;
-  webpush.setVapidDetails(
-    VAPID_SUBJECT ?? "mailto:admin@joxe.co",
-    VAPID_PUBLIC_KEY,
-    VAPID_PRIVATE_KEY
-  );
-  const subs = await kvGet("push_subscriptions") ?? [];
-  if (!subs.length) return;
-
-  // Notifica solo a los dispositivos del estilista asignado a la cita
-  const admin = await kvGet("admin_store");
-  const targetId = (admin?.employees || []).find(e => e.name === appt.stylist)?.id ?? null;
-  const targets = subs.filter(s =>
-    (targetId && s.empId && s.empId === targetId) ||
-    (s.stylist && appt.stylist && s.stylist === appt.stylist)
-  );
-  if (!targets.length) return;
-
-  const payload = JSON.stringify({
+// Aviso al estilista asignado a la cita. El admin recibe el suyo por el
+// tópico general de ntfy (NTFY_TOPIC), como siempre.
+function notifyBooking(appt) {
+  return notifyStaff({
+    stylist: appt.stylist ?? null,
     title: "Nuevo turno reservado",
-    body: `${appt.name ?? "Cliente"} · ${appt.service ?? ""} · ${appt.date ?? ""} ${appt.time ?? ""}`,
-  });
-  await Promise.allSettled(targets.map(sub => webpush.sendNotification(sub, payload)));
-}
-
-async function publishNtfy(topic, appt) {
-  await fetch(`https://ntfy.sh/${encodeURIComponent(topic)}`, {
-    method: "POST",
-    headers: {
-      Title: "Nuevo turno reservado",
-      Tags: "calendar",
-    },
+    tags: "calendar",
     body: `${appt.name ?? "Cliente"} · ${appt.service ?? ""} · ${appt.stylist ?? ""} · ${appt.date ?? ""} ${appt.time ?? ""}`,
   });
-}
-
-// Notifica al admin (canal general) vía ntfy.sh, y al tópico propio del
-// estilista asignado si tiene uno configurado — así cada empleado solo
-// recibe avisos de sus propias citas.
-async function sendNtfyNotification(appt) {
-  const adminTopic = process.env.NTFY_TOPIC;
-  const admin = await kvGet("admin_store");
-  const empTopic = (admin?.employees || []).find(e => e.name === appt.stylist)?.ntfyTopic || null;
-
-  const topics = new Set([adminTopic, empTopic].filter(Boolean));
-  await Promise.allSettled([...topics].map(t => publishNtfy(t, appt)));
 }
 
 function validateAppt(raw) {
@@ -175,10 +136,7 @@ export default async function handler(req, res) {
         // Esperamos las notificaciones antes de responder: en serverless la
         // invocación se congela al enviar la respuesta, así que el trabajo
         // fire-and-forget se pierde antes de llegar a salir.
-        await Promise.allSettled([
-          sendPushNotifications(appt).catch(e => console.error("[book:push]", e.message)),
-          sendNtfyNotification(appt).catch(e => console.error("[book:ntfy]", e.message)),
-        ]);
+        await notifyBooking(appt);
         return res.status(200).json({ ok: true });
       }
       // Lost the race — loop and re-read the fresh state.

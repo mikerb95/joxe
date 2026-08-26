@@ -4,6 +4,7 @@ import {
   applyCors, clientIp, rateLimit, sanitizeStr,
   verifyStaffAuth, verifyAdminAuth, signReviewToken, verifyReviewToken,
 } from "../lib/db.js";
+import { notifyStaff } from "../lib/notify.js";
 
 const KEY = "reviews_store";
 const DEFAULT = () => ({ reviews: [] });
@@ -226,6 +227,26 @@ export default async function handler(req, res) {
         result: { ok: true },
       };
     });
+
+    // Toda reseña queda pendiente de moderación, así que hay que avisar: si
+    // nadie entra al panel, no se publica nunca. Se espera el envío porque la
+    // función se congela al responder. Solo en el alta real, no al reenviar.
+    if (!result.already) {
+      const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+      await notifyStaff({
+        stylist: review.stylist || null,
+        toAdmin: true,
+        title: "Nueva reseña por revisar",
+        ntfyTitle: "Nueva resena por revisar",
+        tags: "star",
+        body: [
+          `${review.name} · ${stars}`,
+          review.service || null,
+          review.stylist ? `Atendió ${review.stylist}` : null,
+          text ? `"${text.slice(0, 140)}${text.length > 140 ? "…" : ""}"` : null,
+        ].filter(Boolean).join(" · "),
+      });
+    }
     return res.status(200).json(result);
   } catch (err) {
     const status = err.status || 500;

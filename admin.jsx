@@ -6591,13 +6591,14 @@ const EmpBookingView = ({emp, onNav}) => {
     fetch("/api/catalog").then(r=>r.ok?r.json():null).then(d=>{ if(d) setCatalog(d); }).catch(()=>{});
   },[]);
 
-  const [form, setForm]   = React.useState({ phone:"", name:"", serviceId:"", date:firstOpen, time:"" });
+  const [form, setForm]   = React.useState({ phone:"", name:"", cedula:"", serviceId:"", date:firstOpen, time:"" });
   const [saving, setSaving] = React.useState(false);
   const [done, setDone]     = React.useState(null);
   const [err, setErr]       = React.useState("");
   // Celulares para los que el staff dijo "¿No es el cliente?" — no se vuelven a autocompletar
   const [rejectedPhones, setRejectedPhones] = React.useState([]);
   const autoNameRef = React.useRef("");   // último nombre puesto automáticamente (para poder reemplazarlo)
+  const autoCedRef  = React.useRef("");   // ídem para la cédula
   const setF = (k,v)=> setForm(f=>({...f,[k]:v}));
 
   const allServices  = catalog?.services || [];
@@ -6659,7 +6660,9 @@ const EmpBookingView = ({emp, onNav}) => {
       const p=(a.phone||"").replace(/\D/g,"");
       const nm=(a.name||"").trim();
       if(p.length===10 && nm && nm!=="Cliente sin nombre"){
-        if(!m[p] || (a.createdAt||0) > m[p].at) m[p]={ name:nm, at:a.createdAt||0 };
+        if(!m[p] || (a.createdAt||0) > m[p].at){
+          m[p]={ name:nm, cedula:(a.cedula||"").replace(/\D/g,""), at:a.createdAt||0 };
+        }
       }
     });
     return m;
@@ -6676,9 +6679,15 @@ const EmpBookingView = ({emp, onNav}) => {
     if(m){
       setForm(f=> (f.name.trim()==="" || f.name===autoNameRef.current) ? {...f, name:m.name} : f);
       autoNameRef.current = m.name;
+      if(m.cedula){
+        setForm(f=> (f.cedula==="" || f.cedula===autoCedRef.current) ? {...f, cedula:m.cedula} : f);
+        autoCedRef.current = m.cedula;
+      }
     } else {
       setForm(f=> (f.name!=="" && f.name===autoNameRef.current) ? {...f, name:""} : f);
       autoNameRef.current = "";
+      setForm(f=> (f.cedula!=="" && f.cedula===autoCedRef.current) ? {...f, cedula:""} : f);
+      autoCedRef.current = "";
     }
   },[phoneDigits, phoneOk, isRejected, phoneNameMap]);
 
@@ -6691,7 +6700,11 @@ const EmpBookingView = ({emp, onNav}) => {
   // El nombre es obligatorio la primera vez que se registra un celular nuevo (sin cliente conocido)
   const nameRequired = phoneOk && !knownName;
   const nameOk       = !nameRequired || form.name.trim().length>0;
-  const canSubmit = phoneOk && nameOk && !!form.serviceId && !!form.date && timeOk && !saving;
+  // La cédula es opcional (el cliente no siempre la tiene a mano por teléfono),
+  // pero sin ella no puede entrar a Mi Cuenta ni dejar reseña.
+  const cedulaDigits = (form.cedula||"").replace(/\D/g,"");
+  const cedulaOk     = cedulaDigits.length===0 || (cedulaDigits.length>=6 && cedulaDigits.length<=12);
+  const canSubmit = phoneOk && nameOk && cedulaOk && !!form.serviceId && !!form.date && timeOk && !saving;
 
   const pickService = (s)=> setForm(f=>({...f, serviceId:s.id, time:""}));
   const pickDate    = (d)=> setForm(f=>({...f, date:d, time:""}));
@@ -6700,6 +6713,7 @@ const EmpBookingView = ({emp, onNav}) => {
     setErr("");
     if (!phoneOk)            { setErr("Ingresa un celular válido de 10 dígitos."); return; }
     if (!nameOk)             { setErr("Ingresa el nombre del cliente (obligatorio para un celular nuevo)."); return; }
+    if (!cedulaOk)           { setErr("La cédula debe tener entre 6 y 12 dígitos, o dejarse vacía."); return; }
     if (!selectedSvc)        { setErr("Selecciona el servicio."); return; }
     if (!timeOk)             { setErr("Selecciona una hora disponible para el bloque."); return; }
     setSaving(true);
@@ -6746,7 +6760,7 @@ const EmpBookingView = ({emp, onNav}) => {
       time: form.time,
       name: form.name.trim() || "Cliente sin nombre",
       phone: phoneDigits,
-      cedula: "",
+      cedula: cedulaDigits,
       createdAt: Date.now(),
       status: "scheduled",
       confirmedBy: emp.name,     // creada en mano por el staff → ya confirmada
@@ -6775,7 +6789,7 @@ const EmpBookingView = ({emp, onNav}) => {
     setDone(appt);
   };
 
-  const resetForNew = () => { setDone(null); setForm({ phone:"", name:"", serviceId:"", date:firstOpen, time:"" }); setErr(""); };
+  const resetForNew = () => { setDone(null); setForm({ phone:"", name:"", cedula:"", serviceId:"", date:firstOpen, time:"" }); setErr(""); };
 
   const dayLabel = (d,i)=> i===0&&d===todayD ? "Hoy" : d===addDay(todayD,1) ? "Mañana" :
     new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric"});
@@ -6852,6 +6866,18 @@ const EmpBookingView = ({emp, onNav}) => {
                   background:"transparent",border:"none",color:C.gold,cursor:"pointer",padding:0,
                   fontFamily:"'JetBrains Mono',monospace",fontSize:11,textDecoration:"underline",
                 }}>¿No es el cliente?</button>
+              </div>
+            )}
+          </div>
+          <div style={{gridColumn:"1 / -1"}}>
+            <FieldInput label="Cédula (opcional)" type="tel" value={form.cedula}
+              onChange={e=>{ autoCedRef.current=""; setF("cedula", e.target.value.replace(/\D/g,"").slice(0,12)); }}
+              placeholder="1234567890" />
+            {cedulaDigits.length>0 && !cedulaOk ? (
+              <div style={{marginTop:6,fontSize:11,color:C.red}}>Entre 6 y 12 dígitos.</div>
+            ) : (
+              <div style={{marginTop:6,fontSize:11,color:C.muted}}>
+                Con la cédula el cliente puede entrar a Mi Cuenta, ver su historial y dejar reseña.
               </div>
             )}
           </div>
