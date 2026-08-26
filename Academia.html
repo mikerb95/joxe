@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Clases de barbería · JOXE Academia</title>
+<meta name="description" content="Clases de barbería en JOXE Asesores de Imagen. Formación práctica en el salón, cupos limitados e inscripción en línea.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --noir: #0C0C0C;
+    --ivory: #F5F1EA;
+    --bronze: #C29E66;
+    --display: 'Marcellus', serif;
+    --sans: 'Outfit', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--ivory);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body { font-family: var(--sans); color: var(--noir); overflow-x: hidden; }
+  ::selection { background: var(--bronze); color: var(--noir); }
+  a { color: inherit; }
+  button { font-family: var(--sans); }
+  input:focus, textarea:focus, select:focus, button:focus-visible, a:focus-visible {
+    outline: 1px solid var(--bronze); outline-offset: 2px;
+  }
+  select option { background: var(--noir); color: var(--ivory); }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .section { animation: fadeIn 0.8s ease; }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none !important; }
+    .nav-burger { display: block !important; }
+    .ac-hero { padding: 140px 24px 72px !important; }
+    .ac-form-grid, .footer-grid { grid-template-columns: 1fr !important; gap: 48px !important; }
+    .section { padding: 72px 24px !important; }
+    .footer-bottom { flex-direction: column; }
+  }
+  @media (max-width: 640px) {
+    .ac-courses-grid { grid-template-columns: 1fr !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="academia.jsx"></script>
+</body>
+</html>

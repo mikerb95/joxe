@@ -49,6 +49,10 @@
       "destination": "/Showcase.html"
     },
     {
+      "source": "/academia",
+      "destination": "/Academia.html"
+    },
+    {
       "source": "/",
       "destination": "/Asesores de Imagen.html"
     }
