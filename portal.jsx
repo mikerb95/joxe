@@ -1272,6 +1272,7 @@ const BookingPortal = () => {
 
                 {/* Botón WhatsApp */}
                 <a
+                  data-wa-avoid
                   href={`https://wa.me/${waAdminRaw}?text=${encodeURIComponent(
                     `Hola, quiero confirmar mi cita 🗓️\n\nNombre: ${ticket.name}\nServicio: ${ticket.service}\nFecha: ${ticket.date} a las ${formatTime12h(ticket.time)}\nEstilista: ${ticket.stylist}\nCódigo: ${ticket.code}\n\nAdjunto comprobante de abono de $10.000 a Nequi/DaviPlata 3124499862.`
                   )}`}
@@ -3692,6 +3693,7 @@ const CheckInClientView = ({ store, setStore, employee, headerRight }) => {
                 </div>
               )}
               <button
+                data-wa-avoid
                 onClick={confirmVisit}
                 disabled={cedula.replace(/\D/g, '').length < 5}
                 style={{ width: "100%",
