@@ -65,10 +65,10 @@ const str = (v, max) => sanitizeStr(v, max)?.trim() ?? "";
 
 // El precio se guarda como número (0 = sin precio publicado) y la nota lleva
 // el matiz ("desde", "por sesión"), igual que el catálogo de servicios.
-function cleanCourse(c, i) {
+function cleanCourse(c) {
   const price = Number(c?.price);
   return {
-    id: str(c?.id, 40) || `c${i + 1}`,
+    id: str(c?.id, 40) || `c_${randomUUID().slice(0, 8)}`,
     name: str(c?.name, 120),
     summary: str(c?.summary, 400),
     level: str(c?.level, 60),
@@ -82,6 +82,16 @@ function cleanCourse(c, i) {
   };
 }
 
+function dedupeById(courses) {
+  const seen = new Set();
+  return courses.map(c => {
+    let id = c.id;
+    while (seen.has(id)) id = `c_${randomUUID().slice(0, 8)}`;
+    seen.add(id);
+    return id === c.id ? c : { ...c, id };
+  });
+}
+
 function cleanContent(body) {
   return {
     enabled: !!body?.enabled,
@@ -92,8 +102,9 @@ function cleanContent(body) {
     location: str(body?.location, 160),
     includes: Array.isArray(body?.includes)
       ? body.includes.map(t => str(t, 160)).filter(Boolean).slice(0, 12) : [],
+    // Dos cursos con el mismo id romperían el selector del formulario.
     courses: Array.isArray(body?.courses)
-      ? body.courses.map(cleanCourse).filter(c => c.name).slice(0, 20) : [],
+      ? dedupeById(body.courses.map(cleanCourse).filter(c => c.name)).slice(0, 20) : [],
     faq: Array.isArray(body?.faq)
       ? body.faq.map(f => ({ q: str(f?.q, 200), a: str(f?.a, 800) })).filter(f => f.q && f.a).slice(0, 20)
       : [],

@@ -662,6 +662,7 @@ const VIEWS = [
   {id:"commissions", label:"Comisiones",       icon:"%", tooltip:"Comisiones por empleado y liquidaciones"},
   {id:"employees",   label:"Empleados",        icon:"◉", tooltip:"Gestión del equipo y sus PINs"},
   {id:"services",    label:"Servicios",        icon:"✦", tooltip:"Catálogo de servicios y precios"},
+  {id:"academy",     label:"Academia",         icon:"❑", tooltip:"Clases: contenido de la página y solicitudes"},
   {id:"settings",    label:"Configuración",    icon:"⊛", tooltip:"Ajustes generales del salón"},
   {id:"help",        label:"Ayuda",            icon:"?", tooltip:"Guías y documentación del panel"},
 ];
@@ -7650,6 +7651,388 @@ const ReviewsView = () => {
   );
 };
 
+// ==================== ACADEMIA ====================
+// Contenido de la página /academia y bandeja de solicitudes de inscripción.
+// El contenido vive en su propia clave (academy_store), no en admin_store, para
+// que guardar la academia nunca pise la configuración del salón.
+const AC_EMPTY_CONTENT = () => ({
+  enabled:false, kicker:"", headline:"", intro:"", nextStart:"", location:"",
+  includes:[], courses:[], faq:[], whatsappMsg:"",
+});
+
+const AC_LEAD_META = {
+  new:       {label:"Nueva",     color:C.blue},
+  contacted: {label:"Contactada",color:C.gold},
+  enrolled:  {label:"Inscrita",  color:C.green},
+  discarded: {label:"Descartada",color:C.muted},
+};
+
+const FieldArea = ({label,value,onChange,placeholder,rows=3,style}) => (
+  <div style={{display:"flex",flexDirection:"column",gap:6,...style}}>
+    {label && <Mono style={{color:C.muted,fontSize:9}}>{label}</Mono>}
+    <textarea value={value} onChange={onChange} placeholder={placeholder} rows={rows}
+      style={{background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,padding:"11px 14px",
+        fontFamily:"'Outfit',sans-serif",fontSize:14,width:"100%",resize:"vertical"}} />
+  </div>
+);
+
+// Lista de textos sueltos (qué incluye, temario de un curso).
+const AcStringList = ({label,items,onChange,placeholder}) => (
+  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+    <Mono style={{color:C.muted,fontSize:9}}>{label}</Mono>
+    {items.map((t,i)=>(
+      <div key={i} style={{display:"flex",gap:8,alignItems:"center"}}>
+        <input value={t} placeholder={placeholder}
+          onChange={e=>onChange(items.map((v,j)=>j===i?e.target.value:v))}
+          style={{background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,padding:"10px 12px",
+            fontFamily:"'Outfit',sans-serif",fontSize:14,flex:1}} />
+        <Btn variant="danger" small onClick={()=>onChange(items.filter((_,j)=>j!==i))}>×</Btn>
+      </div>
+    ))}
+    <Btn variant="ghost" small style={{alignSelf:"flex-start"}}
+      onClick={()=>onChange([...items,""])}>+ Agregar</Btn>
+  </div>
+);
+
+const AcCourseEditor = ({course,onChange,onDelete}) => {
+  const set = (k) => (e) => onChange({...course,[k]:e.target.value});
+  return (
+    <Card style={{background:course.active===false?C.s2:C.s1,opacity:course.active===false?0.65:1}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:16}}>
+        <Mono style={{color:C.gold,fontSize:9}}>{course.name||"Curso sin nombre"}</Mono>
+        <div style={{display:"flex",gap:8}}>
+          <Btn variant="ghost" small onClick={()=>onChange({...course,active:course.active===false})}>
+            {course.active===false?"Mostrar":"Ocultar"}
+          </Btn>
+          <Btn variant="danger" small onClick={onDelete}>Eliminar</Btn>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14}}>
+        <FieldInput label="Nombre del curso" value={course.name} onChange={set("name")}
+          placeholder="Barbería desde cero" />
+        <FieldInput label="Nivel" value={course.level} onChange={set("level")}
+          placeholder="Principiante" />
+        <FieldInput label="Duración" value={course.duration} onChange={set("duration")}
+          placeholder="8 semanas" />
+        <FieldInput label="Horario" value={course.schedule} onChange={set("schedule")}
+          placeholder="Lunes y miércoles, 2–6 pm" />
+        <FieldInput label="Precio (COP, 0 = a consultar)" type="number" value={course.price}
+          onChange={set("price")} placeholder="0" />
+        <FieldInput label="Nota del precio" value={course.note} onChange={set("note")}
+          placeholder="desde" />
+        <FieldInput label="Cupos (0 = no mostrar)" type="number" value={course.seats}
+          onChange={set("seats")} placeholder="0" />
+      </div>
+      <FieldArea label="Resumen" value={course.summary} onChange={set("summary")} rows={3}
+        placeholder="Qué se lleva el alumno al terminar" style={{marginTop:14}} />
+      <div style={{marginTop:14}}>
+        <AcStringList label="Temario" items={course.topics||[]} placeholder="Degradado a máquina"
+          onChange={topics=>onChange({...course,topics})} />
+      </div>
+    </Card>
+  );
+};
+
+const AcademyView = () => {
+  const [tab,setTab]         = React.useState("contenido");
+  const [content,setContent] = React.useState(AC_EMPTY_CONTENT);
+  const [leads,setLeads]     = React.useState([]);
+  const [loading,setLoading] = React.useState(true);
+  const [saving,setSaving]   = React.useState(false);
+  const [dirty,setDirty]     = React.useState(false);
+  const [msg,setMsg]         = React.useState("");
+  const [err,setErr]         = React.useState("");
+  const [leadFilter,setLeadFilter] = React.useState("open");
+
+  const load = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/academy?action=all", { headers: adminHeaders() });
+      if (!res.ok) throw new Error("No se pudo cargar la academia");
+      const data = await res.json();
+      setContent({...AC_EMPTY_CONTENT(), ...(data.content||{})});
+      setLeads(data.leads||[]);
+      setDirty(false);
+      setErr("");
+    } catch (e) { setErr(e.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  React.useEffect(()=>{ load(); }, [load]);
+
+  const edit = (patch) => { setContent(c=>({...c,...patch})); setDirty(true); setMsg(""); };
+  const setField = (k) => (e) => edit({[k]:e.target.value});
+
+  const save = async () => {
+    setSaving(true); setErr(""); setMsg("");
+    try {
+      const payload = {
+        ...content,
+        courses: (content.courses||[]).map(c=>({
+          ...c, price:Number(c.price)||0, seats:Number(c.seats)||0,
+        })),
+      };
+      const res = await fetch("/api/academy?action=content", {
+        method:"POST", headers: adminHeaders(), body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok) throw new Error(data.error||"No se pudo guardar");
+      setContent({...AC_EMPTY_CONTENT(), ...(data.content||{})});
+      setDirty(false);
+      setMsg("Cambios publicados");
+    } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
+  };
+
+  const leadOp = async (id, op) => {
+    if (op==="delete" && !confirm("¿Eliminar esta solicitud?")) return;
+    try {
+      const res = await fetch("/api/academy?action=lead", {
+        method:"POST", headers: adminHeaders(), body: JSON.stringify({ id, op }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(()=>({}))).error||"Error al guardar");
+      await load();
+    } catch (e) { setErr(e.message); }
+  };
+
+  const addCourse = () => edit({courses:[...(content.courses||[]),{
+    id:genId(), name:"", summary:"", level:"", duration:"", schedule:"",
+    price:0, note:"", seats:0, topics:[], active:true,
+  }]});
+
+  const addFaq = () => edit({faq:[...(content.faq||[]),{q:"",a:""}]});
+
+  const newCount = leads.filter(l=>l.status==="new").length;
+  const shownLeads = leads.filter(l =>
+    leadFilter==="all" ? true :
+    leadFilter==="open" ? (l.status==="new"||l.status==="contacted") :
+    l.status===leadFilter);
+
+  const waLead = (l) => {
+    const num = `57${String(l.phone||"").replace(/\D/g,"")}`;
+    const first = String(l.name||"").trim().split(/\s+/)[0]||"";
+    const curso = l.courseName ? ` sobre ${l.courseName}` : "";
+    const msg = `Hola ${first}, soy de JOXE. Recibimos tu solicitud${curso}. ¿Te cuento los detalles?`;
+    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  };
+
+  if (loading) return (
+    <div>
+      <PageHeader title="Academia" subtitle="Clases · Inscripciones" />
+      <div style={{padding:32,color:C.muted,fontSize:13}}>Cargando…</div>
+    </div>
+  );
+
+  return (
+    <div>
+      <PageHeader title="Academia" subtitle="Clases · Inscripciones"
+        action={<>
+          <Btn variant="ghost" small onClick={load}>Actualizar</Btn>
+          {tab==="contenido" &&
+            <Btn small onClick={save} disabled={saving||!dirty}>
+              {saving?"Guardando…":"Publicar cambios"}
+            </Btn>}
+        </>} />
+
+      {err && (
+        <div style={{margin:"16px 32px",padding:"12px 16px",border:`1px solid ${C.red}40`,
+          background:"rgba(196,102,102,0.07)",color:C.red,fontSize:13}}>{err}</div>
+      )}
+      {msg && (
+        <div style={{margin:"16px 32px",padding:"12px 16px",border:`1px solid ${C.green}40`,
+          background:"rgba(102,196,153,0.07)",color:C.green,fontSize:13}}>{msg}</div>
+      )}
+
+      <div style={{display:"flex",gap:4,padding:"18px 32px 0"}}>
+        {[["contenido","Contenido de la página"],["solicitudes",`Solicitudes${newCount?` · ${newCount}`:""}`]].map(([id,label])=>(
+          <button key={id} onClick={()=>setTab(id)} style={{
+            background:tab===id?C.s2:"transparent",border:`1px solid ${tab===id?C.bdr2:C.bdr}`,
+            color:tab===id?C.text:C.muted,padding:"10px 18px",cursor:"pointer",
+            fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.08em",
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {tab==="contenido" ? (
+        <div style={{padding:"24px 32px",display:"flex",flexDirection:"column",gap:20,maxWidth:980}}>
+          <Card>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+              <div>
+                <div style={{fontSize:15,fontFamily:"'Marcellus',serif"}}>Página pública</div>
+                <div style={{fontSize:12,color:C.muted,marginTop:6,maxWidth:520,lineHeight:1.6}}>
+                  Mientras esté apagada, /academia no muestra los cursos y el enlace
+                  no aparece ni en el menú ni en el home.
+                </div>
+              </div>
+              <Btn variant={content.enabled?"primary":"ghost"}
+                onClick={()=>edit({enabled:!content.enabled})}>
+                {content.enabled?"Publicada":"Apagada"}
+              </Btn>
+            </div>
+          </Card>
+
+          <Card>
+            <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:16}}>Portada</Mono>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:14}}>
+              <FieldInput label="Antetítulo" value={content.kicker} onChange={setField("kicker")}
+                placeholder="Academia JOXE" />
+              <FieldInput label="Titular" value={content.headline} onChange={setField("headline")}
+                placeholder="Clases de barbería" />
+              <FieldInput label="Próximo grupo" value={content.nextStart} onChange={setField("nextStart")}
+                placeholder="Inicia el 3 de marzo" />
+              <FieldInput label="Dónde" value={content.location} onChange={setField("location")}
+                placeholder="En el salón" />
+            </div>
+            <FieldArea label="Introducción" value={content.intro} onChange={setField("intro")}
+              rows={4} placeholder="De qué se trata la formación" style={{marginTop:14}} />
+            <FieldInput label="Mensaje del botón de WhatsApp" value={content.whatsappMsg}
+              onChange={setField("whatsappMsg")} placeholder="Hola, quiero información sobre las clases."
+              style={{marginTop:14}} />
+          </Card>
+
+          <Card>
+            <AcStringList label="Qué incluye" items={content.includes||[]}
+              placeholder="Kit de herramientas" onChange={includes=>edit({includes})} />
+          </Card>
+
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <Mono style={{color:C.gold,fontSize:9}}>Cursos</Mono>
+              <Btn small onClick={addCourse}>+ Agregar curso</Btn>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              {(content.courses||[]).length===0 && (
+                <Card><div style={{color:C.muted,fontSize:13}}>
+                  Todavía no hay cursos. Agrega el primero para poder publicar la página.
+                </div></Card>
+              )}
+              {(content.courses||[]).map((c,i)=>(
+                <AcCourseEditor key={c.id||i} course={c}
+                  onChange={next=>edit({courses:content.courses.map((x,j)=>j===i?next:x)})}
+                  onDelete={()=>{
+                    if (!confirm("¿Eliminar este curso?")) return;
+                    edit({courses:content.courses.filter((_,j)=>j!==i)});
+                  }} />
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <Mono style={{color:C.gold,fontSize:9}}>Preguntas frecuentes</Mono>
+              <Btn small variant="ghost" onClick={addFaq}>+ Agregar pregunta</Btn>
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:12}}>
+              {(content.faq||[]).map((f,i)=>(
+                <Card key={i}>
+                  <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                    <div style={{flex:1,display:"flex",flexDirection:"column",gap:12}}>
+                      <FieldInput label="Pregunta" value={f.q}
+                        onChange={e=>edit({faq:content.faq.map((x,j)=>j===i?{...x,q:e.target.value}:x)})}
+                        placeholder="¿Necesito experiencia previa?" />
+                      <FieldArea label="Respuesta" value={f.a} rows={3}
+                        onChange={e=>edit({faq:content.faq.map((x,j)=>j===i?{...x,a:e.target.value}:x)})} />
+                    </div>
+                    <Btn variant="danger" small
+                      onClick={()=>edit({faq:content.faq.filter((_,j)=>j!==i)})}>×</Btn>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          <div style={{display:"flex",gap:10,alignItems:"center",paddingBottom:40}}>
+            <Btn onClick={save} disabled={saving||!dirty}>
+              {saving?"Guardando…":"Publicar cambios"}
+            </Btn>
+            {dirty && <span style={{color:C.muted,fontSize:12}}>Hay cambios sin publicar</span>}
+            <a href="/academia" target="_blank" rel="noopener noreferrer"
+              style={{color:C.gold,fontSize:12,textDecoration:"none",letterSpacing:"0.08em"}}>
+              Ver la página ↗
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div>
+          <div style={{padding:"24px 32px",display:"grid",
+            gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14}}>
+            <StatCard label="Sin atender" small color={newCount?C.blue:C.muted}
+              value={String(newCount).padStart(2,"0")}
+              sub={newCount?"Esperan respuesta":"Todo al día"} />
+            <StatCard label="Inscritas" small color={C.green}
+              value={String(leads.filter(l=>l.status==="enrolled").length).padStart(2,"0")}
+              sub="Confirmadas" />
+            <StatCard label="Total recibidas" small
+              value={String(leads.length).padStart(2,"0")} sub="Histórico" />
+          </div>
+
+          <div style={{display:"flex",gap:6,padding:"0 32px 16px",flexWrap:"wrap"}}>
+            {[["open","Abiertas"],["new","Nuevas"],["contacted","Contactadas"],
+              ["enrolled","Inscritas"],["discarded","Descartadas"],["all","Todas"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setLeadFilter(id)} style={{
+                background:leadFilter===id?"rgba(194,158,102,0.12)":"transparent",
+                border:`1px solid ${leadFilter===id?C.gold:C.bdr}`,
+                color:leadFilter===id?C.gold:C.muted,padding:"7px 14px",cursor:"pointer",
+                fontFamily:"'JetBrains Mono',monospace",fontSize:10,letterSpacing:"0.1em",
+                textTransform:"uppercase",
+              }}>{label}</button>
+            ))}
+          </div>
+
+          <div style={{padding:"0 32px 40px",display:"flex",flexDirection:"column",gap:10}}>
+            {shownLeads.length===0 && (
+              <Card><div style={{color:C.muted,fontSize:13}}>No hay solicitudes en este filtro.</div></Card>
+            )}
+            {shownLeads.map(l=>{
+              const meta = AC_LEAD_META[l.status]||AC_LEAD_META.new;
+              return (
+                <div key={l.id} style={{border:`1px solid ${C.bdr}`,background:C.s1,padding:"18px 20px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
+                    <div style={{minWidth:220}}>
+                      <div style={{display:"flex",alignItems:"center",gap:10}}>
+                        <span style={{width:7,height:7,borderRadius:999,background:meta.color}} />
+                        <span style={{fontSize:16,fontFamily:"'Marcellus',serif"}}>{l.name}</span>
+                        <Mono style={{color:meta.color,fontSize:9}}>{meta.label}</Mono>
+                      </div>
+                      <div style={{fontSize:13,color:C.muted,marginTop:8,display:"flex",gap:14,flexWrap:"wrap"}}>
+                        <span>{l.phone}</span>
+                        {l.email && <span>{l.email}</span>}
+                        <span>{new Date(l.createdAt).toLocaleDateString("es-CO",{day:"2-digit",month:"short",year:"numeric"})}</span>
+                      </div>
+                      {l.courseName && (
+                        <Mono style={{color:C.gold,fontSize:9,display:"block",marginTop:8}}>{l.courseName}</Mono>
+                      )}
+                      {l.message && (
+                        <p style={{fontSize:13,color:C.text,opacity:0.8,lineHeight:1.6,margin:"12px 0 0",maxWidth:560}}>
+                          “{l.message}”
+                        </p>
+                      )}
+                    </div>
+                    <div style={{display:"flex",gap:8,alignItems:"flex-start",flexWrap:"wrap"}}>
+                      <a href={waLead(l)} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none"}}>
+                        <Btn small>WhatsApp</Btn>
+                      </a>
+                      {l.status!=="contacted" && (
+                        <Btn variant="ghost" small onClick={()=>leadOp(l.id,"contacted")}>Contactada</Btn>
+                      )}
+                      {l.status!=="enrolled" && (
+                        <Btn variant="ghost" small onClick={()=>leadOp(l.id,"enrolled")}>Inscrita</Btn>
+                      )}
+                      {l.status!=="discarded" && (
+                        <Btn variant="ghost" small onClick={()=>leadOp(l.id,"discarded")}>Descartar</Btn>
+                      )}
+                      <Btn variant="danger" small onClick={()=>leadOp(l.id,"delete")}>Eliminar</Btn>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ==================== ROOT ====================
 const AdminPortal = () => {
   const [authed,setAuthed]     = React.useState(isAuthed);
@@ -7708,6 +8091,7 @@ const AdminPortal = () => {
     commissions:         CommissionsView,
     employees:           EmployeesView,
     services:            ServicesView,
+    academy:             AcademyView,
     settings:            SettingsView,
     "stylist-settings": StylistSettingsView,
     help:                HelpView,
