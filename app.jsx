@@ -25,6 +25,7 @@ function App() {
   const goToBooking = () => { window.location.href = "/booking"; };
   const [scrolled, setScrolled] = useState(false);
   const reviews = useReviewsFeed();
+  const academy = useAcademy();
 
   useEffect(() => {
     const onMsg = (e) => {
@@ -63,14 +64,16 @@ function App() {
   return (
     <div style={{ background: "var(--ivory)", minHeight: "100vh" }}>
       <Nav onReserveClick={goToBooking} scrolled={scrolled}
-        hasReviews={!!(reviews && reviews.count)} />
+        hasReviews={!!(reviews && reviews.count)}
+        hasAcademy={!!academy?.enabled} />
       <Hero onReserveClick={goToBooking} />
       <Marquee />
       <Services />
       <Gallery />
       <Reviews data={reviews} />
+      <AcademyTeaser data={academy} />
       <LocationMap />
-      <Footer />
+      <Footer hasAcademy={!!academy?.enabled} />
       <WhatsAppBlob />
 
       {editMode && <TweaksPanel tweaks={tweaks} update={updateTweak} />}

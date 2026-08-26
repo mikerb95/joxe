@@ -67,8 +67,30 @@ const useReviewsFeed = () => {
   return data;
 };
 
-const Nav = ({ onReserveClick, scrolled, hasReviews }) => {
+// Lo mismo para la academia: el nav necesita saber si hay clases publicadas
+// para no enlazar a una página que todavía está vacía.
+const useAcademy = () => {
+  const [data, setData] = React.useState(null);
+  React.useEffect(() => {
+    fetch("/api/academy")
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(setData)
+      .catch(() => {});
+  }, []);
+  return data;
+};
+
+// hrefPrefix deja reusar el nav fuera del home: en /academia los anchors tienen
+// que apuntar a "/#servicios", no a una sección que no existe en esa página.
+const Nav = ({ onReserveClick, scrolled, hasReviews, hasAcademy, hrefPrefix = "" }) => {
   const [open, setOpen] = React.useState(false);
+  const links = [
+    ["Servicios", `${hrefPrefix}#servicios`],
+    ["Galería", `${hrefPrefix}#galeria`],
+    ...(hasReviews ? [["Reseñas", `${hrefPrefix}#resenas`]] : []),
+    ...(hasAcademy ? [["Academia", "/academia"]] : []),
+    ["Ubicación", `${hrefPrefix}#ubicacion`],
+  ];
   return (
     <>
       <nav style={{
@@ -80,19 +102,14 @@ const Nav = ({ onReserveClick, scrolled, hasReviews }) => {
         transition: "background 0.4s, backdrop-filter 0.4s, padding 0.4s",
         color: "var(--ivory)",
       }}>
-        <a href="#top" style={{
+        <a href={`${hrefPrefix}#top`} style={{
           fontFamily: "var(--display)", fontSize: 22, letterSpacing: "0.3em",
           color: "var(--ivory)", textDecoration: "none", fontWeight: 400,
         }}>
           JOXE
         </a>
         <div className="nav-links" style={{ display: "flex", gap: 36, alignItems: "center" }}>
-          {[
-            ["Servicios", "#servicios"],
-            ["Galería", "#galeria"],
-            ...(hasReviews ? [["Reseñas", "#resenas"]] : []),
-            ["Ubicación", "#ubicacion"],
-          ].map(([label, href]) => (
+          {links.map(([label, href]) => (
             <a key={href} href={href} style={{
               color: "var(--ivory)", textDecoration: "none",
               fontFamily: "var(--sans)", fontSize: 13, letterSpacing: "0.1em",
@@ -137,12 +154,7 @@ const Nav = ({ onReserveClick, scrolled, hasReviews }) => {
           position: "fixed", inset: 0, zIndex: 49, background: "var(--noir)",
           padding: "90px 32px 32px", display: "flex", flexDirection: "column", gap: 28,
         }}>
-          {[
-            ["Servicios", "#servicios"],
-            ["Galería", "#galeria"],
-            ...(hasReviews ? [["Reseñas", "#resenas"]] : []),
-            ["Ubicación", "#ubicacion"],
-          ].map(([label, href]) => (
+          {links.map(([label, href]) => (
             <a key={href} href={href} onClick={() => setOpen(false)} style={{
               color: "var(--ivory)", textDecoration: "none",
               fontFamily: "var(--display)", fontSize: 34, letterSpacing: "0.02em",
@@ -704,6 +716,87 @@ const Reviews = ({ data }) => {
 };
 
 // ——————————————————————————————————————————————
+// ACADEMIA — adelanto en el home
+// ——————————————————————————————————————————————
+// Solo se pinta cuando hay contenido publicado desde el panel. Sin cursos
+// cargados no hay sección: el home no anuncia algo que todavía no existe.
+const AcademyTeaser = ({ data }) => {
+  const content = data?.enabled ? data.content : null;
+  if (!content) return null;
+  const courses = (content.courses || []).slice(0, 4);
+
+  return (
+    <section id="academia" style={{
+      background: "var(--noir)", color: "var(--ivory)", padding: "120px 64px",
+    }} className="section">
+      <div style={{
+        maxWidth: 1400, margin: "0 auto",
+        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "start",
+      }} className="services-grid">
+        <div>
+          <Mono style={{ color: "var(--bronze)" }}>04 — Academia</Mono>
+          <h2 style={{
+            fontFamily: "var(--display)", fontWeight: 400,
+            fontSize: "clamp(40px, 4.5vw, 64px)", lineHeight: 1.05,
+            margin: "24px 0 32px", letterSpacing: "-0.01em",
+          }}>
+            {content.headline || <>Aprende el oficio<br /><em style={{ color: "var(--bronze)" }}>en la silla.</em></>}
+          </h2>
+          {content.intro && (
+            <p style={{
+              fontFamily: "var(--sans)", fontSize: 15, lineHeight: 1.7,
+              opacity: 0.7, maxWidth: 420, margin: "0 0 36px",
+            }}>{content.intro}</p>
+          )}
+          <a href="/academia" style={{
+            display: "inline-flex", alignItems: "center", gap: 12,
+            border: "1px solid var(--bronze)", color: "var(--bronze)",
+            textDecoration: "none", padding: "16px 28px",
+            fontFamily: "var(--sans)", fontSize: 12, letterSpacing: "0.2em",
+            textTransform: "uppercase",
+          }}>
+            Ver las clases →
+          </a>
+          {content.nextStart && (
+            <div style={{
+              marginTop: 24, fontFamily: "var(--sans)", fontSize: 13, opacity: 0.55,
+            }}>{content.nextStart}</div>
+          )}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {courses.map((c, i) => (
+            <a key={c.id || i} href="/academia" style={{
+              display: "grid", gridTemplateColumns: "1fr auto", gap: 24,
+              alignItems: "baseline", padding: "26px 0", textDecoration: "none",
+              color: "var(--ivory)",
+              borderTop: `1px solid rgba(245,241,234,${i === 0 ? "0.18" : "0.08"})`,
+            }}>
+              <div>
+                <h3 style={{
+                  fontFamily: "var(--display)", fontWeight: 400, fontSize: 26,
+                  margin: "0 0 8px", letterSpacing: "-0.01em",
+                }}>{c.name}</h3>
+                <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>
+                  {[c.level, c.duration].filter(Boolean).join(" · ")}
+                </Mono>
+              </div>
+              {c.price > 0 && (
+                <div style={{
+                  fontFamily: "var(--sans)", fontSize: 18,
+                  fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+                }}>{formatPrice(c.price, c.note)}</div>
+              )}
+            </a>
+          ))}
+          <div style={{ borderTop: "1px solid rgba(245,241,234,0.08)" }} />
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// ——————————————————————————————————————————————
 // MAPA DE UBICACIÓN
 // ——————————————————————————————————————————————
 const LocationMap = () => (
@@ -756,7 +849,7 @@ const LocationMap = () => (
 // ——————————————————————————————————————————————
 // FOOTER
 // ——————————————————————————————————————————————
-const Footer = () => (
+const Footer = ({ hasAcademy }) => (
   <footer style={{
     background: "var(--noir)", color: "var(--ivory)",
     padding: "80px 64px 32px", borderTop: "1px solid rgba(245,241,234,0.1)",
@@ -781,7 +874,8 @@ const Footer = () => (
       <div>
         <Mono style={{ color: "var(--bronze)", display: "block", marginBottom: 18 }}>Navegación</Mono>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[["Servicios", "#servicios"], ["Galería", "#galeria"],
+          {[["Servicios", "/#servicios"], ["Galería", "/#galeria"],
+            ...(hasAcademy ? [["Academia", "/academia"]] : []),
             ["Mi cuenta", "Cuenta.html"]].map(([l, h]) => (
             <a key={h} href={h} style={{
               color: "var(--ivory)", textDecoration: "none",
@@ -888,5 +982,6 @@ const WhatsAppBlob = () => {
 Object.assign(window, {
   Nav, Hero, Marquee, Services, Gallery,
   LocationMap, Footer, Placeholder, Mono,
-  WhatsAppBlob,
+  WhatsAppBlob, AcademyTeaser, useAcademy,
+  formatPrice, formatDur, StarRow,
 });
