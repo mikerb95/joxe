@@ -7391,6 +7391,7 @@ const AdmStars = ({value,size=13}) => (
 
 const ReviewsView = () => {
   const [appts]  = useAppts();
+  const [admin]  = useAdmin();
   const [data,setData]       = React.useState({reviews:[],avg:0,count:0,byStylist:{}});
   const [loading,setLoading] = React.useState(true);
   const [err,setErr]         = React.useState("");
@@ -7440,16 +7441,30 @@ const ReviewsView = () => {
   };
 
   const reviewed = new Set(data.reviews.map(r=>r.apptId));
-  // Citas completadas de los últimos 30 días que aún no tienen reseña.
+  // Visitas de los últimos 30 días que aún no tienen reseña. Cuenta tanto la
+  // cita cerrada con "Completar servicio" como la que simplemente ya ocurrió:
+  // si el salón no usa el check-in, la lista se quedaría vacía para siempre.
   const cutoff = Date.now() - 30*24*3600*1000;
-  const pendientesDePedir = (appts.completed||[])
+  const cancelledIds = new Set(admin.cancelledIds||[]);
+  const noShowIds    = new Set(admin.noShowIds||[]);
+  const completedIds = new Set((appts.completed||[]).map(a=>a.id));
+  const visitMs = (a) => {
+    const t = a.completedAt ? new Date(a.completedAt).getTime()
+                            : new Date(`${a.date}T${a.time||"00:00"}`).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  };
+  const pendientesDePedir = [
+      ...(appts.completed||[]),
+      ...(appts.appointments||[]),
+      ...(appts.active||[]),
+    ]
     .filter(a => !reviewed.has(a.id))
-    .filter(a => {
-      const t = a.completedAt ? new Date(a.completedAt).getTime()
-                              : new Date(`${a.date}T${a.time||"00:00"}`).getTime();
-      return !Number.isNaN(t) && t >= cutoff;
-    })
-    .sort((a,b)=>(b.date||"").localeCompare(a.date||""))
+    .filter(a => !cancelledIds.has(a.id) && !noShowIds.has(a.id)
+      && a.status !== "cancelled" && a.status !== "no-show")
+    .filter(a => completedIds.has(a.id) || visitMs(a) < Date.now())
+    .filter(a => visitMs(a) >= cutoff)
+    .filter((a,i,arr) => arr.findIndex(x=>x.id===a.id) === i)
+    .sort((a,b)=>visitMs(b)-visitMs(a))
     .slice(0, 20);
 
   // Una nota baja sin revisar va primero: es la que hay que atender hoy. El

@@ -1,6 +1,7 @@
 import {
   initTables, kvGet, kvGetCached, kvSet,
   applyCors, clientIp, rateLimit, signReviewToken, cleanName, sanitizeStr,
+  makeReviewEligibility, apptDoneMs,
 } from "../lib/db.js";
 
 const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
@@ -12,14 +13,6 @@ const last4 = v => String(v ?? "").replace(/\D/g, "").slice(-4);
 
 // Misma ventana que usa Mi Cuenta para ofrecer el botón de reseña.
 const REVIEW_WINDOW_MS = 30 * 24 * 3600 * 1000;
-
-// Momento de la cita: completedAt si el panel lo guardó, si no fecha + hora.
-function apptTime(a) {
-  const t = a?.completedAt
-    ? new Date(a.completedAt).getTime()
-    : new Date(`${a?.date || ""}T${a?.time || "00:00"}:00${COT_OFFSET}`).getTime();
-  return Number.isNaN(t) ? 0 : t;
-}
 
 const firstWord = (full) => String(full || "").trim().split(/\s+/)[0] || "";
 
@@ -99,24 +92,32 @@ export default async function handler(req, res) {
         }
 
         // El último nombre registrado: el de la cita más reciente que traiga uno.
-        const byRecency = [...mineAll].sort((a, b) => apptTime(b) - apptTime(a));
+        const byRecency = [...mineAll].sort((a, b) => apptDoneMs(b) - apptDoneMs(a));
         const registeredName = cleanName(
           (byRecency.find(a => cleanName(a.name)) || {}).name, 120
         );
 
-        const completedIds = new Set((store.completed || []).map(a => a.id));
         const reviewedIds = new Set(
           ((await kvGet("reviews_store"))?.reviews || []).map(r => r.apptId)
         );
-        const completedMine = byRecency.filter(a => completedIds.has(a.id));
-        if (!completedMine.length) return res.status(409).json({ error: "not_completed" });
+        const eligible = makeReviewEligibility({
+          completedIds: (store.completed || []).map(a => a.id),
+          cancelledIds: adminData.cancelledIds,
+          noShowIds: adminData.noShowIds,
+        });
+        const visitasMine = byRecency.filter(eligible);
+        if (!visitasMine.length) return res.status(409).json({ error: "not_completed" });
 
-        // Se reseña la visita completada más reciente que siga sin reseña, y
-        // solo dentro de la ventana: opinar sobre algo de hace un año no ayuda.
-        const target = completedMine.find(
-          a => !reviewedIds.has(a.id) && (Date.now() - apptTime(a)) <= REVIEW_WINDOW_MS
+        // Se reseña la visita más reciente que siga sin reseña, y solo dentro
+        // de la ventana: opinar sobre algo de hace un año no ayuda.
+        const target = visitasMine.find(
+          a => !reviewedIds.has(a.id) && (Date.now() - apptDoneMs(a)) <= REVIEW_WINDOW_MS
         );
         if (!target) {
+          // Distinguir los dos motivos: decirle "ya opinaste" a quien nunca lo
+          // hizo, solo porque su visita quedó vieja, es sencillamente falso.
+          const yaOpino = visitasMine.some(a => reviewedIds.has(a.id));
+          if (!yaOpino) return res.status(409).json({ error: "too_old" });
           return res.status(200).json({ ok: true, already: true, maskedName: maskName(registeredName) });
         }
 
@@ -156,7 +157,12 @@ export default async function handler(req, res) {
       // demostró que la cita es suya, así que aquí solo falta que esté
       // completada y que no haya reseñado antes.
       if (action === "review-link") {
-        if (!completedSet.has(id)) return res.status(409).json({ error: "not_completed" });
+        const eligible = makeReviewEligibility({
+          completedIds: [...completedSet],
+          cancelledIds: adminData.cancelledIds,
+          noShowIds: adminData.noShowIds,
+        });
+        if (!eligible(appt)) return res.status(409).json({ error: "not_completed" });
         const reviews = (await kvGet("reviews_store"))?.reviews || [];
         if (reviews.some(r => r.apptId === id)) {
           return res.status(200).json({ ok: true, already: true });
@@ -226,6 +232,14 @@ export default async function handler(req, res) {
         .map(r => [r.apptId, r.status])
     );
 
+    // Misma regla que usa /resena, para que Mi Cuenta no ofrezca el botón en
+    // citas que el backend luego rechazaría (ni al revés).
+    const canReview = makeReviewEligibility({
+      completedIds: [...completedSet],
+      cancelledIds,
+      noShowIds: adminData.noShowIds,
+    });
+
     const appointments = all.map(a => {
       let computedStatus = "scheduled";
       if (cancelledIds.includes(a.id))    computedStatus = "cancelled";
@@ -238,6 +252,7 @@ export default async function handler(req, res) {
         ...a, computedStatus,
         reviewed: reviewStatusByAppt.has(a.id),
         reviewStatus: reviewStatusByAppt.get(a.id) || null,
+        reviewable: canReview(a),
       };
     });
 

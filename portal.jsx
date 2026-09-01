@@ -2322,13 +2322,18 @@ const CuentaPortal = () => {
   // Solo se ofrece reseñar la visita más reciente, y dentro de los 30 días
   // siguientes: pasado ese tiempo el recuerdo ya no da para una opinión útil.
   const REVIEW_WINDOW_MS = 30 * 24 * 3600 * 1000;
-  const reviewable = history
-    .filter(a => a.computedStatus === "completed" && !a.reviewed)
-    .find(a => {
-      const t = a.completedAt ? new Date(a.completedAt).getTime()
-                              : new Date(`${a.date}T${a.time || "00:00"}`).getTime();
-      return !Number.isNaN(t) && Date.now() - t <= REVIEW_WINDOW_MS;
-    });
+  // El backend marca cuáles admiten reseña (a.reviewable): no basta con mirar
+  // computedStatus, porque una visita que ya ocurrió sigue figurando como
+  // "agendada" si nadie pulsó "Completar servicio" en la agenda.
+  const visitMs = (a) => {
+    const t = a.completedAt ? new Date(a.completedAt).getTime()
+                            : new Date(`${a.date}T${a.time || "00:00"}`).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  };
+  const reviewable = appts
+    .filter(a => a.reviewable && !a.reviewed)
+    .sort((a, b) => visitMs(b) - visitMs(a))
+    .find(a => Date.now() - visitMs(a) <= REVIEW_WINDOW_MS);
 
   return (
     <PortalShell tone="noir" header={

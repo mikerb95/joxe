@@ -3,7 +3,7 @@ import {
   initTables, kvGet, kvGetCached, kvGetWithMeta, kvCas, kvInvalidate,
   applyCors, clientIp, rateLimit, sanitizeStr,
   verifyStaffAuth, verifyAdminAuth, signReviewToken, verifyReviewToken,
-  cleanName, nameError,
+  cleanName, nameError, makeReviewEligibility,
 } from "../lib/db.js";
 import { notifyStaff } from "../lib/notify.js";
 
@@ -69,15 +69,21 @@ function summarize(reviews) {
   return { avg, count, approved };
 }
 
-// Busca la cita en las tres listas y decide si admite reseña.
+// Busca la cita en las tres listas y decide si admite reseña. La regla vive en
+// lib/db.js para que el panel, Mi Cuenta y esta ruta no puedan contradecirse.
 async function findCompletedAppt(apptId) {
   const store = await kvGet("turno_store") || {};
+  const admin = await kvGet("admin_store") || {};
   const completed = store.completed || [];
   const appt = completed.find(a => a.id === apptId)
     || [...(store.appointments || []), ...(store.active || [])].find(a => a.id === apptId);
   if (!appt) return null;
-  const isCompleted = completed.some(a => a.id === apptId);
-  return { appt, isCompleted };
+  const eligible = makeReviewEligibility({
+    completedIds: completed.map(a => a.id),
+    cancelledIds: admin.cancelledIds,
+    noShowIds: admin.noShowIds,
+  });
+  return { appt, isCompleted: eligible(appt) };
 }
 
 export default async function handler(req, res) {
