@@ -259,11 +259,16 @@ export default async function handler(req, res) {
     const phoneKey  = ((all.find(a => a.phone) || {}).phone || "").replace(/\D/g, "");
     const crmKey    = cedula || phone;
     const clientCrm = crmStore[crmKey] || crmStore[phoneKey] || {};
-    const loyalty   = adminData.loyalty?.enabled
+    // El programa solo se le muestra al cliente si de verdad está en marcha:
+    // encendido Y con un premio definido por el salón. Antes bastaba con el
+    // interruptor, y el código rellenaba el premio con un "Corte gratis" que
+    // nadie había configurado: al cliente se le prometía algo inventado.
+    const loyaltyReward = String(adminData.loyalty?.reward || "").trim();
+    const loyalty = (adminData.loyalty?.enabled && loyaltyReward)
       ? {
           enabled:  true,
-          target:   adminData.loyalty.target  || 10,
-          reward:   adminData.loyalty.reward  || "Corte gratis",
+          target:   Number(adminData.loyalty.target) > 0 ? Number(adminData.loyalty.target) : 10,
+          reward:   sanitizeStr(loyaltyReward, 80),
           visits:   clientCrm.loyaltyVisits   || 0,
           redeemed: clientCrm.loyaltyRedeemed || 0,
         }

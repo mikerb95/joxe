@@ -4938,14 +4938,26 @@ const SettingsView = ({ onNav }) => {
                     value={admin.loyalty?.target??10} min="1" max="50"
                     onChange={e=>setAdmin(a=>({...a,loyalty:{...(a.loyalty||{}),target:Number(e.target.value)||10}}))} />
                   <FieldInput label="Descripción del premio"
-                    value={admin.loyalty?.reward??"Corte gratis"}
+                    value={admin.loyalty?.reward??""}
                     onChange={e=>setAdmin(a=>({...a,loyalty:{...(a.loyalty||{}),reward:e.target.value}}))}
-                    placeholder="Corte gratis" />
+                    placeholder="Ej: Corte gratis" />
                 </div>
-                <div style={{padding:"12px 14px",background:C.s2,border:`1px solid ${C.bdr}`,fontSize:13,color:C.muted}}>
-                  Al llegar a <strong style={{color:C.text}}>{admin.loyalty?.target??10}</strong> visitas acumuladas,
-                  el cliente obtiene: <strong style={{color:C.gold}}>{admin.loyalty?.reward??"Corte gratis"}</strong>.
-                  Puedes sumar o restar visitas manualmente desde el panel CRM.
+                <div style={{padding:"12px 14px",background:C.s2,
+                  border:`1px solid ${String(admin.loyalty?.reward||"").trim()?C.bdr:C.gold+"55"}`,
+                  fontSize:13,color:C.muted}}>
+                  {String(admin.loyalty?.reward||"").trim() ? (
+                    <>
+                      Al llegar a <strong style={{color:C.text}}>{admin.loyalty?.target??10}</strong> visitas acumuladas,
+                      el cliente obtiene: <strong style={{color:C.gold}}>{admin.loyalty.reward}</strong>.
+                      Puedes sumar o restar visitas manualmente desde el panel CRM.
+                    </>
+                  ) : (
+                    <>
+                      Escribe el premio para que el programa aparezca en Mi Cuenta.
+                      Mientras esté vacío, el cliente no ve nada: no le prometemos
+                      un premio que el salón no ha definido.
+                    </>
+                  )}
                 </div>
               </>
             )}
