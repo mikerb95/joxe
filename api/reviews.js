@@ -11,6 +11,8 @@ const KEY = "reviews_store";
 const DEFAULT = () => ({ reviews: [] });
 
 const MAX_TEXT = 600;
+// De aquí para abajo la reseña se trata como una queja que hay que atender.
+const LOW_RATING = 2;
 const MAX_NAME = 40;
 const CAS_RETRIES = 4;
 
@@ -220,6 +222,7 @@ export default async function handler(req, res) {
       stylistId: appt.stylistId || null,
       serviceId: appt.serviceId || null,
       status: "pending", // toda reseña pasa por el panel antes de salir al home
+      needsAttention: rating <= LOW_RATING, // el panel la sube al principio de la cola
       createdAt: Date.now(),
     };
 
@@ -239,12 +242,18 @@ export default async function handler(req, res) {
     // función se congela al responder. Solo en el alta real, no al reenviar.
     if (!result.already) {
       const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
+      // Una nota baja no es una reseña más en la cola: es un cliente molesto y
+      // hay pocas horas para arreglarlo antes de que lo escriba en otra parte.
+      // Va con prioridad alta para que suene aunque el teléfono esté en
+      // silencio. La moderación sigue siendo la misma para todas.
+      const low = rating <= LOW_RATING;
       await notifyStaff({
         stylist: review.stylist || null,
         toAdmin: true,
-        title: "Nueva reseña por revisar",
-        ntfyTitle: "Nueva resena por revisar",
-        tags: "star",
+        title: low ? `Reseña de ${rating} ${rating === 1 ? "estrella" : "estrellas"}: atender hoy` : "Nueva reseña por revisar",
+        ntfyTitle: low ? "Resena baja: atender hoy" : "Nueva resena por revisar",
+        tags: low ? "rotating_light" : "star",
+        priority: low ? "high" : null,
         body: [
           `${review.name} · ${stars}`,
           review.service || null,

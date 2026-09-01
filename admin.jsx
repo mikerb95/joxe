@@ -5,6 +5,10 @@
 // tildes y ñ), espacios, apóstrofo y guion: nada de números, emojis ni
 // símbolos. Vale igual para clientes y para el equipo.
 const NAME_STRIP_RE = /[^\p{L}\p{M}'’ -]/gu;
+// Igual que en api/reviews.js: de aquí para abajo la reseña se atiende, no
+// solo se modera.
+const LOW_RATING = 2;
+
 const cleanName = (v, max = 120) => String(v ?? "")
   .replace(NAME_STRIP_RE, "").replace(/['’-]{2,}/g, m => m[0])
   .replace(/\s+/g, " ").trimStart().slice(0, max);
@@ -7448,16 +7452,32 @@ const ReviewsView = () => {
     .sort((a,b)=>(b.date||"").localeCompare(a.date||""))
     .slice(0, 20);
 
+  // Una nota baja sin revisar va primero: es la que hay que atender hoy. El
+  // resto se ordena por fecha, como siempre.
+  const needsAttention = r => r.status === "pending" && r.rating <= LOW_RATING;
   const shown = data.reviews
     .filter(r => filter==="all" ? true : r.status===filter)
-    .sort((a,b)=>b.createdAt-a.createdAt);
+    .sort((a,b)=>{
+      const d = Number(needsAttention(b)) - Number(needsAttention(a));
+      return d !== 0 ? d : b.createdAt-a.createdAt;
+    });
 
   const pendingCount = data.reviews.filter(r=>r.status==="pending").length;
+  const attentionCount = data.reviews.filter(needsAttention).length;
   const stylistRows  = Object.entries(data.byStylist||{})
     .sort((a,b)=>b[1].avg-a[1].avg);
 
+  // El celular puede estar guardado con o sin indicativo: el portal exige 10
+  // dígitos, pero en el panel se puede teclear "57 300 123 4567". Anteponer 57
+  // a ciegas dejaba el enlace muerto (wa.me/57573001234567).
+  const waNumber = (phone) => {
+    const d = String(phone||"").replace(/\D/g,"");
+    if (!d) return "";
+    return d.length > 10 ? d : `57${d}`;
+  };
+
   const waLink = (a, url) => {
-    const num = `57${String(a.phone||"").replace(/\D/g,"")}`;
+    const num = waNumber(a.phone);
     const first = String(a.name||"").trim().split(/\s+/)[0] || "";
     const msg = `Hola ${first}, gracias por tu visita a JOXE. ¿Nos dejas tu opinión? Solo toma un minuto: ${url}`;
     return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
@@ -7481,6 +7501,11 @@ const ReviewsView = () => {
         <StatCard label="Por revisar" small color={pendingCount?C.blue:C.muted}
           value={String(pendingCount).padStart(2,"0")}
           sub={pendingCount?"Esperan tu aprobación":"Todo al día"} />
+        {attentionCount > 0 && (
+          <StatCard label="Por atender" small color={C.red}
+            value={String(attentionCount).padStart(2,"0")}
+            sub="Notas bajas sin revisar" />
+        )}
         <StatCard label="Sin pedir" small color={C.gold}
           value={String(pendientesDePedir.length).padStart(2,"0")}
           sub="Citas completadas sin reseña" />
@@ -7589,6 +7614,12 @@ const ReviewsView = () => {
                       fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.1em",
                       textTransform:"uppercase",background:st.bg,color:st.color,
                       border:`1px solid ${st.color}30`}}>{st.label}</span>
+                    {needsAttention(r) && (
+                      <span style={{padding:"3px 10px",fontSize:10,
+                        fontFamily:"'JetBrains Mono',monospace",letterSpacing:"0.1em",
+                        textTransform:"uppercase",background:"rgba(196,102,102,0.12)",
+                        color:C.red,border:`1px solid ${C.red}40`}}>Atender</span>
+                    )}
                     <span style={{flex:1}} />
                     <span style={{fontSize:11,color:C.muted}}>
                       {new Date(r.createdAt).toLocaleDateString("es-CO",
