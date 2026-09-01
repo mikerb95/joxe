@@ -218,7 +218,8 @@ function ResenaPortal() {
       const data = await r.json().catch(() => ({}));
       if (r.status === 404) throw new Error("No encontramos ninguna visita con esa cédula. Revisa el número, o escríbenos si reservaste con otro documento.");
       if (r.status === 429) throw new Error("Demasiados intentos. Espera unos minutos y vuelve a probar.");
-      if (data.error === "not_completed") throw new Error("Todavía no tienes una visita completada para reseñar. Cuando termines tu próxima cita podrás dejarnos tu opinión.");
+      if (data.error === "not_completed") throw new Error("Todavía no tienes una visita para reseñar. Cuando pases por el salón podrás dejarnos tu opinión.");
+      if (data.error === "too_old") throw new Error("Tu última visita ya tiene más de un mes, así que cerramos las opiniones de esa cita. Te esperamos en la próxima.");
       if (!r.ok) throw new Error(data.error || "No pudimos verificar tus datos.");
       if (data.already) {
         setState({ phase: "already", review: null });
