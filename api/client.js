@@ -6,10 +6,10 @@ import {
 
 const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
 
-// Mi Cuenta no tiene contraseña: la cédula sola sería una llave demasiado
-// débil (no es un dato secreto), así que se exige además los últimos 4 dígitos
-// del celular con el que quedó registrada la cita.
-const last4 = v => String(v ?? "").replace(/\D/g, "").slice(-4);
+// Mi Cuenta se abre solo con la cédula. Como la cédula no es un dato secreto,
+// la protección no está en la llave sino en lo que se entrega: la respuesta se
+// arma campo por campo y deja fuera el celular, la cédula, el precio cobrado y
+// las notas internas del equipo.
 
 // Misma ventana que usa Mi Cuenta para ofrecer el botón de reseña.
 const REVIEW_WINDOW_MS = 30 * 24 * 3600 * 1000;
@@ -23,13 +23,6 @@ function maskName(full) {
   const parts = cleanName(full, 120).split(" ").filter(Boolean);
   if (!parts.length) return "";
   return [parts[0], ...parts.slice(1).map(w => `${w[0]}•••`)].join(" ");
-}
-
-function phoneMatches(appts, phone4) {
-  return appts.some(a => {
-    const d = last4(a.phone);
-    return d.length === 4 && d === phone4;
-  });
 }
 
 // Los intentos fallidos se cuentan aparte: así se puede frenar a quien pruebe
@@ -51,7 +44,7 @@ export default async function handler(req, res) {
 
     // ---- Client self-service: cancelar cita / pedir link de reseña ----
     if (req.method === "POST") {
-      const { id, cedula: rawCedula, phone4: rawPhone4, action } = req.body ?? {};
+      const { id, cedula: rawCedula, action } = req.body ?? {};
       if (!["cancel", "review-link", "review-lookup"].includes(action)) {
         return res.status(400).json({ error: "Invalid action" });
       }
@@ -142,15 +135,8 @@ export default async function handler(req, res) {
       if (!appt || (appt.cedula || "").replace(/\D/g, "") !== cedula) {
         return res.status(404).json({ error: "Appointment not found" });
       }
-      // Se compara contra todos los celulares de esa cédula: quien cambió de
-      // número sigue entrando con el último que registró.
-      const phone4 = last4(rawPhone4);
-      const mine = all.filter(a => (a.cedula || "").replace(/\D/g, "") === cedula);
-      if (!phoneMatches(mine, phone4)) {
-        if (await tooManyFailures(req, res)) return;
-        return res.status(401).json({ error: "auth_failed" });
-      }
-
+      // La cita ya se comprobó contra la cédula: es la misma llave con la que
+      // se entra a Mi Cuenta, sin los últimos 4 del celular.
       const completedSet = new Set((store.completed || []).map(a => a.id));
 
       // El cliente pide el link para reseñar su propia visita. La cédula ya
@@ -193,9 +179,7 @@ export default async function handler(req, res) {
 
     const cedula = (req.query.cedula || "").replace(/\D/g, "");
     const phone  = (req.query.phone  || "").replace(/\D/g, "");
-    const phone4 = last4(req.query.phone4);
     if (!cedula && !phone) return res.status(400).json({ error: "Missing cedula or phone" });
-    if (cedula && phone4.length !== 4) return res.status(400).json({ error: "missing_phone4" });
 
     const store     = await kvGet("turno_store") || { appointments: [], active: [], completed: [], blockedSlots: [] };
     const adminData = await kvGet("admin_store")  || {};
@@ -218,11 +202,14 @@ export default async function handler(req, res) {
       return (a.phone || "").replace(/\D/g, "") === phone;
     });
 
-    // Cédula y celular tienen que ir juntos. Una cédula sin citas responde
-    // igual que una con el celular equivocado: no se confirma si existe.
-    if (cedula && !phoneMatches(all, phone4)) {
+    // Entrar solo con la cédula: no es un dato secreto, así que la protección
+    // no puede ser la llave sino lo que se entrega. Abajo se arma la respuesta
+    // campo por campo, sin celular, sin cédula y sin las notas internas del
+    // equipo. Una cédula sin citas cuenta como intento fallido, para que
+    // probar números en serie choque con el límite.
+    if (cedula && !all.length) {
       if (await tooManyFailures(req, res)) return;
-      return res.status(401).json({ error: "auth_failed" });
+      return res.status(404).json({ error: "not_found" });
     }
 
     // Estado de la reseña de cada cita: la cuenta no la vuelve a pedir y le
@@ -248,8 +235,20 @@ export default async function handler(req, res) {
         const live = store.active.find(x => x.id === a.id);
         computedStatus = live?.status || "waiting";
       }
+      // Lista blanca: solo lo que la pantalla de Mi Cuenta pinta. Antes se
+      // devolvía la cita entera (...a), y con ella el celular, la cédula, el
+      // precio cobrado y las notas internas que el equipo escribe al cerrar
+      // el servicio. Nada de eso tiene por qué salir del panel.
       return {
-        ...a, computedStatus,
+        id: a.id,
+        code: a.code || "",
+        date: a.date || "",
+        time: a.time || "",
+        service: a.service || "",
+        stylist: a.stylist || "",
+        createdAt: a.createdAt || 0,
+        completedAt: a.completedAt || null,
+        computedStatus,
         reviewed: reviewStatusByAppt.has(a.id),
         reviewStatus: reviewStatusByAppt.get(a.id) || null,
         reviewable: canReview(a),
@@ -277,7 +276,11 @@ export default async function handler(req, res) {
     };
     const waNumber = (adminData.whatsappAdminNumber || "").replace(/\D/g, "");
 
-    return res.status(200).json({ appointments, loyalty, selfService, waNumber });
+    // Solo el nombre de pila, para saludar. El apellido no hace falta aquí.
+    const latest = [...all].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+    const firstName = cleanName(latest?.name, 120).split(" ")[0] || "";
+
+    return res.status(200).json({ appointments, firstName, loyalty, selfService, waNumber });
   } catch (err) {
     console.error("[client]", err.message);
     return res.status(500).json({ error: err.message });

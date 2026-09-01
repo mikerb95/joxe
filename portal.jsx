@@ -795,11 +795,7 @@ const BookingPortal = () => {
     // queda lista: al entrar ve su cita sin volver a identificarse.
     try {
       const cc = String(appt.cedula || "").replace(/\D/g, "");
-      const p4 = String(appt.phone  || "").replace(/\D/g, "").slice(-4);
-      if (cc && p4.length === 4) {
-        localStorage.setItem(ACCT_KEY, cc);
-        localStorage.setItem(ACCT_P4_KEY, p4);
-      }
+      if (cc) localStorage.setItem(ACCT_KEY, cc);
     } catch {}
     try { sessionStorage.removeItem(BOOKING_DRAFT_KEY); } catch {}
   };
@@ -2024,31 +2020,27 @@ const REVIEW_LABEL = {
 };
 
 const ACCT_KEY   = "joxe_cuenta_cedula";
-const ACCT_P4_KEY = "joxe_cuenta_phone4";
+const ACCT_P4_KEY = "joxe_cuenta_phone4"; // solo para limpiar sesiones viejas
 
 const CuentaPortal = () => {
   const [cedula,   setCedula]   = React.useState(() => localStorage.getItem(ACCT_KEY) || "");
-  const [phone4,   setPhone4]   = React.useState(() => localStorage.getItem(ACCT_P4_KEY) || "");
   const [input,    setInput]    = React.useState("");
-  const [input4,   setInput4]   = React.useState("");
   const [data,     setData]     = React.useState(null);
   const [loading,  setLoading]  = React.useState(false);
   const [error,    setError]    = React.useState("");
   const [showQR,   setShowQR]   = React.useState(null);
 
   // Devuelve "ok" | "auth" | "net" para que quien llama decida qué mostrar.
-  const fetchData = React.useCallback(async (cc, p4, silent = false) => {
+  const fetchData = React.useCallback(async (cc, silent = false) => {
     try {
-      const res = await fetch(
-        `/api/client?cedula=${encodeURIComponent(cc)}&phone4=${encodeURIComponent(p4)}`);
-      if (res.status === 401 || res.status === 429) {
+      const res = await fetch(`/api/client?cedula=${encodeURIComponent(cc)}`);
+      if (res.status === 404 || res.status === 429) {
         setData(null);
         localStorage.removeItem(ACCT_KEY);
-        localStorage.removeItem(ACCT_P4_KEY);
-        setCedula(""); setPhone4("");
+        setCedula("");
         setError(res.status === 429
           ? "Demasiados intentos. Espera unos minutos e intenta de nuevo."
-          : "Los datos no coinciden. Revisa tu cédula y los últimos 4 dígitos de tu celular.");
+          : "No encontramos citas con esa cédula. Revisa el número.");
         return "auth";
       }
       if (!res.ok) throw new Error("error");
@@ -2062,38 +2054,33 @@ const CuentaPortal = () => {
 
   // Auto-load + live poll
   React.useEffect(() => {
+    // Las sesiones viejas guardaban también los 4 dígitos: ya no se usan.
+    localStorage.removeItem(ACCT_P4_KEY);
     const cc = localStorage.getItem(ACCT_KEY);
-    const p4 = localStorage.getItem(ACCT_P4_KEY);
-    // Sesiones viejas guardaban solo la cédula: se piden los dos datos de nuevo.
-    if (cc && p4) { setCedula(cc); setPhone4(p4); fetchData(cc, p4, true); }
-    else if (cc)  { localStorage.removeItem(ACCT_KEY); setCedula(""); }
+    if (cc) { setCedula(cc); fetchData(cc, true); }
   }, [fetchData]);
 
   const pollAccount = React.useCallback(() => {
-    if (!cedula || !phone4) return;
-    fetchData(cedula, phone4, true);
-  }, [cedula, phone4, fetchData]);
+    if (!cedula) return;
+    fetchData(cedula, true);
+  }, [cedula, fetchData]);
   usePolling(pollAccount, 60000);
 
   const login = async () => {
     const clean = input.replace(/\D/g, "");
-    const clean4 = input4.replace(/\D/g, "");
     if (clean.length < 6)  { setError("Ingresa una cédula válida."); return; }
-    if (clean4.length !== 4) { setError("Ingresa los últimos 4 dígitos de tu celular."); return; }
     setLoading(true); setError("");
-    const outcome = await fetchData(clean, clean4);
+    const outcome = await fetchData(clean);
     if (outcome === "ok") {
-      setCedula(clean); setPhone4(clean4);
+      setCedula(clean);
       localStorage.setItem(ACCT_KEY, clean);
-      localStorage.setItem(ACCT_P4_KEY, clean4);
     }
     setLoading(false);
   };
 
   const logout = () => {
-    setCedula(""); setPhone4(""); setData(null); setInput(""); setInput4("");
+    setCedula(""); setData(null); setInput("");
     localStorage.removeItem(ACCT_KEY);
-    localStorage.removeItem(ACCT_P4_KEY);
   };
 
   const todayStr  = (() => { const d = nowCOT(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
@@ -2137,7 +2124,7 @@ const CuentaPortal = () => {
     try {
       const res = await fetch("/api/client", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: a.id, cedula, phone4, action: "cancel" }),
+        body: JSON.stringify({ id: a.id, cedula, action: "cancel" }),
       });
       if (res.status === 409) {
         const d = await res.json().catch(() => ({}));
@@ -2148,7 +2135,7 @@ const CuentaPortal = () => {
       } else if (!res.ok) {
         await dialog.alert({ title: "Error", body: "No pudimos cancelar la cita. Intenta de nuevo." });
       } else {
-        await fetchData(cedula, phone4, true);
+        await fetchData(cedula, true);
       }
     } catch {
       await dialog.alert({ title: "Sin conexión", body: "No pudimos conectarnos. Intenta de nuevo." });
@@ -2166,7 +2153,7 @@ const CuentaPortal = () => {
     try {
       const res = await fetch("/api/client", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: a.id, cedula, phone4, action: "review-link" }),
+        body: JSON.stringify({ id: a.id, cedula, action: "review-link" }),
       });
       const d = await res.json().catch(() => ({}));
       if (res.ok && d.token) {
@@ -2178,7 +2165,7 @@ const CuentaPortal = () => {
           title: "Ya nos dejaste tu opinión",
           body: "Gracias. Revisamos cada reseña antes de publicarla en la web.",
         });
-        await fetchData(cedula, phone4, true);
+        await fetchData(cedula, true);
       } else {
         await dialog.alert({
           title: "No pudimos abrir el formulario",
@@ -2194,7 +2181,7 @@ const CuentaPortal = () => {
 
   // ── LOGIN SCREEN ──────────────────────────────────────────
   if (!cedula || !data) {
-    const canSubmit = input.length >= 6 && input4.length === 4;
+    const canSubmit = input.length >= 6;
     return (
       <PortalShell tone="noir" header={
         <PortalHeader subtitle="Portal · Cliente" title="Mi Cuenta"
@@ -2218,7 +2205,7 @@ const CuentaPortal = () => {
               letterSpacing: "-0.01em", lineHeight: 1.1,
             }}>Consulta tus visitas.</h1>
             <p style={{ fontSize: 15, opacity: 0.6, lineHeight: 1.6, marginBottom: 40 }}>
-              Ingresa tu cédula y los últimos 4 dígitos de tu celular para ver tus citas, historial de visitas y puntos de lealtad.
+              Ingresa tu cédula para ver tus citas, historial de visitas y puntos de lealtad.
             </p>
 
             <div style={{
@@ -2244,30 +2231,10 @@ const CuentaPortal = () => {
                   fontSize: 16, letterSpacing: "0.1em",
                 }}
               />
-              <label htmlFor="cuenta-phone4">
-                <PMono style={{ fontSize: 9, color: "rgba(245,241,234,0.5)", display: "block", margin: "22px 0 10px" }}>
-                  Últimos 4 dígitos de tu celular
-                </PMono>
-              </label>
-              <input id="cuenta-phone4" name="phone4" autoComplete="off"
-                value={input4}
-                onChange={e => { setInput4(e.target.value.replace(/\D/g, "").slice(0, 4)); setError(""); }}
-                onKeyDown={e => e.key === "Enter" && login()}
-                placeholder="4567"
-                inputMode="numeric"
-                aria-invalid={!!error}
-                aria-describedby={error ? "cuenta-cedula-err" : "cuenta-phone4-hint"}
-                style={{
-                  width: "100%", padding: "18px 20px",
-                  background: "#0C0C0C", border: "1px solid rgba(245,241,234,0.15)",
-                  color: "#F5F1EA", fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 16, letterSpacing: "0.3em",
-                }}
-              />
-              <div id="cuenta-phone4-hint" style={{
+              <div style={{
                 marginTop: 8, fontSize: 11, lineHeight: 1.5, color: "rgba(245,241,234,0.4)",
               }}>
-                El celular con el que reservaste tu cita.
+                Sin puntos ni espacios.
               </div>
               {error && (
                 <div id="cuenta-cedula-err" role="alert" style={{ marginTop: 10, fontSize: 12, color: "#C46666" }}>{error}</div>
@@ -2304,9 +2271,8 @@ const CuentaPortal = () => {
   const appts  = data.appointments || [];
   const loyalty = data.loyalty;
 
-  const clientName = appts.length > 0
-    ? appts.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0]?.name || ""
-    : "";
+  // El backend manda solo el nombre de pila: las citas ya no traen el nombre.
+  const clientName = data.firstName || "";
 
   const upcoming = appts
     .filter(a => !["cancelled","completed"].includes(a.computedStatus)
