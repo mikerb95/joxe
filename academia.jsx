@@ -6,6 +6,14 @@ const { useState, useEffect } = React;
 
 const AC_STATUS = { idle: "idle", sending: "sending", sent: "sent" };
 
+// Espejo de cleanName en lib/db.js: en un nombre solo entran letras (con
+// tildes y ñ), espacios, apóstrofo y guion. El backend vuelve a validar.
+const NAME_STRIP_RE = /[^\p{L}\p{M}'’ -]/gu;
+const NAME_HAS_FORBIDDEN_RE = /[^\p{L}\p{M}'’ -]/u;
+const cleanName = (v, max = 80) => String(v ?? "")
+  .replace(NAME_STRIP_RE, "").replace(/['’-]{2,}/g, m => m[0])
+  .replace(/\s+/g, " ").trimStart().slice(0, max);
+
 // ——————————————————————————————————————————————
 // HERO
 // ——————————————————————————————————————————————
@@ -230,6 +238,12 @@ const AcEnroll = React.forwardRef(({ content, courseId, onCourseChange }, ref) =
   const [error, setError] = useState("");
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
+  // El nombre se filtra al escribir, igual que en reservas.
+  const [nameBlocked, setNameBlocked] = useState(false);
+  const setName = (e) => {
+    setNameBlocked(NAME_HAS_FORBIDDEN_RE.test(e.target.value));
+    setForm(f => ({ ...f, name: cleanName(e.target.value, 80) }));
+  };
   const courses = content.courses || [];
 
   const wa = getWAConfig();
@@ -309,8 +323,15 @@ const AcEnroll = React.forwardRef(({ content, courseId, onCourseChange }, ref) =
         ) : (
           <form onSubmit={submit} style={{ display: "grid", gap: 20 }}>
             <AcField label="Nombre y apellido">
-              <input required value={form.name} onChange={set("name")}
-                maxLength={80} style={acInputStyle} />
+              <input required value={form.name} onChange={setName}
+                maxLength={80} style={acInputStyle}
+                aria-invalid={nameBlocked}
+                aria-describedby={nameBlocked ? "ac-name-err" : undefined} />
+              {nameBlocked && (
+                <div id="ac-name-err" role="alert" style={{
+                  marginTop: 6, fontSize: 12, color: "#C46666",
+                }}>Solo letras: sin números, emojis ni símbolos.</div>
+              )}
             </AcField>
             <AcField label="Celular">
               <input required type="tel" inputMode="numeric" value={form.phone}

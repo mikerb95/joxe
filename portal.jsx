@@ -4,6 +4,19 @@
 // ============================================================
 // STORE — Turso (via /api/store) + localStorage cache
 // ============================================================
+// ============================================================
+// NOMBRES DE PERSONAS
+// Espejo de cleanName/nameError en lib/db.js. El backend vuelve a validar;
+// esto evita que el cliente llegue al final del formulario para enterarse.
+// Solo letras (con tildes y ñ), espacios, apóstrofo y guion.
+// ============================================================
+const NAME_STRIP_RE = /[^\p{L}\p{M}'’ -]/gu;
+const NAME_HAS_FORBIDDEN_RE = /[^\p{L}\p{M}'’ -]/u;
+const cleanName = (v, max = 120) => String(v ?? "")
+  .replace(NAME_STRIP_RE, "").replace(/['’-]{2,}/g, m => m[0])
+  .replace(/\s+/g, " ").trimStart().slice(0, max);
+const nameLetters = (v) => String(v ?? "").replace(/[^\p{L}]/gu, "").length;
+
 const STORE_KEY = "joxe_turnos_v1";
 const STORE_DEFAULT = () => ({ appointments: [], active: [], completed: [], blockedSlots: [], blockRanges: [] });
 
@@ -600,6 +613,8 @@ const BookingPortal = () => {
   }, []);
   const [step, setStep] = React.useState(initial.step);
   const [form, setForm] = React.useState(initial.form);
+  // Avisa cuando el filtro del nombre descartó algo de lo que se escribió.
+  const [nameBlocked, setNameBlocked] = React.useState(false);
   const [ticket, setTicket] = React.useState(null);
   const [secsLeft, setSecsLeft] = React.useState(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -786,11 +801,11 @@ const BookingPortal = () => {
   const trimmedName = form.name.trim();
   const phoneDigits = cleanDigits(form.phone);
   const errors = {
-    name:   trimmedName.length === 0 ? "" : trimmedName.length < 3 ? "Ingresa al menos 3 caracteres." : "",
+    name:   trimmedName.length === 0 ? "" : nameLetters(trimmedName) < 3 ? "Ingresa al menos 3 letras." : "",
     phone:  phoneDigits.length === 0 ? "" : phoneDigits.length !== 10 ? "Debe tener 10 dígitos (ej: 300 123 4567)." : "",
     cedula: form.cedula.length === 0 ? "" : (form.cedula.length < 6 || form.cedula.length > 12) ? "Cédula entre 6 y 12 dígitos." : "",
   };
-  const step4Valid = trimmedName.length >= 3
+  const step4Valid = nameLetters(trimmedName) >= 3
     && phoneDigits.length === 10
     && form.cedula.length >= 6 && form.cedula.length <= 12;
 
@@ -1085,18 +1100,23 @@ const BookingPortal = () => {
                   <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>Nombre completo</PMono>
                 </label>
                 <input id="bk-name" name="name" autoComplete="name" required
-                  value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                  value={form.name}
+                  onChange={e => {
+                    // Se avisa solo si de verdad se descartó algo.
+                    setNameBlocked(NAME_HAS_FORBIDDEN_RE.test(e.target.value));
+                    setForm({ ...form, name: cleanName(e.target.value) });
+                  }}
                   placeholder="María Pérez"
-                  aria-invalid={!!errors.name}
-                  aria-describedby={errors.name ? "bk-name-err" : undefined}
+                  aria-invalid={!!(errors.name || nameBlocked)}
+                  aria-describedby={(errors.name || nameBlocked) ? "bk-name-err" : undefined}
                   style={{
                     width: "100%", padding: "18px 20px",
-                    border: `1px solid ${errors.name ? "#C46666" : "rgba(12,12,12,0.2)"}`, background: "#FFF",
+                    border: `1px solid ${(errors.name || nameBlocked) ? "#C46666" : "rgba(12,12,12,0.2)"}`, background: "#FFF",
                     fontFamily: "'Outfit', sans-serif", fontSize: 15, color: "#0C0C0C",
                   }} />
-                {errors.name && (
+                {(errors.name || nameBlocked) && (
                   <div id="bk-name-err" role="alert" style={{ marginTop: 6, fontSize: 12, color: "#C46666" }}>
-                    {errors.name}
+                    {errors.name || "Solo letras: sin números, emojis ni símbolos."}
                   </div>
                 )}
               </div>

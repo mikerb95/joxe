@@ -30,6 +30,7 @@ const LABELS = ["", "Muy mal", "Mal", "Aceptable", "Muy bien", "Excelente"];
 // Espejo de cleanName/nameError en lib/db.js. El backend vuelve a validar;
 // esto es solo para que el cliente vea el error mientras escribe.
 const NAME_STRIP_RE = /[^\p{L}\p{M}'’ -]/gu;
+const NAME_HAS_FORBIDDEN_RE = /[^\p{L}\p{M}'’ -]/u;
 const cleanName = (v, max = 40) => String(v ?? "")
   .replace(NAME_STRIP_RE, "").replace(/['’-]{2,}/g, m => m[0])
   .replace(/\s+/g, " ").trimStart().slice(0, max);
@@ -124,39 +125,107 @@ function Notice({ title, body, tone = "neutral", account = false }) {
   );
 }
 
+
+// Campo de la pantalla de identificación. Mismo look que el resto: caja
+// translúcida sobre el fondo negro, sin bordes redondeados.
+function IdField({ id, label, hint, value, onChange, maxLength, inputMode = "numeric", autoComplete }) {
+  return (
+    <div>
+      <label htmlFor={id} style={{ display: "block", marginBottom: 10 }}>
+        <RMono style={{ opacity: 0.55 }}>{label}</RMono>
+      </label>
+      <input id={id} value={value} maxLength={maxLength} inputMode={inputMode}
+        autoComplete={autoComplete}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          width: "100%", padding: "15px 16px",
+          background: "rgba(245,241,234,0.04)", color: C.ivory,
+          border: "1px solid rgba(245,241,234,0.15)", borderRadius: 0,
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 15,
+          letterSpacing: "0.08em",
+        }} />
+      {hint && (
+        <div style={{ marginTop: 6, opacity: 0.4, fontSize: 11, lineHeight: 1.5 }}>{hint}</div>
+      )}
+    </div>
+  );
+}
+
 function ResenaPortal() {
-  const token = new URLSearchParams(window.location.search).get("t") || "";
-  const [state, setState] = useState({ phase: "loading" });
+  const urlToken = new URLSearchParams(window.location.search).get("t") || "";
+  // El token puede venir del link o salir de la identificación por cédula.
+  const [token, setToken] = useState(urlToken);
+  const [state, setState] = useState({ phase: urlToken ? "loading" : "identify" });
   const [rating, setRating] = useState(0);
   const [name, setName] = useState("");
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
 
+  // Identificación (solo cuando se entra sin link).
+  const [cedula, setCedula] = useState("");
+  const [phone4, setPhone4] = useState("");
+  const [idError, setIdError] = useState("");
+  const [idBusy, setIdBusy] = useState(false);
+  // Avisa cuando el filtro descarta algo de lo que se escribió en el nombre.
+  const [blocked, setBlocked] = useState(false);
+
   useEffect(() => {
-    if (!token) { setState({ phase: "invalid" }); return; }
-    fetch(`/api/reviews?token=${encodeURIComponent(token)}`)
+    if (!urlToken) return;
+    fetch(`/api/reviews?token=${encodeURIComponent(urlToken)}`)
       .then(async r => {
         const data = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(data.error || "error");
         if (data.already) setState({ phase: "already", appt: data.appt, review: data.review });
         else {
-          setName(data.appt?.name || "");
+          setName(cleanName(data.appt?.name || ""));
           setState({ phase: "form", appt: data.appt });
         }
       })
       .catch(err => setState({ phase: err.message === "not_found" ? "notfound" : "invalid" }));
-  }, [token]);
+  }, [urlToken]);
+
+  // Cédula + últimos 4 del celular: la misma llave que pide Mi Cuenta. La
+  // cédula sola no basta, no es un dato secreto.
+  const identify = async () => {
+    if (cedula.length < 6) { setIdError("Escribe tu cédula completa."); return; }
+    if (phone4.length !== 4) { setIdError("Faltan los últimos 4 dígitos de tu celular."); return; }
+    setIdBusy(true); setIdError("");
+    try {
+      const r = await fetch("/api/client", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "review-lookup", cedula, phone4 }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.status === 401) throw new Error("No encontramos una visita con esos datos. Revisa tu cédula y los últimos 4 dígitos del celular con el que reservaste.");
+      if (r.status === 429) throw new Error("Demasiados intentos. Espera unos minutos y vuelve a probar.");
+      if (data.error === "not_completed") throw new Error("Todavía no tienes una visita completada para reseñar. Cuando termines tu próxima cita podrás dejarnos tu opinión.");
+      if (!r.ok) throw new Error(data.error || "No pudimos verificar tus datos.");
+      if (data.already) {
+        setState({ phase: "already", review: null });
+        return;
+      }
+      setToken(data.token);
+      setName(cleanName(data.name || ""));
+      setState({ phase: "form", appt: { ...data.appt, name: cleanName(data.name || "") } });
+    } catch (err) {
+      setIdError(err.message);
+    } finally {
+      setIdBusy(false);
+    }
+  };
 
   const submit = async () => {
     if (rating === 0) { setError("Elige cuántas estrellas nos das."); return; }
-    if (!name.trim()) { setError("Escribe el nombre con el que quieres aparecer."); return; }
+    const nameErr = nameError(name);
+    if (nameErr) { setError(nameErr); return; }
     setSending(true); setError("");
     try {
       const r = await fetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, name: name.trim(), rating, text: text.trim() }),
+        body: JSON.stringify({ token, name: cleanName(name), rating, text: text.trim() }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || "No pudimos guardar tu reseña.");
@@ -168,6 +237,56 @@ function ResenaPortal() {
     }
   };
 
+  if (state.phase === "identify") {
+    return (
+      <Shell>
+        <RMono style={{ color: C.bronze }}>Tu opinión</RMono>
+        <h1 style={{
+          fontFamily: "'Marcellus', serif", fontSize: 34, fontWeight: 400,
+          margin: "16px 0 10px", letterSpacing: "0.01em", lineHeight: 1.2,
+        }}>Cuéntanos cómo te fue.</h1>
+        <p style={{ opacity: 0.6, fontSize: 15, lineHeight: 1.7, margin: "0 0 36px" }}>
+          Identifícate con tu cédula y buscamos tu última visita. Solo pueden
+          opinar quienes ya estuvieron en el salón.
+        </p>
+
+        <div style={{ display: "grid", gap: 24, maxWidth: 420 }}>
+          <IdField id="rv-cedula" label="Cédula" autoComplete="off"
+            value={cedula} maxLength={12}
+            hint="Sin puntos ni espacios."
+            onChange={v => { setCedula(v.replace(/\D/g, "").slice(0, 12)); setIdError(""); }} />
+          <IdField id="rv-phone4" label="Últimos 4 del celular" autoComplete="off"
+            value={phone4} maxLength={4}
+            hint="Los 4 últimos dígitos del número con el que reservaste."
+            onChange={v => { setPhone4(v.replace(/\D/g, "").slice(0, 4)); setIdError(""); }} />
+        </div>
+
+        {idError && (
+          <div style={{
+            marginTop: 22, padding: "12px 16px", fontSize: 13, maxWidth: 420,
+            color: C.red, border: `1px solid ${C.red}`,
+            background: "rgba(196,102,102,0.07)", lineHeight: 1.6,
+          }}>{idError}</div>
+        )}
+
+        <button onClick={identify} disabled={idBusy} style={{
+          marginTop: 30, maxWidth: 420, width: "100%", padding: "17px 22px",
+          background: idBusy ? "transparent" : C.bronze,
+          color: idBusy ? C.bronze : C.noir,
+          border: `1px solid ${C.bronze}`, cursor: idBusy ? "default" : "pointer",
+          fontFamily: "'Outfit', sans-serif", fontSize: 13,
+          letterSpacing: "0.2em", textTransform: "uppercase",
+          transition: "background 0.3s, color 0.3s",
+        }}>
+          {idBusy ? "Buscando…" : "Continuar"}
+        </button>
+
+        <p style={{ marginTop: 18, opacity: 0.4, fontSize: 12, lineHeight: 1.6, maxWidth: 420 }}>
+          Usamos estos datos solo para encontrar tu visita. No se publican.
+        </p>
+      </Shell>
+    );
+  }
   if (state.phase === "loading") {
     return <Shell><div style={{ textAlign: "center", paddingTop: 60, opacity: 0.5 }}><RMono>Cargando…</RMono></div></Shell>;
   }
@@ -183,7 +302,7 @@ function ResenaPortal() {
     return <Shell><Notice tone="ok" account title="Ya nos dejaste tu opinión"
       body={state.review?.status === "approved"
         ? "Tu reseña ya está publicada en nuestra web. Gracias por tomarte el tiempo."
-        : "La recibimos y está en revisión. Aparecerá en la web muy pronto. Gracias."} /></Shell>;
+        : "Ya tenemos tu opinión de la última visita. Aparecerá en la web en cuanto la revisemos. Gracias."} /></Shell>;
   }
   if (state.phase === "thanks") {
     return <Shell><Notice tone="ok" account title="Gracias por escribirnos"
@@ -211,7 +330,12 @@ function ResenaPortal() {
         <RMono style={{ opacity: 0.55 }}>Tu nombre</RMono>
       </label>
       <input id="rv-name" value={name} maxLength={40} autoComplete="given-name"
-        onChange={e => { setName(e.target.value); setError(""); }}
+        onChange={e => {
+          // Se filtra al escribir: números, emojis y símbolos no entran.
+          setBlocked(NAME_HAS_FORBIDDEN_RE.test(e.target.value));
+          setName(cleanName(e.target.value));
+          setError("");
+        }}
         placeholder="Así aparecerás en la web"
         style={{
           width: "100%", padding: "15px 16px",
@@ -219,8 +343,11 @@ function ResenaPortal() {
           border: "1px solid rgba(245,241,234,0.15)", borderRadius: 0,
           fontFamily: "'Outfit', sans-serif", fontSize: 15,
         }} />
-      <div style={{ marginTop: 6, opacity: 0.4, fontSize: 11, lineHeight: 1.5 }}>
-        Puedes dejar solo tu nombre de pila o cambiarlo si prefieres otro.
+      <div style={{ marginTop: 6, opacity: blocked ? 1 : 0.4, fontSize: 11, lineHeight: 1.5,
+        color: blocked ? C.red : "inherit" }}>
+        {blocked
+          ? "Solo letras: sin números, emojis ni símbolos."
+          : "Este es el nombre con el que te tenemos registrado. Puedes ajustarlo si prefieres otro."}
       </div>
 
       <label htmlFor="rv-text" style={{ display: "block", margin: "28px 0 10px" }}>

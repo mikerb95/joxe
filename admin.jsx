@@ -1,5 +1,14 @@
 // JOXE Admin Portal — Panel de gestión del barbero
 
+// ---- Nombres de personas ----
+// Espejo de cleanName en lib/db.js. En un nombre solo entran letras (con
+// tildes y ñ), espacios, apóstrofo y guion: nada de números, emojis ni
+// símbolos. Vale igual para clientes y para el equipo.
+const NAME_STRIP_RE = /[^\p{L}\p{M}'’ -]/gu;
+const cleanName = (v, max = 120) => String(v ?? "")
+  .replace(NAME_STRIP_RE, "").replace(/['’-]{2,}/g, m => m[0])
+  .replace(/\s+/g, " ").trimStart().slice(0, max);
+
 // ==================== STORES (Turso via API + localStorage cache) ====================
 const ADMIN_KEY = "joxe_admin_v1";
 const APPT_KEY  = "joxe_turnos_v1";
@@ -2820,7 +2829,7 @@ const RevenueView = () => {
               onChange={e=>setForm({...form,service:e.target.value})}
               options={[{value:"",label:"Otro/Manual"},...(admin.services||[]).filter(s=>s.active).map(s=>({value:s.name,label:s.name}))]} />
             <FieldInput label="Cliente" value={form.client}
-              onChange={e=>setForm({...form,client:e.target.value})} placeholder="Nombre" />
+              onChange={e=>setForm({...form,client:cleanName(e.target.value)})} placeholder="Nombre" />
             <FieldSelect label="Método" value={form.method}
               onChange={e=>setForm({...form,method:e.target.value})} options={METHODS} />
             <FieldInput label="Nota" value={form.note}
@@ -3584,7 +3593,7 @@ const EmployeesView = () => {
         <div style={{padding:"20px 32px",borderBottom:`1px solid ${C.bdr}`,background:C.s1}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,maxWidth:720,marginBottom:16}}>
             <FieldInput label="Nombre" value={newEmp.name}
-              onChange={e=>setNewEmp({...newEmp,name:e.target.value})} placeholder="Laura M." />
+              onChange={e=>setNewEmp({...newEmp,name:cleanName(e.target.value,80)})} placeholder="Laura M." />
             <FieldSelect label="Rol" value={newEmp.role}
               onChange={e=>setNewEmp({...newEmp,role:e.target.value})}
               options={ROLES} />
@@ -3767,7 +3776,7 @@ const EmployeesView = () => {
                   <div style={{padding:"18px 20px",background:C.s2}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,maxWidth:680,marginBottom:14}}>
                       <FieldInput label="Nombre" value={editForm.name}
-                        onChange={e=>setEditForm({...editForm,name:e.target.value})} />
+                        onChange={e=>setEditForm({...editForm,name:cleanName(e.target.value,80)})} />
                       <FieldSelect label="Rol" value={editForm.role}
                         onChange={e=>setEditForm({...editForm,role:e.target.value})}
                         options={ROLES} />
@@ -4508,7 +4517,7 @@ const StylistSettingsView = ({ empId, onNav }) => {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
             <FieldInput label="Nombre"
               value={form.name}
-              onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              onChange={e => setForm(f => ({ ...f, name: cleanName(e.target.value, 80) }))} />
             <FieldSelect label="Rol" value={form.role}
               onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
               options={ROLES} />
@@ -4888,7 +4897,7 @@ const SettingsView = ({ onNav }) => {
             })}
           </div>
           <div style={{display:"flex",gap:10}}>
-            <FieldInput value={newStylist} onChange={e=>setNewStylist(e.target.value)}
+            <FieldInput value={newStylist} onChange={e=>setNewStylist(cleanName(e.target.value,80))}
               placeholder="Nombre del estilista" style={{flex:1}} />
             <Btn onClick={addStylist} disabled={!newStylist.trim()}>Agregar</Btn>
           </div>
@@ -6856,7 +6865,7 @@ const EmpBookingView = ({emp, onNav}) => {
           </div>
           <div>
             <FieldInput label={nameRequired ? "Nombre *" : "Nombre (opcional)"} value={form.name}
-              onChange={e=>{ autoNameRef.current=""; setF("name", e.target.value); }} placeholder="Nombre del cliente" />
+              onChange={e=>{ autoNameRef.current=""; setF("name", cleanName(e.target.value)); }} placeholder="Nombre del cliente" />
             {nameRequired && form.name.trim()==="" && (
               <div style={{marginTop:6,fontSize:11,color:C.muted}}>Cliente nuevo · el nombre es obligatorio.</div>
             )}

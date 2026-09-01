@@ -3,6 +3,7 @@ import {
   initTables, kvGet, kvGetCached, kvGetWithMeta, kvCas, kvInvalidate,
   applyCors, clientIp, rateLimit, sanitizeStr,
   verifyStaffAuth, verifyAdminAuth, signReviewToken, verifyReviewToken,
+  cleanName, nameError,
 } from "../lib/db.js";
 import { notifyStaff } from "../lib/notify.js";
 
@@ -46,14 +47,15 @@ function publicReview(r) {
 
 // Solo el nombre de pila, para no publicar el nombre completo de nadie.
 function firstName(full) {
-  return sanitizeStr(String(full || "").trim().split(/\s+/)[0] || "Cliente", MAX_NAME);
+  return cleanName(String(full || "").trim().split(/\s+/)[0] || "Cliente", MAX_NAME);
 }
 
-// El cliente puede corregir cómo quiere que aparezca su nombre. Si lo deja
-// vacío o solo con símbolos, se cae al nombre de pila de la cita.
+// El cliente puede corregir cómo quiere que aparezca su nombre. cleanName ya
+// dejó fuera números, emojis y símbolos; si lo que queda no es un nombre, se
+// cae al nombre de pila de la cita en vez de publicar algo vacío.
 function displayName(input, apptName) {
-  const clean = sanitizeStr(String(input || "").replace(/\s+/g, " ").trim(), MAX_NAME);
-  return /\p{L}/u.test(clean || "") ? clean : firstName(apptName);
+  const clean = cleanName(input, MAX_NAME);
+  return clean.length >= 2 ? clean : firstName(apptName);
 }
 
 function summarize(reviews) {
@@ -195,6 +197,10 @@ export default async function handler(req, res) {
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
       return res.status(400).json({ error: "La calificación debe ir de 1 a 5" });
     }
+    // El nombre se publica en el home: se rechaza en vez de corregirlo callado,
+    // así el cliente ve qué pasó con lo que escribió.
+    const nameErr = nameError(rawName, { min: 2, max: MAX_NAME });
+    if (nameErr) return res.status(400).json({ error: nameErr });
     const text = sanitizeStr(rawText, MAX_TEXT).trim();
 
     const found = await findCompletedAppt(apptId);

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import {
   initTables, kvGet, kvGetCached, kvGetWithMeta, kvCas, kvInvalidate,
-  applyCors, clientIp, rateLimit, sanitizeStr,
+  applyCors, clientIp, rateLimit, sanitizeStr, cleanName, nameError,
   verifyStaffAuth, verifyAdminAuth,
 } from "../lib/db.js";
 import { notifyStaff } from "../lib/notify.js";
@@ -192,8 +192,10 @@ export default async function handler(req, res) {
 
     const { name: rawName, phone: rawPhone, email: rawEmail, courseId, message: rawMsg } = req.body ?? {};
 
-    const name = str(rawName, 80);
-    if (name.length < 2) return res.status(400).json({ error: "Escribe tu nombre" });
+    // Mismo criterio que en reservas: el nombre de una persona son letras.
+    const nameErr = nameError(rawName, { min: 2, max: 80 });
+    if (nameErr) return res.status(400).json({ error: nameErr });
+    const name = cleanName(rawName, 80);
 
     const phone = String(rawPhone ?? "").replace(/\D/g, "").slice(0, 15);
     if (phone.length < 7) return res.status(400).json({ error: "Escribe un celular válido" });

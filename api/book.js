@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr } from "../lib/db.js";
+import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr, cleanName, nameError } from "../lib/db.js";
 // kvGet: reads admin_store (catalog); kvGetWithMeta + kvCas: optimistic append.
 import { blocksFromStore, blockConflict } from "../lib/blocks.js";
 import { notifyStaff } from "../lib/notify.js";
@@ -29,6 +29,12 @@ function validateAppt(raw) {
   const dur = Number(raw.serviceDur);
   if (!Number.isFinite(dur) || dur < 0 || dur > 600) return { error: "Invalid serviceDur" };
 
+  // El nombre queda en la agenda, en la pantalla del lobby y en las reseñas:
+  // solo letras. Se rechaza aquí, no solo en el navegador, porque el POST se
+  // puede hacer a mano.
+  const nameErr = nameError(raw.name, { min: 3, max: 120 });
+  if (nameErr) return { error: nameErr };
+
   // Whitelist fields. Sanitize free-text. Cap lengths.
   const appt = {
     id: String(raw.id),
@@ -38,7 +44,7 @@ function validateAppt(raw) {
     stylist: sanitizeStr(raw.stylist, 80),
     date: String(raw.date),
     time: String(raw.time),
-    name: sanitizeStr(raw.name, 120),
+    name: cleanName(raw.name, 120),
     phone: String(raw.phone ?? "").replace(/\D/g, "").slice(0, 20),
     cedula: String(raw.cedula ?? "").replace(/\D/g, "").slice(0, 20),
     createdAt: Number.isFinite(Number(raw.createdAt)) ? Number(raw.createdAt) : Date.now(),
