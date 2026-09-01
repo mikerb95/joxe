@@ -1,8 +1,9 @@
 // JOXE — Página de reseña del cliente.
 // Dos maneras de entrar:
 //   1. Con el link firmado que manda el salón: /resena?t=<token>.
-//   2. Sin link: /resena pide cédula + últimos 4 del celular, encuentra la
-//      última visita completada sin reseñar y trae el nombre registrado.
+//   2. Sin link: /resena pide la cédula, encuentra la última visita completada
+//      sin reseñar y muestra el nombre enmascarado para que el cliente
+//      confirme que es su registro. El nombre completo nunca sale del servidor.
 // En los dos casos se termina con un token firmado: el formulario nunca se
 // abre sin una cita completada detrás.
 
@@ -26,6 +27,15 @@ const Star = ({ filled, size = 34 }) => (
 );
 
 const LABELS = ["", "Muy mal", "Mal", "Aceptable", "Muy bien", "Excelente"];
+
+// "2026-08-30" -> "30 de agosto". Se parte a mano porque new Date("YYYY-MM-DD")
+// se interpreta en UTC y en Colombia mostraría el día anterior.
+const fmtVisitDate = (ymd) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(ymd || ""));
+  if (!m) return "";
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return d.toLocaleDateString("es-CO", { day: "numeric", month: "long" });
+};
 
 // Espejo de cleanName/nameError en lib/db.js. El backend vuelve a validar;
 // esto es solo para que el cliente vea el error mientras escribe.
@@ -164,7 +174,6 @@ function ResenaPortal() {
 
   // Identificación (solo cuando se entra sin link).
   const [cedula, setCedula] = useState("");
-  const [phone4, setPhone4] = useState("");
   const [idError, setIdError] = useState("");
   const [idBusy, setIdBusy] = useState(false);
   // Avisa cuando el filtro descarta algo de lo que se escribió en el nombre.
@@ -195,20 +204,19 @@ function ResenaPortal() {
       .catch(err => setState({ phase: err.message === "not_found" ? "notfound" : "invalid" }));
   }, [urlToken]);
 
-  // Cédula + últimos 4 del celular: la misma llave que pide Mi Cuenta. La
-  // cédula sola no basta, no es un dato secreto.
+  // Solo la cédula. El servidor devuelve el nombre enmascarado para que el
+  // cliente confirme que ese registro es suyo antes de pasar al formulario.
   const identify = async () => {
     if (cedula.length < 6) { setIdError("Escribe tu cédula completa."); return; }
-    if (phone4.length !== 4) { setIdError("Faltan los últimos 4 dígitos de tu celular."); return; }
     setIdBusy(true); setIdError("");
     try {
       const r = await fetch("/api/client", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "review-lookup", cedula, phone4 }),
+        body: JSON.stringify({ action: "review-lookup", cedula }),
       });
       const data = await r.json().catch(() => ({}));
-      if (r.status === 401) throw new Error("No encontramos una visita con esos datos. Revisa tu cédula y los últimos 4 dígitos del celular con el que reservaste.");
+      if (r.status === 404) throw new Error("No encontramos ninguna visita con esa cédula. Revisa el número, o escríbenos si reservaste con otro documento.");
       if (r.status === 429) throw new Error("Demasiados intentos. Espera unos minutos y vuelve a probar.");
       if (data.error === "not_completed") throw new Error("Todavía no tienes una visita completada para reseñar. Cuando termines tu próxima cita podrás dejarnos tu opinión.");
       if (!r.ok) throw new Error(data.error || "No pudimos verificar tus datos.");
@@ -218,12 +226,27 @@ function ResenaPortal() {
       }
       setToken(data.token);
       setName(cleanName(data.name || ""));
-      setState({ phase: "form", appt: { ...data.appt, name: cleanName(data.name || "") } });
+      // El nombre de pila viaja en appt para que el saludo del formulario
+      // funcione igual que cuando se entra con el link firmado.
+      setState({
+        phase: "confirm",
+        appt: { ...data.appt, name: cleanName(data.name || "") },
+        maskedName: data.maskedName || "",
+      });
     } catch (err) {
       setIdError(err.message);
     } finally {
       setIdBusy(false);
     }
+  };
+
+  // El cliente dice que no es él: se vuelve al principio sin dar más pistas.
+  const rejectIdentity = () => {
+    setToken("");
+    setName("");
+    setCedula("");
+    setState({ phase: "identify" });
+    setIdError("Revisa el número de tu cédula e inténtalo de nuevo.");
   };
 
   const submit = async () => {
@@ -256,19 +279,15 @@ function ResenaPortal() {
           margin: "16px 0 10px", letterSpacing: "0.01em", lineHeight: 1.2,
         }}>Cuéntanos cómo te fue.</h1>
         <p style={{ opacity: 0.6, fontSize: 15, lineHeight: 1.7, margin: "0 0 36px" }}>
-          Identifícate con tu cédula y buscamos tu última visita. Solo pueden
-          opinar quienes ya estuvieron en el salón.
+          Escribe tu cédula y buscamos tu última visita. Solo pueden opinar
+          quienes ya estuvieron en el salón.
         </p>
 
-        <div style={{ display: "grid", gap: 24, maxWidth: 420 }}>
+        <div style={{ maxWidth: 420 }}>
           <IdField id="rv-cedula" label="Cédula" autoComplete="off"
             value={cedula} maxLength={12}
             hint="Sin puntos ni espacios."
             onChange={v => { setCedula(v.replace(/\D/g, "").slice(0, 12)); setIdError(""); }} />
-          <IdField id="rv-phone4" label="Últimos 4 del celular" autoComplete="off"
-            value={phone4} maxLength={4}
-            hint="Los 4 últimos dígitos del número con el que reservaste."
-            onChange={v => { setPhone4(v.replace(/\D/g, "").slice(0, 4)); setIdError(""); }} />
         </div>
 
         {idError && (
@@ -294,6 +313,56 @@ function ResenaPortal() {
         <p style={{ marginTop: 18, opacity: 0.4, fontSize: 12, lineHeight: 1.6, maxWidth: 420 }}>
           Usamos estos datos solo para encontrar tu visita. No se publican.
         </p>
+      </Shell>
+    );
+  }
+  if (state.phase === "confirm") {
+    const { appt, maskedName } = state;
+    return (
+      <Shell>
+        <RMono style={{ color: C.bronze }}>Confirma que eres tú</RMono>
+        <h1 style={{
+          fontFamily: "'Marcellus', serif", fontSize: 34, fontWeight: 400,
+          margin: "16px 0 10px", letterSpacing: "0.01em", lineHeight: 1.2,
+        }}>Encontramos tu visita.</h1>
+        <p style={{ opacity: 0.6, fontSize: 15, lineHeight: 1.7, margin: "0 0 32px" }}>
+          Ocultamos parte de tu nombre a propósito. Si este es tu registro,
+          continúa.
+        </p>
+
+        <div style={{
+          maxWidth: 420, padding: "22px 24px",
+          background: "rgba(245,241,234,0.04)",
+          border: "1px solid rgba(245,241,234,0.15)",
+        }}>
+          <RMono style={{ opacity: 0.5, fontSize: 10 }}>A nombre de</RMono>
+          <div style={{
+            fontFamily: "'Marcellus', serif", fontSize: 26,
+            margin: "10px 0 0", letterSpacing: "0.03em",
+          }}>{maskedName || "Cliente"}</div>
+          <div style={{
+            marginTop: 14, paddingTop: 14, fontSize: 13, opacity: 0.6,
+            borderTop: "1px solid rgba(245,241,234,0.1)", lineHeight: 1.7,
+          }}>
+            {[appt?.service, appt?.stylist && `con ${appt.stylist}`, fmtVisitDate(appt?.date)]
+              .filter(Boolean).join(" · ")}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 28, maxWidth: 420 }}>
+          <button onClick={() => setState(s => ({ ...s, phase: "form" }))} style={{
+            flex: 1, minWidth: 160, padding: "16px 22px",
+            background: C.bronze, color: C.noir, border: `1px solid ${C.bronze}`,
+            cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: 13,
+            letterSpacing: "0.2em", textTransform: "uppercase",
+          }}>Sí, soy yo</button>
+          <button onClick={rejectIdentity} style={{
+            padding: "16px 22px", background: "transparent",
+            border: "1px solid rgba(245,241,234,0.25)", color: C.ivory,
+            cursor: "pointer", fontFamily: "'Outfit', sans-serif", fontSize: 13,
+            letterSpacing: "0.2em", textTransform: "uppercase",
+          }}>No soy yo</button>
+        </div>
       </Shell>
     );
   }

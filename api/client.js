@@ -21,6 +21,17 @@ function apptTime(a) {
   return Number.isNaN(t) ? 0 : t;
 }
 
+const firstWord = (full) => String(full || "").trim().split(/\s+/)[0] || "";
+
+// "Ana María Pérez" -> "Ana M••• P•••". Alcanza para que el cliente reconozca
+// que es su registro, y no para que un tercero se lleve el nombre completo
+// probando cédulas.
+function maskName(full) {
+  const parts = cleanName(full, 120).split(" ").filter(Boolean);
+  if (!parts.length) return "";
+  return [parts[0], ...parts.slice(1).map(w => `${w[0]}•••`)].join(" ");
+}
+
 function phoneMatches(appts, phone4) {
   return appts.some(a => {
     const d = last4(a.phone);
@@ -73,13 +84,18 @@ export default async function handler(req, res) {
       const all = [...(store.appointments || []), ...(store.active || []), ...(store.completed || [])];
 
       // ---- Identificación por cédula para dejar reseña sin link ----
-      // Misma llave que Mi Cuenta (cédula + últimos 4 del celular): la cédula
-      // sola dejaría que cualquiera sacara nombres probando números.
+      // Aquí basta la cédula: se pide solo eso para que dejar una opinión no
+      // tenga fricción. El nombre nunca sale completo, va enmascarado, y lo
+      // que se publica es solo el nombre de pila. La cédula no es un dato
+      // secreto, así que el filtro real de lo que sale a la web sigue siendo
+      // la moderación del panel: nada se publica sin aprobación.
       if (action === "review-lookup") {
         const mineAll = all.filter(a => (a.cedula || "").replace(/\D/g, "") === cedula);
-        if (!phoneMatches(mineAll, last4(rawPhone4))) {
+        if (!mineAll.length) {
+          // Una cédula sin citas cuenta como intento fallido: es lo que haría
+          // alguien probando números en serie, y así se topa con el límite.
           if (await tooManyFailures(req, res)) return;
-          return res.status(401).json({ error: "auth_failed" });
+          return res.status(404).json({ error: "not_found" });
         }
 
         // El último nombre registrado: el de la cita más reciente que traiga uno.
@@ -101,13 +117,17 @@ export default async function handler(req, res) {
           a => !reviewedIds.has(a.id) && (Date.now() - apptTime(a)) <= REVIEW_WINDOW_MS
         );
         if (!target) {
-          return res.status(200).json({ ok: true, already: true, name: registeredName });
+          return res.status(200).json({ ok: true, already: true, maskedName: maskName(registeredName) });
         }
 
         return res.status(200).json({
           ok: true,
           token: signReviewToken(target.id),
-          name: registeredName,
+          // Para confirmar identidad, sin exponer el nombre completo.
+          maskedName: maskName(registeredName),
+          // El nombre de pila es justo lo que se publicaría de todos modos,
+          // así que sirve de valor inicial del formulario sin revelar de más.
+          name: firstWord(registeredName),
           appt: {
             service: sanitizeStr(target.service, 120) || "",
             stylist: sanitizeStr(target.stylist, 80) || "",

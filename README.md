@@ -11,7 +11,7 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - **Staff portal**: acceso de empleados.
 - **PWA**: manifiesto y service worker para experiencia instalable.
 - **Academia**: página pública de las clases de barbería en `/academia`, con cursos, temario, preguntas frecuentes y formulario de inscripción. El contenido se edita desde el panel (Admin → Academia) y nace apagado: mientras no se publique, la página no muestra cursos y el enlace no aparece ni en el menú ni en el home. Las solicitudes llegan a la bandeja del panel y avisan al equipo.
-- **Reseñas**: calificaciones de clientes con cita completada, moderadas desde el panel y publicadas en el home. Hay tres formas de llegar al formulario: el link firmado que envía el salón, el botón "Deja tu reseña" en Mi Cuenta, y la página `/resena` abierta directamente, donde el cliente se identifica con su cédula y los últimos 4 dígitos de su celular. En ese caso se busca su visita completada más reciente sin reseñar (últimos 30 días) y se propone el último nombre que registró.
+- **Reseñas**: calificaciones de clientes con cita completada, moderadas desde el panel y publicadas en el home. Hay tres formas de llegar al formulario: el link firmado que envía el salón, el botón "Deja tu reseña" en Mi Cuenta, y la página `/resena` abierta directamente, donde el cliente solo escribe su cédula. En ese caso se busca su visita completada más reciente sin reseñar (últimos 30 días) y se muestra el nombre enmascarado ("Ana M••• P•••") para que confirme que el registro es suyo. El nombre completo nunca sale del servidor: al formulario solo viaja el nombre de pila, que es lo único que se publica.
 
 ## Nombres de personas
 
