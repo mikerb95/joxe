@@ -8,6 +8,7 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - **Portal público**: página de acceso y navegación general.
 - **Booking**: flujo de reservas para clientes.
 - **Check-in / Lobby / Scan**: acceso y control operativo en sala.
+- **Mi Cuenta**: el cliente entra solo con su cédula, sin contraseña. Como la cédula no es un dato secreto, la protección no está en la llave sino en lo que se entrega: la respuesta se arma campo por campo y deja fuera el celular, la cédula, el precio cobrado y las notas internas del equipo.
 - **Staff portal**: acceso de empleados.
 - **PWA**: manifiesto y service worker para experiencia instalable.
 - **Academia**: página pública de las clases de barbería en `/academia`, con cursos, temario, preguntas frecuentes y formulario de inscripción. El contenido se edita desde el panel (Admin → Academia) y nace apagado: mientras no se publique, la página no muestra cursos y el enlace no aparece ni en el menú ni en el home. Las solicitudes llegan a la bandeja del panel y avisan al equipo.
