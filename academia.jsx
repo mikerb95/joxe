@@ -238,12 +238,20 @@ const AcEnroll = React.forwardRef(({ content, courseId, onCourseChange }, ref) =
   const [error, setError] = useState("");
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }));
-  // El nombre se filtra al escribir, igual que en reservas.
+  // El nombre se filtra al escribir, igual que en reservas. El aviso se
+  // sostiene unos segundos para que no se apague con la siguiente tecla válida.
   const [nameBlocked, setNameBlocked] = useState(false);
+  const nameBlockedTimer = React.useRef(null);
   const setName = (e) => {
-    setNameBlocked(NAME_HAS_FORBIDDEN_RE.test(e.target.value));
-    setForm(f => ({ ...f, name: cleanName(e.target.value, 80) }));
+    const raw = e.target.value;
+    if (NAME_HAS_FORBIDDEN_RE.test(raw)) {
+      setNameBlocked(true);
+      clearTimeout(nameBlockedTimer.current);
+      nameBlockedTimer.current = setTimeout(() => setNameBlocked(false), 4000);
+    }
+    setForm(f => ({ ...f, name: cleanName(raw, 80) }));
   };
+  useEffect(() => () => clearTimeout(nameBlockedTimer.current), []);
   const courses = content.courses || [];
 
   const wa = getWAConfig();

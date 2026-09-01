@@ -6,7 +6,7 @@
 // En los dos casos se termina con un token firmado: el formulario nunca se
 // abre sin una cita completada detrás.
 
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 const C = { noir: "#0C0C0C", ivory: "#F5F1EA", bronze: "#C29E66", red: "#C46666", green: "#66C499" };
 
@@ -168,7 +168,17 @@ function ResenaPortal() {
   const [idError, setIdError] = useState("");
   const [idBusy, setIdBusy] = useState(false);
   // Avisa cuando el filtro descarta algo de lo que se escribió en el nombre.
+  // El aviso se sostiene unos segundos: si se apagara con la siguiente tecla
+  // válida, el cliente vería desaparecer caracteres sin saber por qué.
   const [blocked, setBlocked] = useState(false);
+  const blockedTimer = useRef(null);
+  const flagBlocked = (raw) => {
+    if (!NAME_HAS_FORBIDDEN_RE.test(raw)) return;
+    setBlocked(true);
+    clearTimeout(blockedTimer.current);
+    blockedTimer.current = setTimeout(() => setBlocked(false), 4000);
+  };
+  useEffect(() => () => clearTimeout(blockedTimer.current), []);
 
   useEffect(() => {
     if (!urlToken) return;
@@ -332,7 +342,7 @@ function ResenaPortal() {
       <input id="rv-name" value={name} maxLength={40} autoComplete="given-name"
         onChange={e => {
           // Se filtra al escribir: números, emojis y símbolos no entran.
-          setBlocked(NAME_HAS_FORBIDDEN_RE.test(e.target.value));
+          flagBlocked(e.target.value);
           setName(cleanName(e.target.value));
           setError("");
         }}

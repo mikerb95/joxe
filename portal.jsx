@@ -613,8 +613,18 @@ const BookingPortal = () => {
   }, []);
   const [step, setStep] = React.useState(initial.step);
   const [form, setForm] = React.useState(initial.form);
-  // Avisa cuando el filtro del nombre descartó algo de lo que se escribió.
+  // Avisa cuando el filtro del nombre descartó algo de lo que se escribió. El
+  // aviso se sostiene unos segundos: si se apagara con la siguiente tecla
+  // válida, el cliente vería desaparecer caracteres sin saber por qué.
   const [nameBlocked, setNameBlocked] = React.useState(false);
+  const nameBlockedTimer = React.useRef(null);
+  const flagNameBlocked = (raw) => {
+    if (!NAME_HAS_FORBIDDEN_RE.test(raw)) return;
+    setNameBlocked(true);
+    clearTimeout(nameBlockedTimer.current);
+    nameBlockedTimer.current = setTimeout(() => setNameBlocked(false), 4000);
+  };
+  React.useEffect(() => () => clearTimeout(nameBlockedTimer.current), []);
   const [ticket, setTicket] = React.useState(null);
   const [secsLeft, setSecsLeft] = React.useState(null);
   const [submitting, setSubmitting] = React.useState(false);
@@ -1102,8 +1112,7 @@ const BookingPortal = () => {
                 <input id="bk-name" name="name" autoComplete="name" required
                   value={form.name}
                   onChange={e => {
-                    // Se avisa solo si de verdad se descartó algo.
-                    setNameBlocked(NAME_HAS_FORBIDDEN_RE.test(e.target.value));
+                    flagNameBlocked(e.target.value);
                     setForm({ ...form, name: cleanName(e.target.value) });
                   }}
                   placeholder="María Pérez"
