@@ -75,6 +75,7 @@ function App() {
       <LocationMap />
       <Footer hasAcademy={!!academy?.enabled} />
       <WhatsAppBlob />
+      <ReviewInviteBlob />
 
       {editMode && <TweaksPanel tweaks={tweaks} update={updateTweak} />}
     </div>

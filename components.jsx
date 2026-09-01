@@ -987,6 +987,128 @@ const useWAAvoid = (offset, size) => {
   return away;
 };
 
+// ——————————————————————————————————————————————
+// INVITACIÓN A DEJAR RESEÑA
+// Va abajo a la izquierda: el blob de WhatsApp ocupa la derecha y los dos
+// nunca deben cruzarse. No aparece al entrar sino cuando el visitante ya
+// bajó un rato, para que se lea como sugerencia y no como pop-up. Se cierra
+// y no vuelve a salir en 30 días (también al usarlo, para no insistirle a
+// quien ya fue a opinar).
+// ——————————————————————————————————————————————
+const REVIEW_INVITE_KEY = "joxe_review_invite_hidden_until";
+const REVIEW_INVITE_QUIET_MS = 30 * 24 * 3600 * 1000;
+
+const reviewInviteSilenced = () => {
+  try {
+    const until = Number(localStorage.getItem(REVIEW_INVITE_KEY) || 0);
+    return Number.isFinite(until) && Date.now() < until;
+  } catch { return false; } // modo privado: se muestra igual, sin recordar nada
+};
+
+const silenceReviewInvite = () => {
+  try {
+    localStorage.setItem(REVIEW_INVITE_KEY, String(Date.now() + REVIEW_INVITE_QUIET_MS));
+  } catch {}
+};
+
+const ReviewInviteBlob = () => {
+  const [silenced, setSilenced] = React.useState(reviewInviteSilenced);
+  const [shown, setShown] = React.useState(false);
+  const [mobile, setMobile] = React.useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches
+  );
+
+  React.useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const onChange = e => setMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  React.useEffect(() => {
+    if (silenced) return;
+    // Una vez visible se queda: que aparezca y desaparezca al subir y bajar
+    // sería más molesto que útil.
+    const check = () => {
+      if (window.scrollY > window.innerHeight * 1.5) {
+        setShown(true);
+        window.removeEventListener("scroll", check);
+      }
+    };
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
+  }, [silenced]);
+
+  if (silenced) return null;
+
+  const offset = mobile ? 18 : 28;
+  const dismiss = () => { silenceReviewInvite(); setSilenced(true); };
+
+  return (
+    <div
+      role="complementary"
+      aria-label="Invitación a dejar una reseña"
+      style={{
+        position: "fixed",
+        bottom: `calc(${offset}px + env(safe-area-inset-bottom, 0px))`,
+        left: offset, zIndex: 9998,
+        display: "flex", alignItems: "center", gap: mobile ? 10 : 14,
+        // Nunca debe llegar hasta el blob de WhatsApp, que vive en la derecha.
+        maxWidth: `calc(100vw - ${offset * 2 + (mobile ? 78 : 96)}px)`,
+        background: "rgba(12,12,12,0.94)",
+        border: "1px solid rgba(194,158,102,0.35)",
+        borderRadius: 999,
+        padding: mobile ? "10px 12px 10px 16px" : "13px 16px 13px 20px",
+        boxShadow: "0 6px 28px rgba(12,12,12,0.28)",
+        backdropFilter: "blur(10px)",
+        opacity: shown ? 1 : 0,
+        transform: shown ? "none" : "translateY(140%)",
+        pointerEvents: shown ? "auto" : "none",
+        transition: "opacity 0.45s ease, transform 0.5s cubic-bezier(.4,0,.2,1)",
+      }}
+    >
+      <a href="/resena" onClick={silenceReviewInvite}
+        style={{
+          display: "flex", alignItems: "center", gap: 10,
+          textDecoration: "none", color: "var(--ivory)", minWidth: 0,
+        }}>
+        <span aria-hidden="true" style={{
+          width: 7, height: 7, borderRadius: "50%",
+          background: "var(--bronze)", flexShrink: 0,
+        }} />
+        <span style={{ minWidth: 0 }}>
+          <span style={{
+            display: "block", fontFamily: "var(--sans)",
+            fontSize: mobile ? 12 : 13, fontWeight: 500,
+            letterSpacing: "0.01em", whiteSpace: "nowrap",
+            overflow: "hidden", textOverflow: "ellipsis",
+          }}>
+            ¿Ya te atendimos?
+          </span>
+          <span style={{
+            display: "block", fontFamily: "var(--sans)",
+            fontSize: mobile ? 11 : 12, opacity: 0.6, marginTop: 1,
+            whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          }}>
+            Cuéntanos cómo te fue
+          </span>
+        </span>
+      </a>
+      <button type="button" onClick={dismiss} aria-label="Cerrar la invitación"
+        style={{
+          flexShrink: 0, width: 24, height: 24, borderRadius: "50%",
+          background: "transparent", border: "none", cursor: "pointer",
+          color: "var(--ivory)", opacity: 0.45, fontSize: 15, lineHeight: 1,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 0,
+        }}>
+        ×
+      </button>
+    </div>
+  );
+};
+
 const WhatsAppBlob = () => {
   const [hovered, setHovered] = React.useState(false);
   const [mobile, setMobile] = React.useState(
