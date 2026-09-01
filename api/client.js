@@ -1,6 +1,6 @@
 import {
   initTables, kvGet, kvGetCached, kvSet,
-  applyCors, clientIp, rateLimit, signReviewToken,
+  applyCors, clientIp, rateLimit, signReviewToken, cleanName, sanitizeStr,
 } from "../lib/db.js";
 
 const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
@@ -9,6 +9,17 @@ const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
 // débil (no es un dato secreto), así que se exige además los últimos 4 dígitos
 // del celular con el que quedó registrada la cita.
 const last4 = v => String(v ?? "").replace(/\D/g, "").slice(-4);
+
+// Misma ventana que usa Mi Cuenta para ofrecer el botón de reseña.
+const REVIEW_WINDOW_MS = 30 * 24 * 3600 * 1000;
+
+// Momento de la cita: completedAt si el panel lo guardó, si no fecha + hora.
+function apptTime(a) {
+  const t = a?.completedAt
+    ? new Date(a.completedAt).getTime()
+    : new Date(`${a?.date || ""}T${a?.time || "00:00"}:00${COT_OFFSET}`).getTime();
+  return Number.isNaN(t) ? 0 : t;
+}
 
 function phoneMatches(appts, phone4) {
   return appts.some(a => {
@@ -37,7 +48,7 @@ export default async function handler(req, res) {
     // ---- Client self-service: cancelar cita / pedir link de reseña ----
     if (req.method === "POST") {
       const { id, cedula: rawCedula, phone4: rawPhone4, action } = req.body ?? {};
-      if (!["cancel", "review-link"].includes(action)) {
+      if (!["cancel", "review-link", "review-lookup"].includes(action)) {
         return res.status(400).json({ error: "Invalid action" });
       }
 
@@ -49,12 +60,62 @@ export default async function handler(req, res) {
       }
 
       const cedula = String(rawCedula ?? "").replace(/\D/g, "");
-      if (!id || !cedula) return res.status(400).json({ error: "Missing id or cedula" });
+      // review-lookup es el único que no parte de una cita concreta: el cliente
+      // llega a /resena sin link y solo trae su cédula.
+      if (!cedula) return res.status(400).json({ error: "Missing cedula" });
+      if (action !== "review-lookup" && !id) {
+        return res.status(400).json({ error: "Missing id or cedula" });
+      }
 
       const store     = await kvGet("turno_store") || { appointments: [], active: [], completed: [], blockedSlots: [] };
       const adminData = await kvGet("admin_store")  || {};
 
       const all = [...(store.appointments || []), ...(store.active || []), ...(store.completed || [])];
+
+      // ---- Identificación por cédula para dejar reseña sin link ----
+      // Misma llave que Mi Cuenta (cédula + últimos 4 del celular): la cédula
+      // sola dejaría que cualquiera sacara nombres probando números.
+      if (action === "review-lookup") {
+        const mineAll = all.filter(a => (a.cedula || "").replace(/\D/g, "") === cedula);
+        if (!phoneMatches(mineAll, last4(rawPhone4))) {
+          if (await tooManyFailures(req, res)) return;
+          return res.status(401).json({ error: "auth_failed" });
+        }
+
+        // El último nombre registrado: el de la cita más reciente que traiga uno.
+        const byRecency = [...mineAll].sort((a, b) => apptTime(b) - apptTime(a));
+        const registeredName = cleanName(
+          (byRecency.find(a => cleanName(a.name)) || {}).name, 120
+        );
+
+        const completedIds = new Set((store.completed || []).map(a => a.id));
+        const reviewedIds = new Set(
+          ((await kvGet("reviews_store"))?.reviews || []).map(r => r.apptId)
+        );
+        const completedMine = byRecency.filter(a => completedIds.has(a.id));
+        if (!completedMine.length) return res.status(409).json({ error: "not_completed" });
+
+        // Se reseña la visita completada más reciente que siga sin reseña, y
+        // solo dentro de la ventana: opinar sobre algo de hace un año no ayuda.
+        const target = completedMine.find(
+          a => !reviewedIds.has(a.id) && (Date.now() - apptTime(a)) <= REVIEW_WINDOW_MS
+        );
+        if (!target) {
+          return res.status(200).json({ ok: true, already: true, name: registeredName });
+        }
+
+        return res.status(200).json({
+          ok: true,
+          token: signReviewToken(target.id),
+          name: registeredName,
+          appt: {
+            service: sanitizeStr(target.service, 120) || "",
+            stylist: sanitizeStr(target.stylist, 80) || "",
+            date: target.date || "",
+          },
+        });
+      }
+
       const appt = all.find(a => a.id === id);
       // Ownership check: cédula de la cita + últimos 4 del celular.
       if (!appt || (appt.cedula || "").replace(/\D/g, "") !== cedula) {

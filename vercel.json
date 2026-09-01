@@ -59,11 +59,9 @@
   ],
   "functions": {
     "api/crm.js": {
-      "memory": 128,
       "maxDuration": 10
     },
     "api/client.js": {
-      "memory": 128,
       "maxDuration": 10
     }
   },

@@ -1,6 +1,10 @@
 // JOXE — Página de reseña del cliente.
-// Se llega aquí solo con el link firmado que el salón manda tras completar la
-// cita: /resena?t=<token>. Sin token válido no hay formulario.
+// Dos maneras de entrar:
+//   1. Con el link firmado que manda el salón: /resena?t=<token>.
+//   2. Sin link: /resena pide cédula + últimos 4 del celular, encuentra la
+//      última visita completada sin reseñar y trae el nombre registrado.
+// En los dos casos se termina con un token firmado: el formulario nunca se
+// abre sin una cita completada detrás.
 
 const { useState, useEffect } = React;
 
@@ -22,6 +26,19 @@ const Star = ({ filled, size = 34 }) => (
 );
 
 const LABELS = ["", "Muy mal", "Mal", "Aceptable", "Muy bien", "Excelente"];
+
+// Espejo de cleanName/nameError en lib/db.js. El backend vuelve a validar;
+// esto es solo para que el cliente vea el error mientras escribe.
+const NAME_STRIP_RE = /[^\p{L}\p{M}'’ -]/gu;
+const cleanName = (v, max = 40) => String(v ?? "")
+  .replace(NAME_STRIP_RE, "").replace(/['’-]{2,}/g, m => m[0])
+  .replace(/\s+/g, " ").trimStart().slice(0, max);
+const nameError = (v) => {
+  const raw = String(v ?? "").trim();
+  if (!raw) return "Escribe el nombre con el que quieres aparecer.";
+  if (raw.replace(/[^\p{L}]/gu, "").length < 2) return "Escribe al menos 2 letras.";
+  return "";
+};
 
 function StarPicker({ value, onChange }) {
   const [hover, setHover] = useState(0);
