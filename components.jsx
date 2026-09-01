@@ -690,25 +690,39 @@ const Reviews = ({ data }) => {
           {visible.map(r => <ReviewCard key={r.id} r={r} />)}
         </div>
 
-        {data.reviews.length > 6 && !showAll && (
-          <button onClick={() => setShowAll(true)} style={{
-            marginTop: 40, background: "transparent",
-            border: "1px solid rgba(20,18,18,0.25)", color: "var(--noir)",
-            padding: "15px 32px", cursor: "pointer",
+        <div style={{
+          marginTop: 40, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center",
+        }}>
+          {data.reviews.length > 6 && !showAll && (
+            <button onClick={() => setShowAll(true)} style={{
+              background: "transparent",
+              border: "1px solid rgba(20,18,18,0.25)", color: "var(--noir)",
+              padding: "15px 32px", cursor: "pointer",
+              fontFamily: "var(--sans)", fontSize: 12,
+              letterSpacing: "0.2em", textTransform: "uppercase",
+            }}>
+              Ver las {data.reviews.length} reseñas
+            </button>
+          )}
+          {/* Entrada a /resena sin link: el cliente se identifica con su cédula. */}
+          <a href="/resena" style={{
+            background: "var(--bronze)", color: "var(--ivory)",
+            border: "1px solid var(--bronze)", textDecoration: "none",
+            padding: "15px 32px",
             fontFamily: "var(--sans)", fontSize: 12,
             letterSpacing: "0.2em", textTransform: "uppercase",
           }}>
-            Ver las {data.reviews.length} reseñas
-          </button>
-        )}
+            Deja tu reseña
+          </a>
+        </div>
 
         <p style={{
-          marginTop: 40, fontFamily: "var(--sans)", fontSize: 12,
+          marginTop: 32, fontFamily: "var(--sans)", fontSize: 12,
           opacity: 0.45, lineHeight: 1.6, maxWidth: 520,
         }}>
           Solo puede dejar reseña quien tuvo una cita atendida en el salón.
-          Te enviamos el enlace por WhatsApp después de tu visita, y también
-          lo encuentras en tu cuenta.
+          Identifícate con tu cédula y buscamos tu última visita. También te
+          enviamos el enlace por WhatsApp y lo encuentras en tu cuenta.
         </p>
       </div>
     </section>
