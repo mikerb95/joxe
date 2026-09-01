@@ -11,7 +11,19 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - **Staff portal**: acceso de empleados.
 - **PWA**: manifiesto y service worker para experiencia instalable.
 - **Academia**: página pública de las clases de barbería en `/academia`, con cursos, temario, preguntas frecuentes y formulario de inscripción. El contenido se edita desde el panel (Admin → Academia) y nace apagado: mientras no se publique, la página no muestra cursos y el enlace no aparece ni en el menú ni en el home. Las solicitudes llegan a la bandeja del panel y avisan al equipo.
-- **Reseñas**: calificaciones de clientes con cita completada, moderadas desde el panel y publicadas en el home. El cliente llega al formulario desde el link que envía el salón o desde el botón "Deja tu reseña" en Mi Cuenta.
+- **Reseñas**: calificaciones de clientes con cita completada, moderadas desde el panel y publicadas en el home. Hay tres formas de llegar al formulario: el link firmado que envía el salón, el botón "Deja tu reseña" en Mi Cuenta, y la página `/resena` abierta directamente, donde el cliente se identifica con su cédula y los últimos 4 dígitos de su celular. En ese caso se busca su visita completada más reciente sin reseñar (últimos 30 días) y se propone el último nombre que registró.
+
+## Nombres de personas
+
+Los nombres solo admiten letras (con tildes y ñ), espacios, apóstrofo y guion.
+Números, emojis y símbolos se descartan mientras se escribe y se rechazan en el
+servidor. Aplica a reservas, reseñas, inscripciones de la academia y a los
+campos de nombre del panel (clientes y equipo).
+
+La regla vive en `cleanName` / `nameError` (`lib/db.js`) y está replicada en el
+front (`portal.jsx`, `resena.jsx`, `academia.jsx`, `admin.jsx`), que se cargan
+sueltos en el navegador y no comparten bundler. Si cambia la regla, hay que
+cambiarla en los dos lados.
 
 ## Estructura principal
 
@@ -22,7 +34,7 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - `Staff.html` — acceso del equipo.
 - `Payment.html`, `Cuenta.html`, `Showcase.html`, `Agenda.html` — vistas auxiliares.
   Mi Cuenta (`Cuenta.html`) no usa contraseña: el cliente entra con su cédula más los últimos 4 dígitos del celular con el que reservó.
-- `Resena.html` / `resena.jsx` — formulario de reseña del cliente (solo con link firmado).
+- `Resena.html` / `resena.jsx` — reseña del cliente: identificación por cédula o entrada directa con link firmado.
 - `Academia.html` / `academia.jsx` — página pública de las clases.
 - `api/` — funciones backend.
 - `lib/` — utilidades compartidas.
