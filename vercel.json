@@ -1,6 +1,34 @@
 {
   "rewrites": [
     {
+      "source": "/api/admin",
+      "destination": "/api/ops?_ep=admin"
+    },
+    {
+      "source": "/api/backup",
+      "destination": "/api/ops?_ep=backup"
+    },
+    {
+      "source": "/api/crm",
+      "destination": "/api/ops?_ep=crm"
+    },
+    {
+      "source": "/api/payment",
+      "destination": "/api/ops?_ep=payment"
+    },
+    {
+      "source": "/api/push",
+      "destination": "/api/ops?_ep=push"
+    },
+    {
+      "source": "/api/reminders",
+      "destination": "/api/ops?_ep=reminders"
+    },
+    {
+      "source": "/api/work-hours",
+      "destination": "/api/ops?_ep=work-hours"
+    },
+    {
       "source": "/admin/payment",
       "destination": "/Payment.html"
     },
@@ -58,10 +86,10 @@
     }
   ],
   "functions": {
-    "api/crm.js": {
+    "api/client.js": {
       "maxDuration": 10
     },
-    "api/client.js": {
+    "api/ops.js": {
       "maxDuration": 10
     }
   },
