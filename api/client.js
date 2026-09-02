@@ -3,6 +3,7 @@ import {
   applyCors, clientIp, rateLimit, signReviewToken, cleanName, sanitizeStr,
   makeReviewEligibility, apptDoneMs,
 } from "../lib/db.js";
+import { notifyStaff } from "../lib/notify.js";
 
 const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
 
@@ -10,6 +11,14 @@ const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
 // la protección no está en la llave sino en lo que se entrega: la respuesta se
 // arma campo por campo y deja fuera el celular, la cédula, el precio cobrado y
 // las notas internas del equipo.
+
+// Antelación mínima para que el cliente cancele solo. Es un piso, no un valor
+// por defecto: el panel puede pedir más horas, nunca menos. Por debajo de tres
+// horas el hueco ya no se alcanza a revender y toca coordinarlo por WhatsApp.
+const MIN_HOURS_BEFORE = 3;
+
+const minHoursBefore = (admin) =>
+  Math.max(MIN_HOURS_BEFORE, Number(admin?.selfService?.minHoursBefore) || 0);
 
 // Misma ventana que usa Mi Cuenta para ofrecer el botón de reseña.
 const REVIEW_WINDOW_MS = 30 * 24 * 3600 * 1000;
@@ -162,7 +171,7 @@ export default async function handler(req, res) {
       }
 
       // Enforce minimum-notice window.
-      const minHours = Number(adminData.selfService?.minHoursBefore ?? 2);
+      const minHours = minHoursBefore(adminData);
       if (minHours > 0 && appt.date && appt.time) {
         const startMs = new Date(`${appt.date}T${appt.time}:00${COT_OFFSET}`).getTime();
         if (!Number.isNaN(startMs) && (startMs - Date.now()) < minHours * 3600 * 1000) {
@@ -172,6 +181,22 @@ export default async function handler(req, res) {
 
       const cancelledIds = [...new Set([...(adminData.cancelledIds || []), id])];
       await kvSet("admin_store", { ...adminData, cancelledIds });
+      // Una cancelación libera un hueco de agenda y el equipo tiene que verlo
+      // hoy, no cuando abra el panel: por eso va con prioridad alta. Se espera
+      // el envío porque la función se congela al responder.
+      await notifyStaff({
+        stylist: appt.stylist || null,
+        toAdmin: true,
+        title: "Cita cancelada por el cliente",
+        tags: "x",
+        priority: "high",
+        body: [
+          cleanName(appt.name, 120) || "Cliente",
+          appt.service || null,
+          appt.stylist ? `con ${appt.stylist}` : null,
+          [appt.date, appt.time].filter(Boolean).join(" ") || null,
+        ].filter(Boolean).join(" · "),
+      });
       return res.status(200).json({ ok: true });
     }
 
@@ -277,7 +302,7 @@ export default async function handler(req, res) {
     // Self-service policy + salon contact for the client UI
     const selfService = {
       allowCancel:    adminData.selfService?.allowCancel !== false,
-      minHoursBefore: Number(adminData.selfService?.minHoursBefore ?? 2),
+      minHoursBefore: minHoursBefore(adminData),
     };
     const waNumber = (adminData.whatsappAdminNumber || "").replace(/\D/g, "");
 

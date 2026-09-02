@@ -2098,7 +2098,7 @@ const CuentaPortal = () => {
   // ── Self-service: cancelar / reagendar ────────────────────
   const dialog = useDialog();
   const [busyId, setBusyId] = React.useState(null);
-  const selfService = data?.selfService || { allowCancel: true, minHoursBefore: 2 };
+  const selfService = data?.selfService || { allowCancel: true, minHoursBefore: 3 };
   const waNumber = (data?.waNumber || "").replace(/\D/g, "") || "573124499862";
 
   const waReschedule = (a) => {

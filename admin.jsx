@@ -98,7 +98,7 @@ const DEFAULT_ADMIN = () => ({
   revenue: [],
   expenses: [],
   payouts: [],
-  selfService: { allowCancel: true, minHoursBefore: 2 },
+  selfService: { allowCancel: true, minHoursBefore: 3 },
   noShowIds: [],
   noShowFine: { enabled: false, defaultAmount: 0, byDay: {} },
   archivedEmployees: [],
@@ -4989,11 +4989,11 @@ const SettingsView = ({ onNav }) => {
             </div>
             {admin.selfService?.allowCancel!==false && (
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <FieldInput label="Horas mínimas antes de la cita" type="number" min="0" max="72"
-                  value={admin.selfService?.minHoursBefore??2}
-                  onChange={e=>setAdmin(a=>({...a,selfService:{...(a.selfService||{}),minHoursBefore:Number(e.target.value)||0}}))} />
+                <FieldInput label="Horas mínimas antes de la cita" type="number" min="3" max="72"
+                  value={Math.max(3,admin.selfService?.minHoursBefore??3)}
+                  onChange={e=>setAdmin(a=>({...a,selfService:{...(a.selfService||{}),minHoursBefore:Math.max(3,Number(e.target.value)||0)}}))} />
                 <div style={{alignSelf:"end",fontSize:12,color:C.muted}}>
-                  El cliente no podrá cancelar si faltan menos de <strong style={{color:C.text}}>{admin.selfService?.minHoursBefore??2}h</strong>.
+                  El cliente no podrá cancelar si faltan menos de <strong style={{color:C.text}}>{Math.max(3,admin.selfService?.minHoursBefore??3)}h</strong>. El mínimo es 3h.
                 </div>
               </div>
             )}
