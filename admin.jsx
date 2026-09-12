@@ -7427,6 +7427,7 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
           }}>⌕</span>
           <input
             type="search"
+            className="emp-menu-search"
             value={query}
             onChange={e=>setQuery(e.target.value)}
             onKeyDown={onSearchKey}
@@ -7510,6 +7511,9 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
       <style>{`
         .admin-sidebar-desktop{display:flex!important;}
         .admin-topbar-mobile{display:none!important;}
+        /* La X nativa de input[type=search] duplicaría la nuestra */
+        .emp-menu-search::-webkit-search-cancel-button{-webkit-appearance:none;display:none;}
+        .emp-menu-search::placeholder{color:${C.muted};opacity:1;}
         @media(max-width:768px){
           .admin-sidebar-desktop{display:none!important;}
           .admin-topbar-mobile{display:flex!important;}
