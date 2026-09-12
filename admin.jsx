@@ -7187,16 +7187,116 @@ const EmpHelpView = ({onNav}) => {
 };
 
 // ---- Employee Shell ----
+// `desc` y `kw` alimentan el buscador del menú: `kw` son sinónimos y palabras
+// sueltas que el empleado podría escribir para llegar a cada opción.
 const EMP_VIEWS = [
-  {id:"agenda",        label:"Mi Agenda",       icon:"▦"},
-  {id:"calendario",    label:"Calendario",      icon:"▥"},
-  {id:"reservar",      label:"Reservar turno",  icon:"＋"},
-  {id:"confirmaciones",label:"Confirmar citas", icon:"◉"},
-  {id:"todas",         label:"Mis Citas",       icon:"≡"},
-  {id:"horario",       label:"Mi Horario",      icon:"◷"},
-  {id:"ausencias",     label:"Mis ausencias",   icon:"⊘"},
-  {id:"ayuda",         label:"Ayuda",           icon:"?"},
+  {id:"agenda",        label:"Mi Agenda",       icon:"▦",
+   desc:"Tus citas del día y la línea de tiempo",
+   kw:["hoy","día","turnos de hoy","próximas citas","línea de tiempo","inicio","home"]},
+  {id:"calendario",    label:"Calendario",      icon:"▥",
+   desc:"Vista mensual de tus turnos",
+   kw:["mes","mensual","semana","fechas","ver el mes","calendario mensual"]},
+  {id:"reservar",      label:"Reservar turno",  icon:"＋",
+   desc:"Agenda una cita a mano para un cliente",
+   kw:["nueva cita","agendar","crear cita","apartar","nuevo turno","cliente","agregar","añadir","walk in"]},
+  {id:"confirmaciones",label:"Confirmar citas", icon:"◉",
+   desc:"Reservas pendientes que debes aceptar o rechazar",
+   kw:["pendientes","por confirmar","aceptar","rechazar","solicitudes","reservas web"]},
+  {id:"todas",         label:"Mis Citas",       icon:"≡",
+   desc:"Historial completo de tus citas",
+   kw:["historial","listado","todas las citas","pasadas","canceladas","buscar cita"]},
+  {id:"horario",       label:"Mi Horario",      icon:"◷",
+   desc:"Días y horas en que trabajas",
+   kw:["horario laboral","jornada","hora de entrada","hora de salida","días que trabajo","disponibilidad"]},
+  {id:"ausencias",     label:"Mis ausencias",   icon:"⊘",
+   desc:"Bloquea días u horas en que no estarás",
+   kw:["vacaciones","permiso","incapacidad","bloquear horas","no disponible","descanso","día libre","días libres","cita médica","ausentarme"]},
+  {id:"ayuda",         label:"Ayuda",           icon:"?",
+   desc:"Guías, notificaciones y preguntas frecuentes",
+   kw:["notificaciones","activar notificaciones","avisos","push","faq","preguntas frecuentes","soporte","tutorial","guía","instalar la app"]},
 ];
+
+// ---- Buscador del menú (staff) ----
+// Sin acentos y en minúsculas, para que "mi agenda" y "Mi Agenda" pesen igual.
+// El largo se conserva: cada carácter acentuado vuelve a su letra base, así los
+// índices siguen sirviendo para resaltar el texto original.
+const empNorm = (s) => (s == null ? "" : String(s))
+  .toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+// Subsecuencia: tolera letras faltantes ("rsrvr" encuentra "Reservar turno").
+const empSubseq = (q, t) => {
+  let i = 0;
+  for (let j = 0; j < t.length && i < q.length; j++) if (t[j] === q[i]) i++;
+  return i === q.length;
+};
+
+// Puntaje de una palabra suelta contra una opción. 0 = no coincide.
+const empTokenScore = (tok, item) => {
+  const label = empNorm(item.label);
+  const desc  = empNorm(item.desc);
+  const kws   = (item.kw || []).map(empNorm);
+  if (label.startsWith(tok))                             return 100;
+  if (label.split(/\s+/).some(w => w.startsWith(tok)))   return 90;
+  if (kws.some(k => k === tok))                          return 85;
+  if (label.includes(tok))                               return 75;
+  if (kws.some(k => k.split(/\s+/).some(w => w.startsWith(tok)))) return 65;
+  if (kws.some(k => k.includes(tok)))                    return 55;
+  if (desc.includes(tok))                                return 45;
+  // La subsecuencia solo se aplica al nombre de la opción y con 4 letras o más:
+  // con menos, cualquier palabra corta coincidiría con casi todo.
+  if (tok.length >= 4 && empSubseq(tok, label))          return 30;
+  return 0;
+};
+
+// Todas las palabras escritas deben coincidir con algo de la opción.
+const empMenuScore = (raw, item) => {
+  const toks = empNorm(raw).trim().split(/\s+/).filter(Boolean);
+  if (!toks.length) return 1;
+  let total = 0;
+  for (const t of toks) {
+    const s = empTokenScore(t, item);
+    if (!s) return 0;
+    total += s;
+  }
+  return total;
+};
+
+// Tramos del texto que coinciden literalmente con lo escrito, para resaltarlos.
+const empMatchRanges = (text, raw) => {
+  const hay  = empNorm(text);
+  const toks = empNorm(raw).trim().split(/\s+/).filter(Boolean);
+  const hits = [];
+  for (const t of toks) {
+    let from = 0, at;
+    while ((at = hay.indexOf(t, from)) !== -1) {
+      hits.push([at, at + t.length]);
+      from = at + 1;
+    }
+  }
+  if (!hits.length) return [];
+  hits.sort((a, b) => a[0] - b[0]);
+  const merged = [hits[0]];
+  for (const h of hits.slice(1)) {
+    const last = merged[merged.length - 1];
+    if (h[0] <= last[1]) last[1] = Math.max(last[1], h[1]);
+    else merged.push(h);
+  }
+  return merged;
+};
+
+const EmpHighlight = ({text, query}) => {
+  const ranges = query.trim() ? empMatchRanges(text, query) : [];
+  if (!ranges.length) return <>{text}</>;
+  const out = [];
+  let last = 0;
+  ranges.forEach(([s, e], i) => {
+    if (s > last) out.push(<span key={"p" + i}>{text.slice(last, s)}</span>);
+    out.push(<span key={"m" + i} style={{color:C.gold}}>{text.slice(s, e)}</span>);
+    last = e;
+  });
+  if (last < text.length) out.push(<span key="tail">{text.slice(last)}</span>);
+  return <>{out}</>;
+};
 
 // Empleado edita su propio horario laboral desde /staff. Se guarda vía
 // /api/work-hours (endpoint acotado: solo puede tocar su propio workHours),
@@ -7257,6 +7357,8 @@ const EmpWorkHoursView = ({ emp }) => {
 
 const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
   const [mobileOpen,setMobileOpen] = React.useState(false);
+  const [query,setQuery]           = React.useState("");
+  const [cursor,setCursor]         = React.useState(0);
   const [appts, setAppts] = useAppts();
   const [admin] = useAdmin();
   const pendingAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[])
@@ -7265,9 +7367,49 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
   const activeWarnings = (appts.timeWarnings||[]).filter(w=>w.date>=todayD);
   const dismissWarning = (id) => setAppts(s=>({ ...s, timeWarnings:(s.timeWarnings||[]).filter(x=>x.id!==id) }));
 
+  // El buscador cubre todas las opciones del menú más cerrar sesión, que es la
+  // única acción que no es una vista.
+  const menuItems = React.useMemo(() => ([
+    ...EMP_VIEWS,
+    {id:"__logout", label:"Cerrar sesión", icon:"⊖",
+     desc:"Salir de tu cuenta en este dispositivo",
+     kw:["salir","logout","desconectar","cambiar de usuario","cerrar"]},
+  ]), []);
+
+  const searching = query.trim().length > 0;
+  const results = React.useMemo(() => {
+    if (!searching) return EMP_VIEWS;
+    return menuItems
+      .map(v => ({ v, score: empMenuScore(query, v) }))
+      .filter(r => r.score > 0)
+      .sort((a,b) => b.score - a.score)
+      .map(r => r.v);
+  }, [query, searching, menuItems]);
+
+  React.useEffect(() => { setCursor(0); }, [query]);
+
+  const pick = (v) => {
+    if (v.id === "__logout") { onLogout(); return; }
+    onNav(v.id);
+    setMobileOpen(false);
+    setQuery("");
+  };
+
+  const onSearchKey = (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault(); setCursor(c => Math.min(c + 1, results.length - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault(); setCursor(c => Math.max(c - 1, 0));
+    } else if (e.key === "Enter") {
+      e.preventDefault(); if (results[cursor]) pick(results[cursor]);
+    } else if (e.key === "Escape") {
+      e.preventDefault(); setQuery("");
+    }
+  };
+
   const navContent = (
     <div style={{display:"flex",flexDirection:"column",height:"100%"}}>
-      <div style={{padding:"28px 24px",borderBottom:`1px solid ${C.bdr}`}}>
+      <div style={{padding:"28px 24px 20px",borderBottom:`1px solid ${C.bdr}`}}>
         <div style={{fontFamily:"'Marcellus',serif",fontSize:18,letterSpacing:"0.25em",color:C.text}}>
           {emp.name}
         </div>
@@ -7276,24 +7418,75 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
           padding:"2px 8px",background:"rgba(194,158,102,0.1)",
           border:`1px solid ${C.gold}30`,
         }}>{emp.role}</Mono>
+
+        {/* Buscador: filtra el menú a medida que se escribe */}
+        <div style={{position:"relative",marginTop:16}}>
+          <span style={{
+            position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",
+            fontSize:12,color:searching?C.gold:C.muted,pointerEvents:"none",
+          }}>⌕</span>
+          <input
+            type="search"
+            value={query}
+            onChange={e=>setQuery(e.target.value)}
+            onKeyDown={onSearchKey}
+            placeholder="Buscar en el menú…"
+            aria-label="Buscar una opción del menú"
+            style={{
+              width:"100%",padding:"9px 28px 9px 28px",
+              background:"rgba(255,255,255,0.03)",
+              border:`1px solid ${searching?C.gold+"40":C.bdr}`,
+              color:C.text,fontSize:12,letterSpacing:"0.02em",
+              WebkitAppearance:"none",appearance:"none",borderRadius:0,
+            }}
+          />
+          {searching && (
+            <button onClick={()=>setQuery("")} aria-label="Limpiar búsqueda" style={{
+              position:"absolute",right:6,top:"50%",transform:"translateY(-50%)",
+              background:"none",border:"none",color:C.muted,cursor:"pointer",
+              fontSize:13,lineHeight:1,padding:4,
+            }}>✕</button>
+          )}
+        </div>
       </div>
+
       <nav style={{flex:1,padding:"12px 10px",overflowY:"auto"}}>
-        {EMP_VIEWS.map(v=>{
-          const isA = activeView===v.id;
+        {searching && results.length===0 && (
+          <div style={{padding:"18px 14px",textAlign:"center"}}>
+            <Mono style={{fontSize:9,color:C.muted,display:"block"}}>Sin resultados</Mono>
+            <div style={{fontSize:12,color:C.muted,marginTop:8,lineHeight:1.6}}>
+              Nada del menú coincide con “{query.trim()}”.
+            </div>
+          </div>
+        )}
+        {results.map((v,i)=>{
+          const isA = activeView===v.id && !searching;
+          const isCur = searching && i===cursor;
           const hasBadge = v.id==="confirmaciones"&&pendingAppts>0;
+          const lit = isA || isCur;
           return (
-            <button key={v.id} onClick={()=>{onNav(v.id);setMobileOpen(false);}} style={{
+            <button key={v.id} onClick={()=>pick(v)} onMouseEnter={()=>searching&&setCursor(i)} style={{
               display:"flex",alignItems:"center",gap:12,
               width:"100%",padding:"11px 14px",marginBottom:2,
-              background:isA?"rgba(194,158,102,0.1)":"transparent",
-              border:`1px solid ${isA?C.gold+"30":"transparent"}`,
-              color:isA?C.gold:C.muted,cursor:"pointer",textAlign:"left",
+              background:lit?"rgba(194,158,102,0.1)":"transparent",
+              border:`1px solid ${lit?C.gold+"30":"transparent"}`,
+              color:lit?C.gold:C.muted,cursor:"pointer",textAlign:"left",
               fontFamily:"'Outfit',sans-serif",fontSize:12,letterSpacing:"0.08em",textTransform:"uppercase",
             }}>
               <span style={{fontSize:14,opacity:0.8}}>{v.icon}</span>
-              <span style={{flex:1}}>{v.label}</span>
+              <span style={{flex:1,minWidth:0}}>
+                <EmpHighlight text={v.label} query={searching?query:""} />
+                {searching && v.desc && (
+                  <span style={{
+                    display:"block",marginTop:4,fontSize:11,color:C.muted,
+                    letterSpacing:"0.01em",textTransform:"none",lineHeight:1.45,
+                  }}>
+                    <EmpHighlight text={v.desc} query={query} />
+                  </span>
+                )}
+              </span>
               {hasBadge&&<span style={{
-                padding:"1px 7px",fontSize:9,
+                padding:"1px 7px",fontSize:9,flexShrink:0,
                 background:"rgba(194,158,102,0.2)",color:C.gold,
                 fontFamily:"'JetBrains Mono',monospace",
               }}>{pendingAppts}</span>}
@@ -7301,6 +7494,7 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
           );
         })}
       </nav>
+
       <div style={{padding:"16px 24px",borderTop:`1px solid ${C.bdr}`}}>
         <button onClick={onLogout} style={{
           width:"100%",padding:"10px",background:"transparent",
@@ -7335,7 +7529,7 @@ const EmpShell = ({emp, onLogout, children, activeView, onNav}) => {
           <div style={{width:240,background:C.bg,borderRight:`1px solid ${C.bdr}`,height:"100%"}}>
             {navContent}
           </div>
-          <div style={{flex:1,background:"rgba(0,0,0,0.5)"}} onClick={()=>setMobileOpen(false)}/>
+          <div style={{flex:1,background:"rgba(0,0,0,0.5)"}} onClick={()=>{setMobileOpen(false);setQuery("");}}/>
         </div>
       )}
 
