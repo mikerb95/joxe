@@ -6271,6 +6271,24 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   );
 };
 
+// Viewport móvil: mismo breakpoint que las media queries de Staff.html.
+// Se usa para alternar entre la rejilla semanal (escritorio) y la vista de un
+// solo día (móvil), que comparten estado y no se resuelven solo con CSS.
+const useIsMobile = (bp = 768) => {
+  const q = `(max-width:${bp}px)`;
+  const [isMobile, setIsMobile] = React.useState(
+    () => typeof window !== "undefined" && window.matchMedia(q).matches
+  );
+  React.useEffect(() => {
+    const mq = window.matchMedia(q);
+    const onChange = (e) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, [q]);
+  return isMobile;
+};
+
 // ---- Mis ausencias (staff self-service) ----
 // El propio empleado bloquea su agenda: almuerzo/descanso puntual o una
 // ausencia de uno o varios días (vacaciones, cita médica, permiso). Los
@@ -6283,6 +6301,7 @@ const EmpAbsencesView = ({emp}) => {
   const [hovered,setHovered] = React.useState(null);
   const [selectedDate,setSelectedDate] = React.useState(todayStr());
   const [showRangeModal,setShowRangeModal] = React.useState(false);
+  const isMobile = useIsMobile();
 
   const ALL_TIMES = ["10:00","11:00","12:00","13:00","14:00",
     "15:00","16:00","17:00","18:00","19:00","20:00"];
@@ -6306,7 +6325,7 @@ const EmpAbsencesView = ({emp}) => {
       return;
     }
     if (covering.length>0) {
-      alert("Esta hora está cubierta por un bloqueo de rango. Elimínalo desde la lista de la derecha.");
+      alert("Esta hora está cubierta por un bloqueo de rango. Elimínalo desde la lista de ausencias.");
       return;
     }
     const endMin = timeToMin(time)+BLOCK_SLOT_MIN;
@@ -6388,14 +6407,7 @@ const EmpAbsencesView = ({emp}) => {
             }}>+ Bloquear rango / ausencia</button>
           </div>
 
-          {showRangeModal && (
-            <BlockRangeModal
-              employees={[]}
-              lockedEmpId={emp.id}
-              onSave={(range)=>setAppts(s=>({...s, blockRanges:[...(s.blockRanges||[]),range]}))}
-              onClose={()=>setShowRangeModal(false)}
-            />
-          )}
+          {rangeModal}
 
           {/* Calendar grid */}
           <div style={{overflowX:"auto"}}>
