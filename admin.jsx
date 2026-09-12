@@ -4794,7 +4794,13 @@ const SettingsView = ({ onNav }) => {
   };
 
   // ---- Backup / restauración de la base de datos ----
-  const [backupMsg,setBackupMsg] = React.useState(null);
+  // El archivo que descarga "Descargar backup" es la base entera (toda la tabla
+  // kv), así que alcanza para reconstruirla desde cero. Al restaurar se elige
+  // entre dejar la base idéntica al archivo (completa) o combinarla con lo que
+  // ya hay (merge).
+  const [backupMsg,setBackupMsg]   = React.useState(null);
+  const [pendingBk,setPendingBk]   = React.useState(null); // archivo leído y validado, esperando confirmación
+  const [bkBusy,setBkBusy]         = React.useState(false);
   const restoreRef = React.useRef(null);
 
   const downloadBackup = async () => {
@@ -4808,28 +4814,60 @@ const SettingsView = ({ onNav }) => {
       a.download = `joxe-backup-${new Date().toISOString().replace(/[:.]/g,"-")}.json`;
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
-      setBackupMsg({type:"success", text:"Backup descargado."});
-      setTimeout(()=>setBackupMsg(null), 4000);
+      setBackupMsg({type:"success", text:"Backup descargado. Guardalo fuera de la computadora del salón."});
+      setTimeout(()=>setBackupMsg(null), 6000);
     } catch {
       setBackupMsg({type:"error", text:"Error de conexión al generar el backup."});
     }
   };
 
-  const restoreBackup = async (e) => {
+  // Lee el archivo y lo valida antes de mostrar las opciones de restauración:
+  // así nadie descubre que el archivo era inservible después de vaciar la base.
+  const pickBackupFile = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!confirm("Restaurar combinará los datos del archivo con los actuales (los registros con la misma clave se sobrescriben). ¿Continuar?")) return;
+    setBackupMsg(null);
     try {
-      const snapshot = JSON.parse(await file.text());
-      const res  = await fetch("/api/backup", {
-        method: "POST", headers: adminHeaders(), body: JSON.stringify(snapshot),
+      const data = JSON.parse(await file.text());
+      const rows = Array.isArray(data) ? data : data?.rows;
+      const valid = Array.isArray(rows) && rows.length &&
+        rows.every(r => r && typeof r.key === "string" && r.key && "value" in r);
+      if (!valid) { setBackupMsg({type:"error", text:"El archivo no es un respaldo válido de JOXE."}); return; }
+      setPendingBk({
+        name: file.name,
+        rows,
+        createdAt: Array.isArray(data) ? null : (data.createdAt || null),
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) { setBackupMsg({type:"error", text:data.error || "No se pudo restaurar."}); return; }
-      setBackupMsg({type:"success", text:`Restaurados ${data.restored} registros. Recargá la página para ver los cambios.`});
     } catch {
-      setBackupMsg({type:"error", text:"El archivo no es un backup válido."});
+      setBackupMsg({type:"error", text:"El archivo no es un respaldo válido de JOXE."});
+    }
+  };
+
+  const runRestore = async (replace) => {
+    if (!pendingBk) return;
+    const aviso = replace
+      ? `RESTAURACIÓN COMPLETA\n\nLa base va a quedar exactamente como el archivo "${pendingBk.name}" (${pendingBk.rows.length} registros).\n\nTodo lo cargado después de ese respaldo (citas, clientes, caja, reseñas) se pierde. Si la contraseña del panel cambió desde entonces, vas a tener que entrar con la anterior.\n\n¿Continuar?`
+      : `Combinar agrega los datos del archivo sobre los actuales: los registros con la misma clave se sobrescriben y el resto se conserva.\n\n¿Continuar?`;
+    if (!confirm(aviso)) return;
+    setBkBusy(true);
+    try {
+      const url = replace ? "/api/backup?mode=replace" : "/api/backup";
+      const res = await fetch(url, {
+        method: "POST", headers: adminHeaders(), body: JSON.stringify({ rows: pendingBk.rows }),
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.ok) {
+        setBackupMsg({type:"error", text:data.error || "No se pudo restaurar."});
+        return;
+      }
+      setPendingBk(null);
+      setBackupMsg({type:"success", text:`Restaurados ${data.restored} registros. Recargando el panel...`});
+      setTimeout(()=>window.location.reload(), 1800);
+    } catch {
+      setBackupMsg({type:"error", text:"Error de conexión al restaurar."});
+    } finally {
+      setBkBusy(false);
     }
   };
 
@@ -5158,9 +5196,10 @@ const SettingsView = ({ onNav }) => {
         {/* Backup de la base de datos */}
         <Card>
           <Mono style={{color:C.gold,display:"block",marginBottom:16}}>Copia de seguridad</Mono>
-          <div style={{fontSize:13,color:C.muted,marginBottom:16}}>
-            Descargá un respaldo completo de todos los datos (turnos, clientes, configuración)
-            en un archivo JSON, o restaurá desde un respaldo anterior.
+          <div style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:1.6}}>
+            El archivo JSON que se descarga es la base de datos entera: citas, clientes,
+            caja, reseñas, academia, equipo y configuración. Con ese solo archivo se
+            puede dejar el sistema tal como estaba el día que lo generaste.
           </div>
           {backupMsg && (
             <div style={{
@@ -5172,10 +5211,41 @@ const SettingsView = ({ onNav }) => {
           )}
           <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
             <Btn onClick={downloadBackup}>↓ Descargar backup</Btn>
-            <Btn variant="ghost" onClick={()=>restoreRef.current?.click()}>↑ Restaurar desde archivo</Btn>
+            <Btn variant="ghost" disabled={bkBusy} onClick={()=>restoreRef.current?.click()}>↑ Restaurar desde archivo</Btn>
             <input ref={restoreRef} type="file" accept="application/json,.json"
-              onChange={restoreBackup} style={{display:"none"}} />
+              onChange={pickBackupFile} style={{display:"none"}} />
           </div>
+
+          {pendingBk && (
+            <div style={{marginTop:18,background:C.s2,border:`1px solid ${C.bdr}`,padding:"16px 18px"}}>
+              <Mono style={{color:C.text,fontSize:10,display:"block",marginBottom:8}}>Respaldo listo para restaurar</Mono>
+              <div style={{fontSize:13,color:C.muted,marginBottom:16,lineHeight:1.6}}>
+                <div style={{color:C.text,wordBreak:"break-all"}}>{pendingBk.name}</div>
+                <div>{pendingBk.rows.length} registro{pendingBk.rows.length===1?"":"s"}
+                  {pendingBk.createdAt ? ` · generado el ${new Date(pendingBk.createdAt).toLocaleString("es-EC")}` : ""}
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:12}}>
+                <div>
+                  <Btn variant="danger" small disabled={bkBusy} onClick={()=>runRestore(true)}>
+                    {bkBusy ? "Restaurando..." : "Restauración completa"}
+                  </Btn>
+                  <div style={{fontSize:12,color:C.muted,marginTop:6}}>
+                    Deja la base exactamente como el archivo. Borra todo lo que se cargó después.
+                  </div>
+                </div>
+                <div>
+                  <Btn variant="subtle" small disabled={bkBusy} onClick={()=>runRestore(false)}>Combinar con los datos actuales</Btn>
+                  <div style={{fontSize:12,color:C.muted,marginTop:6}}>
+                    Sobrescribe lo que exista en el archivo y conserva el resto.
+                  </div>
+                </div>
+                <div>
+                  <Btn variant="ghost" small disabled={bkBusy} onClick={()=>{setPendingBk(null);setBackupMsg(null);}}>Cancelar</Btn>
+                </div>
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Change password */}
