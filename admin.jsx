@@ -6358,6 +6358,250 @@ const EmpAbsencesView = ({emp}) => {
     return `${f.getDate()} – ${l.getDate()} ${l.toLocaleDateString("es-CO",{month:"long",year:"numeric"})}`;
   };
 
+  // Bloqueos que empiezan y terminan en el día seleccionado: son los únicos
+  // que "Limpiar día" puede borrar (un rango de varios días se quita entero).
+  const sameDayBlocks = selectedBlocked.filter(
+    b => b.dateStart===selectedDate && (b.dateEnd||b.dateStart)===selectedDate
+  );
+  const allDayBlock = selectedBlocked.find(b=>b.allDay);
+  // Los rangos de varios días no caben en la vista de un solo día: se listan
+  // aparte para poder borrarlos completos.
+  const multiDayBlocks = myBlocks
+    .filter(b=>(b.dateEnd||b.dateStart)!==b.dateStart && (b.dateEnd||b.dateStart)>=todayD)
+    .sort((a,b)=>a.dateStart<b.dateStart?-1:a.dateStart>b.dateStart?1:0);
+
+  const blockWhenLabel = (b) => {
+    const multiDay = b.dateStart!==(b.dateEnd||b.dateStart);
+    if (b.allDay) return multiDay
+      ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · Todo el día`
+      : "Todo el día";
+    return multiDay
+      ? `${fmtDateShort(b.dateStart)} – ${fmtDateShort(b.dateEnd)} · ${formatTime12h(b.timeStart)}–${formatTime12h(b.timeEnd)}`
+      : `${formatTime12h(b.timeStart)}–${formatTime12h(b.timeEnd)}`;
+  };
+
+  const rangeModal = showRangeModal && (
+    <BlockRangeModal
+      employees={[]}
+      lockedEmpId={emp.id}
+      onSave={(range)=>setAppts(s=>({...s, blockRanges:[...(s.blockRanges||[]),range]}))}
+      onClose={()=>setShowRangeModal(false)}
+    />
+  );
+
+  // ---- Móvil: vista de un solo día ----
+  // La semana queda como tira de días y las horas pasan a filas de 56px. Todo
+  // lo que se muestra debajo de la tira pertenece al día seleccionado.
+  if (isMobile) return (
+    <div>
+      <PageHeader title="Mis ausencias" subtitle="Bloquea horas o días en tu agenda" />
+
+      {/* Navegación de semana */}
+      <div style={{
+        display:"flex",alignItems:"center",justifyContent:"space-between",
+        padding:"10px 12px",borderBottom:`1px solid ${C.bdr}`,
+      }}>
+        <button onClick={()=>setWeekOffset(o=>o-1)} style={{
+          width:44,height:44,background:"transparent",border:`1px solid ${C.bdr}`,
+          color:C.text,cursor:"pointer",fontSize:15,
+        }}>←</button>
+        <div style={{textAlign:"center"}}>
+          <Mono style={{color:C.gold,fontSize:10}}>{weekLabel()}</Mono>
+          {weekOffset!==0 && (
+            <button onClick={()=>setWeekOffset(0)} style={{
+              background:"transparent",border:"none",color:C.muted,cursor:"pointer",
+              fontSize:10,marginTop:3,display:"block",width:"100%",
+              fontFamily:"'Outfit',sans-serif",
+            }}>Volver a esta semana</button>
+          )}
+        </div>
+        <button onClick={()=>setWeekOffset(o=>o+1)} style={{
+          width:44,height:44,background:"transparent",border:`1px solid ${C.bdr}`,
+          color:C.text,cursor:"pointer",fontSize:15,
+        }}>→</button>
+      </div>
+
+      {/* Tira de días */}
+      <div style={{
+        display:"grid",gridTemplateColumns:"repeat(7,minmax(0,1fr))",
+        borderBottom:`1px solid ${C.bdr}`,
+      }}>
+        {weekDates.map((d,i)=>{
+          const isToday = d===todayD;
+          const isSel = d===selectedDate;
+          const cnt = blockedForDay(d).length;
+          return (
+            <button key={d} onClick={()=>setSelectedDate(d)} style={{
+              height:62,padding:"8px 0 6px",
+              background:isSel?C.s2:isToday?"rgba(194,158,102,0.07)":C.s1,
+              border:"none",borderRight:`1px solid ${C.bdr}`,
+              outline:isSel?`1px solid ${C.gold}50`:"none",outlineOffset:-1,
+              cursor:"pointer",display:"flex",flexDirection:"column",
+              alignItems:"center",justifyContent:"center",gap:2,
+            }}>
+              <Mono style={{fontSize:8,color:isToday?C.gold:C.muted}}>{DAY_LABELS[i]}</Mono>
+              <span style={{
+                fontSize:15,fontFamily:"'Outfit',sans-serif",lineHeight:1,
+                fontWeight:isToday?600:400,color:isToday?C.gold:C.text,
+              }}>{new Date(d+"T12:00").getDate()}</span>
+              <Mono style={{fontSize:7,color:C.red,letterSpacing:"0.05em",minHeight:9}}>
+                {cnt>0?`${cnt}✕`:""}
+              </Mono>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Resumen del día seleccionado */}
+      <div style={{
+        display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,
+        padding:"14px 20px 12px",
+      }}>
+        <div>
+          <Mono style={{color:C.gold,fontSize:10,display:"block"}}>{fmtDateMed(selectedDate)}</Mono>
+          <Mono style={{color:C.muted,fontSize:8,display:"block",marginTop:3}}>
+            {selectedBlocked.length===0
+              ? "Sin bloqueos"
+              : `${selectedBlocked.length} bloqueo${selectedBlocked.length!==1?"s":""}`}
+          </Mono>
+        </div>
+        {sameDayBlocks.length>0 && (
+          <button onClick={()=>clearDay(selectedDate)} style={{
+            minHeight:44,padding:"0 14px",background:"transparent",
+            border:`1px solid ${C.red}50`,color:C.red,cursor:"pointer",
+            fontFamily:"'JetBrains Mono',monospace",fontSize:9,
+            letterSpacing:"0.1em",textTransform:"uppercase",whiteSpace:"nowrap",
+          }}>Limpiar día</button>
+        )}
+      </div>
+
+      {/* Acciones */}
+      <div style={{padding:"0 20px 14px",display:"flex",flexDirection:"column",gap:10}}>
+        <button onClick={()=>setShowRangeModal(true)} style={{
+          width:"100%",minHeight:48,background:"transparent",
+          border:`1px solid ${C.gold}60`,color:C.gold,cursor:"pointer",
+          fontFamily:"'JetBrains Mono',monospace",fontSize:10,
+          letterSpacing:"0.1em",textTransform:"uppercase",
+        }}>+ Bloquear rango / ausencia</button>
+        <div style={{display:"flex",border:`1px solid ${C.bdr}`,background:C.s2}}>
+          <Mono style={{
+            fontSize:8,color:C.muted,padding:"0 12px",display:"flex",
+            alignItems:"center",borderRight:`1px solid ${C.bdr}`,whiteSpace:"nowrap",
+          }}>Motivo</Mono>
+          <input value={reason} onChange={e=>setReason(e.target.value)}
+            placeholder="Almuerzo, descanso… (opcional)"
+            style={{
+              flex:1,minWidth:0,background:"transparent",border:"none",color:C.text,
+              padding:12,fontFamily:"'Outfit',sans-serif",fontSize:13,outline:"none",
+            }} />
+        </div>
+      </div>
+
+      {rangeModal}
+
+      {allDayBlock ? (
+        /* Un bloqueo de día completo reemplaza la lista de horas */
+        <div style={{
+          margin:"0 20px 16px",border:`1px solid ${C.red}66`,
+          background:"rgba(196,102,102,0.09)",padding:"18px 16px",
+          display:"flex",flexDirection:"column",gap:12,
+        }}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <span style={{width:8,height:8,background:C.red,display:"block"}}/>
+            <Mono style={{fontSize:10,color:C.red}}>Todo el día bloqueado</Mono>
+          </div>
+          <div style={{fontSize:14,color:C.text}}>
+            {allDayBlock.reason||"No disponible"}
+          </div>
+          <div style={{fontSize:12,color:C.muted,lineHeight:1.5}}>
+            {blockWhenLabel(allDayBlock)}
+          </div>
+          <button onClick={()=>setAppts(s=>removeBlock(s, allDayBlock.id))} style={{
+            alignSelf:"flex-start",minHeight:44,padding:"0 16px",background:"transparent",
+            border:`1px solid ${C.bdr2}`,color:C.text,cursor:"pointer",
+            fontFamily:"'JetBrains Mono',monospace",fontSize:9,
+            letterSpacing:"0.1em",textTransform:"uppercase",
+          }}>Quitar ausencia</button>
+        </div>
+      ) : (
+        <div style={{borderTop:`1px solid ${C.bdr}`}}>
+          {ALL_TIMES.map(t=>{
+            const covering = visibleBlocks(selectedDate,t);
+            const blocked = covering.length>0;
+            return (
+              <button key={t} onClick={()=>toggleSlot(selectedDate,t)} style={{
+                width:"100%",minHeight:56,display:"flex",alignItems:"center",gap:14,
+                padding:"0 20px",background:blocked?"rgba(196,102,102,0.13)":"transparent",
+                border:"none",borderBottom:`1px solid ${C.bdr}`,
+                cursor:"pointer",textAlign:"left",
+              }}>
+                <Mono style={{
+                  fontSize:9,width:64,flexShrink:0,
+                  color:blocked?C.muted:C.gold+"90",
+                }}>{formatTime12h(t)}</Mono>
+                <span style={{
+                  width:7,height:7,flexShrink:0,display:"block",
+                  background:blocked?C.red:C.gold+"4D",
+                }}/>
+                <span style={{
+                  flex:1,minWidth:0,fontSize:13,color:blocked?C.text:C.muted2,
+                  overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                }}>{blocked?(covering[0].reason||"No disponible"):"Disponible"}</span>
+                <span style={{
+                  fontSize:15,width:20,textAlign:"center",flexShrink:0,
+                  color:blocked?C.red:C.muted2,
+                }}>{blocked?"✕":"+"}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Leyenda */}
+      <div style={{padding:"16px 20px 24px",display:"flex",flexWrap:"wrap",gap:14,alignItems:"center"}}>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <span style={{width:7,height:7,background:C.red,display:"block"}}/>
+          <Mono style={{color:C.muted,fontSize:8}}>Bloqueado</Mono>
+        </div>
+        <div style={{display:"flex",alignItems:"center",gap:6}}>
+          <span style={{width:7,height:7,background:C.gold+"4D",display:"block"}}/>
+          <Mono style={{color:C.muted,fontSize:8}}>Disponible</Mono>
+        </div>
+        <Mono style={{color:C.muted2,fontSize:8,width:"100%"}}>
+          Toca una hora para bloquearla
+        </Mono>
+      </div>
+
+      {multiDayBlocks.length>0 && (
+        <div style={{padding:"22px 20px 40px",borderTop:`1px solid ${C.bdr}`}}>
+          <Mono style={{fontSize:9,color:C.muted,display:"block",marginBottom:12}}>
+            Ausencias de varios días
+          </Mono>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {multiDayBlocks.map(b=>(
+              <div key={b.id} style={{
+                display:"flex",alignItems:"center",gap:12,background:C.s2,
+                border:`1px solid ${C.bdr}`,padding:14,
+              }}>
+                <span style={{width:7,height:7,background:C.red,display:"block",flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <Mono style={{fontSize:9,color:C.red,display:"block"}}>{blockWhenLabel(b)}</Mono>
+                  {b.reason && b.reason!=="No disponible" && (
+                    <div style={{fontSize:12,color:C.muted,marginTop:4}}>{b.reason}</div>
+                  )}
+                </div>
+                <button onClick={()=>setAppts(s=>removeBlock(s, b.id))} style={{
+                  width:44,height:44,flexShrink:0,background:"transparent",
+                  border:"none",color:C.muted,cursor:"pointer",fontSize:14,
+                }}>✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div>
       <PageHeader title="Mis ausencias" subtitle="Bloquea horas o días en tu agenda" />
