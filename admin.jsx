@@ -5758,9 +5758,26 @@ const EmpAgendaView = ({emp, onNav}) => {
 
   const [activeDay,  setActiveDay]  = React.useState(0);
   const [expandedId, setExpandedId] = React.useState(null);
+  // De quién es la agenda que se ve: el propio empleado (por defecto), "all"
+  // para todo el equipo, o el id de otro empleado. Las citas ajenas son de solo
+  // lectura: sin confirmar, cancelar ni teléfono.
+  const [scope,      setScope]      = React.useState(emp.id);
+  const [team,       setTeam]       = React.useState([]);
+  React.useEffect(()=>{
+    fetch("/api/catalog").then(r=>r.ok?r.json():null)
+      .then(d=>{ if(d?.employees) setTeam(d.employees); }).catch(()=>{});
+  },[]);
 
   const allAppts  = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts   = allAppts.filter(a=>a.stylist===emp.name);
+
+  const others     = team.filter(e=>e.id!==emp.id);
+  const scopeEmp   = scope==="all" ? null : (scope===emp.id ? emp : others.find(e=>e.id===scope));
+  const isMine     = scope===emp.id || !scopeEmp;
+  const viewAppts  = scope==="all" ? allAppts
+    : isMine ? myAppts
+    : allAppts.filter(a=>a.stylist===scopeEmp.name);
+  const viewTitle  = scope==="all" ? "Agenda del equipo" : isMine ? "Mi Agenda" : "Agenda de "+scopeEmp.name;
 
   const pendingCount = myAppts.filter(empNeedsConfirm).length;
 
@@ -5806,7 +5823,7 @@ const EmpAgendaView = ({emp, onNav}) => {
   const date     = dates[activeDay];
   const isToday  = date===todayD;
   // Las canceladas no se listan: solo hacen ruido en la agenda del día.
-  const dayAppts = myAppts.filter(a=>a.date===date&&a.computedStatus!=="cancelled");
+  const dayAppts = viewAppts.filter(a=>a.date===date&&a.computedStatus!=="cancelled");
 
   const byTime = {};
   AGENDA_HOURS.forEach(t=>{ byTime[t]=[]; });
@@ -5818,7 +5835,7 @@ const EmpAgendaView = ({emp, onNav}) => {
 
   return (
     <div>
-      <PageHeader title="Mi Agenda" subtitle={DAY_TAB_LABEL(date,activeDay)+" · "+DAY_HEADER_SUB(date)}
+      <PageHeader title={viewTitle} subtitle={DAY_TAB_LABEL(date,activeDay)+" · "+DAY_HEADER_SUB(date)}
         action={onNav&&<Btn small onClick={()=>onNav("reservar")}>+ Reservar turno</Btn>} />
 
       {/* Mini stats bar */}
@@ -5855,11 +5872,37 @@ const EmpAgendaView = ({emp, onNav}) => {
         <NotificationsCard />
       </div>
 
+      {/* Selector de agenda: la mía, todo el equipo o la de otro empleado */}
+      {others.length>0 && (
+        <div style={{padding:"16px 32px 0"}}>
+          <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:8}}>Ver agenda de</Mono>
+          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+            {[
+              {id:emp.id, label:"Mi agenda"},
+              {id:"all",  label:"Todo el equipo"},
+              ...others.map(e=>({id:e.id, label:e.name})),
+            ].map(opt=>{
+              const sel = scope===opt.id;
+              return (
+                <button key={opt.id} onClick={()=>{setScope(opt.id);setExpandedId(null);}} style={{
+                  padding:"6px 14px",
+                  background:sel?"rgba(194,158,102,0.14)":"transparent",
+                  color:sel?C.gold:C.muted,
+                  border:`1px solid ${sel?C.gold+"70":C.bdr}`,
+                  borderRadius:999,cursor:"pointer",
+                  fontFamily:"'Outfit',sans-serif",fontSize:12,
+                }}>{opt.label}</button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Day tabs */}
       <div style={{display:"flex",gap:4,padding:"16px 32px 0"}}>
         {dates.map((d,i)=>{
-          const cnt = myAppts.filter(a=>a.date===d&&a.computedStatus!=="cancelled").length;
-          const hasPending = myAppts.some(a=>a.date===d&&empNeedsConfirm(a));
+          const cnt = viewAppts.filter(a=>a.date===d&&a.computedStatus!=="cancelled").length;
+          const hasPending = viewAppts.some(a=>a.date===d&&a.stylist===emp.name&&empNeedsConfirm(a));
           return (
             <button key={d} onClick={()=>setActiveDay(i)} style={{
               padding:"8px 18px",
@@ -5931,15 +5974,17 @@ const EmpAgendaView = ({emp, onNav}) => {
 
                 <div style={{padding:"8px 12px",display:"flex",flexDirection:"column",gap:5}}>
                   {slotAppts.map(a=>{
-                    const isPending = empNeedsConfirm(a);
+                    const own = a.stylist===emp.name;
+                    const isPending = own && empNeedsConfirm(a);
                     const isExpanded = expandedId===a.id;
+                    const canExpand = own && !!a.phone;
                     return (
                       <div key={a.id} style={{
                         padding:"8px 10px",
                         background:a.confirmedBy?"rgba(102,196,153,0.1)":isPending?"rgba(194,158,102,0.08)":"rgba(245,241,234,0.04)",
                         borderLeft:`3px solid ${a.confirmedBy?C.green:statusColor(a.computedStatus)}`,
-                        cursor:a.phone?"pointer":"default",
-                      }} onClick={()=>a.phone&&setExpandedId(id=>id===a.id?null:a.id)}>
+                        cursor:canExpand?"pointer":"default",
+                      }} onClick={()=>canExpand&&setExpandedId(id=>id===a.id?null:a.id)}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
                           <div style={{flex:1,minWidth:0}}>
                             <div style={{
@@ -5947,6 +5992,12 @@ const EmpAgendaView = ({emp, onNav}) => {
                               textDecoration:a.computedStatus==="cancelled"?"line-through":"none",
                             }}>{a.name}</div>
                             <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.service}</div>
+                            {scope==="all" && a.stylist && (
+                              <div style={{fontSize:10,color:own?C.gold:C.muted2,marginTop:3,display:"flex",alignItems:"center",gap:5}}>
+                                <span style={{width:6,height:6,borderRadius:"50%",background:own?C.gold:C.muted2,flexShrink:0}}/>
+                                {own ? "Tú" : a.stylist}
+                              </div>
+                            )}
                           </div>
                           <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
                             {isPending && (
@@ -5959,7 +6010,7 @@ const EmpAgendaView = ({emp, onNav}) => {
                                 fontSize:9,letterSpacing:"0.06em",
                               }}>{a.computedStatus==="expired"?"↺":"✓"}</button>
                             )}
-                            {!isPending && !["cancelled","completed","no-show"].includes(a.computedStatus) && (
+                            {own && !isPending && !["cancelled","completed","no-show"].includes(a.computedStatus) && (
                               <button onClick={e=>{e.stopPropagation();cancelAppt(a.id);}} style={{
                                 padding:"4px 8px",background:"transparent",
                                 border:`1px solid ${C.red}30`,color:C.red,
@@ -5978,7 +6029,7 @@ const EmpAgendaView = ({emp, onNav}) => {
                           </div>
                         </div>
                         {/* Expandable phone */}
-                        {isExpanded && a.phone && (
+                        {isExpanded && canExpand && (
                           <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.bdr}`}}>
                             <a href={`https://wa.me/57${a.phone.replace(/\D/g,"")}`}
                               target="_blank" rel="noopener"
