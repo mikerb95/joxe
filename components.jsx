@@ -319,14 +319,21 @@ const formatDur = (mins) => {
 };
 
 const FALLBACK_SERVICES = [
-  { id:"s1", name:"Corte mujer",        price:85000,  dur:60,  active:true },
-  { id:"s2", name:"Corte hombre",       price:45000,  dur:40,  active:true },
-  { id:"s3", name:"Balayage",           price:280000, dur:180, active:true, note:"desde" },
-  { id:"s4", name:"Color correction",   price:320000, dur:240, active:true, note:"desde" },
-  { id:"s5", name:"Color raíz",         price:120000, dur:90,  active:true },
-  { id:"s6", name:"Keratina",           price:260000, dur:180, active:true, note:"desde" },
-  { id:"s7", name:"Asesoría de imagen", price:180000, dur:90,  active:true },
-  { id:"s8", name:"Peinado novia",      price:220000, dur:120, active:true, note:"desde" },
+  { id:"s2",   name:"Corte hombre (con mascarilla puntos negros + cejas)", price:22000, dur:60,  active:true },
+  { id:"s9",   name:"Corte hombre con barba",                              price:27000, dur:60,  active:true },
+  { id:"s10",  name:"Martes: corte hombre + mascarilla + cejas",           price:16000, dur:60,  active:true },
+  { id:"s11",  name:"Martes: corte hombre con barba",                      price:20000, dur:60,  active:true },
+  { id:"s1",   name:"Corte dama",                                          price:20000, dur:60,  active:true },
+  { id:"s12",  name:"Cepillado dama",                                      price:20000, dur:60,  active:true, note:"desde" },
+  { id:"s13",  name:"Tinturas",                                            price:0,     dur:60,  active:true, quote:true },
+  { id:"s6",   name:"Keratina alisado permanente dama",                    price:100000, dur:240, active:true, note:"desde" },
+  { id:"s14",  name:"Keratina alisado permanente hombre (+ corte gratis)", price:90000, dur:240, active:true },
+  { id:"s15",  name:"Ondulado permanente hombre (+ corte gratis)",         price:130000, dur:120, active:true },
+  { id:"s16",  name:"Depilación de cejas con cera",                        price:10000, dur:60,  active:true },
+  { id:"s17",  name:"Depilación de cejas con cuchilla",                    price:5000,  dur:60,  active:true },
+  { id:"s18",  name:"Limpieza facial",                                     price:45000, dur:60,  active:true },
+  { id:"s19",  name:"Corte + limpieza facial",                             price:55000, dur:60,  active:true },
+  { id:"s7",   name:"Asesoría de imagen",                                  price:0,     dur:60,  active:true },
 ];
 
 const Services = () => {
