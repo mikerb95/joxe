@@ -502,6 +502,11 @@ const fmtDateSub = (d) => {
 };
 
 const fmtCOP = (n) => n == null ? "" : "$" + Number(n).toLocaleString("es-CO");
+// Un servicio en 0 es gratis; uno marcado "quote" no tiene precio fijo.
+const fmtServicePrice = (s) =>
+  s.quote ? "Según valoración"
+  : Number(s.price) === 0 ? "Gratis"
+  : (s.note ? s.note + " " : "") + fmtCOP(s.price);
 
 // Convierte "HH:MM" (24h, formato interno) a "h:MM AM/PM" para mostrar en la UI.
 const formatTime12h = (t) => {
@@ -886,7 +891,7 @@ const BookingPortal = () => {
                       fontSize: 12, opacity: 0.7, fontFamily: "'JetBrains Mono', monospace",
                     }}>
                       <span>{s.dur} min</span>
-                      <span>{s.note ? s.note + " " : ""}{fmtCOP(s.price)}</span>
+                      <span>{fmtServicePrice(s)}</span>
                     </div>
                   </button>
                 );

@@ -260,7 +260,7 @@ const Hero = ({ onReserveClick }) => (
           fontFamily: "var(--sans)", fontSize: 12, color: "var(--ivory)",
           letterSpacing: "0.05em",
         }}>
-          Color correction + corte · 3.5 hrs
+          Tintura + corte
         </div>
       </div>
     </div>
@@ -271,7 +271,7 @@ const Hero = ({ onReserveClick }) => (
 // MARQUEE
 // ——————————————————————————————————————————————
 const Marquee = () => {
-  const items = ["Corte", "Color", "Balayage", "Keratina", "Asesoría de imagen", "Novias", "Extensiones", "Peinados"];
+  const items = ["Corte", "Barba", "Tinturas", "Keratina", "Cepillado", "Ondulado permanente", "Limpieza facial", "Asesoría de imagen"];
   return (
     <div style={{
       background: "var(--ivory)", color: "var(--noir)",
@@ -302,6 +302,13 @@ const Marquee = () => {
 const formatPrice = (price, note) => {
   const formatted = "$" + Number(price).toLocaleString("es-CO");
   return note ? `${note} ${formatted}` : formatted;
+};
+
+// Un servicio en 0 es gratis; uno marcado "quote" no tiene precio fijo.
+const formatServicePrice = (s) => {
+  if (s.quote) return "Según valoración";
+  if (Number(s.price) === 0) return "Gratis";
+  return formatPrice(s.price, s.note);
 };
 
 const formatDur = (mins) => {
@@ -391,7 +398,7 @@ const Services = () => {
                   fontFamily: "var(--sans)", fontSize: 20,
                   fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
                   letterSpacing: "-0.01em",
-                }}>{formatPrice(item.price, item.note)}</div>
+                }}>{formatServicePrice(item)}</div>
               </div>
             ))}
             <div style={{ borderTop: "1px solid rgba(20,18,18,0.08)" }} />
@@ -469,7 +476,7 @@ const BeforeAfter = () => {
 const Gallery = () => {
   const [idx, setIdx] = React.useState(0);
   const cases = [
-    { title: "Balayage miel sobre base oscura", meta: "Color correction · 4 hrs" },
+    { title: "Tono miel sobre base oscura", meta: "Tintura" },
     { title: "Corte bob francés", meta: "Corte + styling · 90 min" },
     { title: "Recuperación post-decoloración", meta: "Tratamiento + color · 3.5 hrs" },
     { title: "Rubio platino", meta: "Decoloración + matiz · 5 hrs" },

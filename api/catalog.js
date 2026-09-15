@@ -35,7 +35,7 @@ export default async function handler(req, res) {
 
     const services = (admin?.services || DEFAULT_SERVICES)
       .filter(s => s.active)
-      .map(({ id, name, price, dur, note }) => ({ id, name, price, dur, note }));
+      .map(({ id, name, price, dur, note, quote }) => ({ id, name, price, dur, note, ...(quote ? { quote: true } : {}) }));
 
     const employees = (admin?.employees || DEFAULT_EMPLOYEES)
       .filter(e => e.active !== false)

@@ -400,6 +400,13 @@ const DEFAULT_WORK_HOURS = () => ({
 const PAY_COLORS = { Efectivo:"#C29E66", Transferencia:"#8ab0ff", Datáfono:"#C46666", Nequi:"#66C499", Multa:"#e07070" };
 
 const fmtCOP = (n) => n == null ? "—" : "$" + Number(n).toLocaleString("es-CO");
+// Un servicio en 0 es gratis; uno marcado "quote" no tiene precio fijo.
+const fmtServicePrice = (s) =>
+  s.quote ? "Según valoración"
+  : Number(s.price) === 0 ? "Gratis"
+  : (s.note ? `${s.note} ` : "") + fmtCOP(s.price);
+// Los gratis y los de valoración no cuentan para el precio promedio.
+const hasFixedPrice = (s) => !s.quote && Number(s.price) > 0;
 const fmtDateShort = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{day:"numeric",month:"short"});
 const fmtDateMed = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"});
 const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-digit",hour12:true});
@@ -3868,12 +3875,21 @@ const EmployeesView = () => {
 };
 
 // ==================== SERVICES ====================
+const QuoteCheckbox = ({checked,onChange}) => (
+  <label style={{display:"flex",alignItems:"center",gap:8,marginTop:12,cursor:"pointer"}}>
+    <input type="checkbox" checked={!!checked} onChange={e=>onChange(e.target.checked)} />
+    <Mono style={{color:C.text,fontSize:10,textTransform:"none",letterSpacing:0}}>
+      Precio según valoración (no se muestra precio)
+    </Mono>
+  </label>
+);
+
 const ServicesView = () => {
   const [admin,setAdmin] = useAdmin();
   const [editId,setEditId] = React.useState(null);
   const [editForm,setEditForm] = React.useState({});
   const [showAdd,setShowAdd] = React.useState(false);
-  const [newSvc,setNewSvc] = React.useState({name:"",price:"",dur:"",note:"",commissionFixed:""});
+  const [newSvc,setNewSvc] = React.useState({name:"",price:"",dur:"",note:"",commissionFixed:"",quote:false});
 
   const services = admin.services||[];
   const revenue  = (admin.revenue||[]).filter(r=>!r.deleted);
@@ -3885,12 +3901,12 @@ const ServicesView = () => {
 
   const startEdit = (s) => {
     setEditId(s.id);
-    setEditForm({name:s.name,price:s.price,dur:s.dur,note:s.note||"",commissionFixed:s.commissionFixed||""});
+    setEditForm({name:s.name,price:s.price,dur:s.dur,note:s.note||"",commissionFixed:s.commissionFixed||"",quote:!!s.quote});
   };
 
   const saveEdit = (id) => {
     setAdmin(a=>({...a, services:a.services.map(s=>
-      s.id===id ? {...s,...editForm,price:Number(editForm.price),dur:Number(editForm.dur),commissionFixed:Number(editForm.commissionFixed)||0} : s
+      s.id===id ? {...s,...editForm,price:Number(editForm.price)||0,dur:Number(editForm.dur),commissionFixed:Number(editForm.commissionFixed)||0} : s
     )}));
     setEditId(null);
   };
@@ -3906,13 +3922,16 @@ const ServicesView = () => {
     setAdmin(a=>({...a, services:a.services.filter(s=>s.id!==id)}));
   };
 
+  // Precio 0 es válido (se muestra "Gratis"); vacío solo se permite si es según valoración.
+  const canAdd = !!newSvc.name.trim() && (newSvc.quote || String(newSvc.price).trim() !== "");
+
   const addService = () => {
-    if (!newSvc.name||!newSvc.price) return;
+    if (!canAdd) return;
     setAdmin(a=>({...a, services:[...a.services,{
-      id:genId(),...newSvc,price:Number(newSvc.price),dur:Number(newSvc.dur)||60,
+      id:genId(),...newSvc,price:Number(newSvc.price)||0,dur:Number(newSvc.dur)||60,
       commissionFixed:Number(newSvc.commissionFixed)||0,active:true,
     }]}));
-    setNewSvc({name:"",price:"",dur:"",note:"",commissionFixed:""});
+    setNewSvc({name:"",price:"",dur:"",note:"",commissionFixed:"",quote:false});
     setShowAdd(false);
   };
 
@@ -3929,7 +3948,7 @@ const ServicesView = () => {
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14,maxWidth:700}}>
             <FieldInput label="Nombre del servicio" value={newSvc.name}
               onChange={e=>setNewSvc({...newSvc,name:e.target.value})} placeholder="Corte hombre" />
-            <FieldInput label="Precio (COP)" type="number" value={newSvc.price}
+            <FieldInput label="Precio (COP, 0 = gratis)" type="number" value={newSvc.price}
               onChange={e=>setNewSvc({...newSvc,price:e.target.value})} placeholder="45000" />
             <FieldInput label="Duración (min)" type="number" value={newSvc.dur}
               onChange={e=>setNewSvc({...newSvc,dur:e.target.value})} placeholder="40" />
@@ -3938,8 +3957,9 @@ const ServicesView = () => {
             <FieldInput label="Comisión fija (COP, opcional)" type="number" value={newSvc.commissionFixed}
               onChange={e=>setNewSvc({...newSvc,commissionFixed:e.target.value})} placeholder="0 = usar %" />
           </div>
+          <QuoteCheckbox checked={newSvc.quote} onChange={v=>setNewSvc({...newSvc,quote:v})} />
           <div style={{display:"flex",gap:10,marginTop:14}}>
-            <Btn onClick={addService} disabled={!newSvc.name||!newSvc.price}>Agregar servicio</Btn>
+            <Btn onClick={addService} disabled={!canAdd}>Agregar servicio</Btn>
             <Btn variant="ghost" onClick={()=>setShowAdd(false)}>Cancelar</Btn>
           </div>
         </div>
@@ -3963,11 +3983,11 @@ const ServicesView = () => {
                   }}>
                     <div>
                       <div style={{fontSize:15,fontFamily:"'Marcellus',serif"}}>{s.name}</div>
-                      {s.note&&<Mono style={{color:C.muted,fontSize:9}}>{s.note}</Mono>}
+                      {s.note&&!s.quote&&<Mono style={{color:C.muted,fontSize:9}}>{s.note}</Mono>}
                     </div>
                     <div style={{textAlign:"right"}}>
-                      <div style={{fontSize:15,fontVariantNumeric:"tabular-nums"}}>
-                        {fmtCOP(s.price)}
+                      <div style={{fontSize:s.quote?12:15,fontVariantNumeric:"tabular-nums"}}>
+                        {s.quote?"Valoración":Number(s.price)===0?"Gratis":fmtCOP(s.price)}
                       </div>
                       <Mono style={{fontSize:8,color:C.muted}}>precio</Mono>
                     </div>
@@ -4006,7 +4026,7 @@ const ServicesView = () => {
                     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12}}>
                       <FieldInput label="Nombre" value={editForm.name}
                         onChange={e=>setEditForm({...editForm,name:e.target.value})} />
-                      <FieldInput label="Precio (COP)" type="number" value={editForm.price}
+                      <FieldInput label="Precio (COP, 0 = gratis)" type="number" value={editForm.price}
                         onChange={e=>setEditForm({...editForm,price:e.target.value})} />
                       <FieldInput label="Duración (min)" type="number" value={editForm.dur}
                         onChange={e=>setEditForm({...editForm,dur:e.target.value})} />
@@ -4015,6 +4035,7 @@ const ServicesView = () => {
                       <FieldInput label="Comisión fija (COP, opcional)" type="number" value={editForm.commissionFixed ?? ""}
                         onChange={e=>setEditForm({...editForm,commissionFixed:e.target.value})} placeholder="0 = usar %" />
                     </div>
+                    <QuoteCheckbox checked={editForm.quote} onChange={v=>setEditForm({...editForm,quote:v})} />
                     <div style={{display:"flex",gap:8,marginTop:12}}>
                       <Btn small onClick={()=>saveEdit(s.id)}>Guardar</Btn>
                       <Btn small variant="ghost" onClick={()=>setEditId(null)}>Cancelar</Btn>
@@ -4045,7 +4066,7 @@ const ServicesView = () => {
               Precio promedio
             </Mono>
             <div style={{fontFamily:"'Marcellus',serif",fontSize:32,color:C.gold}}>
-              {fmtCOP(Math.round(services.filter(s=>s.active).reduce((s,v)=>s+v.price,0)/(services.filter(s=>s.active).length||1)))}
+              {fmtCOP(Math.round(services.filter(s=>s.active&&hasFixedPrice(s)).reduce((s,v)=>s+Number(v.price),0)/(services.filter(s=>s.active&&hasFixedPrice(s)).length||1)))}
             </div>
           </div>
           <div>
@@ -7255,7 +7276,7 @@ const EmpBookingView = ({emp, onNav}) => {
                   <div style={{fontSize:14,marginBottom:4}}>{s.name}</div>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
                     <Mono style={{color:C.gold,fontSize:9}}>{s.dur} min</Mono>
-                    <span style={{fontSize:12,color:C.muted}}>{s.note?`${s.note} `:""}{fmtCOP(s.price)}</span>
+                    <span style={{fontSize:12,color:C.muted}}>{fmtServicePrice(s)}</span>
                   </div>
                 </button>
               );
