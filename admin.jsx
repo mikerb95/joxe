@@ -81,10 +81,8 @@ const DEFAULT_ADMIN = () => ({
   stylists: ["Joxe", "Laura M.", "Camila R."],
   cancelledIds: [],
   services: [
-    { id:"s2",   name:"Corte hombre (con mascarilla puntos negros + cejas)", price:22000, dur:60,  active:true },
-    { id:"s9",   name:"Corte hombre con barba",                              price:27000, dur:60,  active:true },
-    { id:"s10",  name:"Martes: corte hombre + mascarilla + cejas",           price:16000, dur:60,  active:true },
-    { id:"s11",  name:"Martes: corte hombre con barba",                      price:20000, dur:60,  active:true },
+    { id:"s2",   name:"Corte hombre (con mascarilla puntos negros + cejas)", price:22000, dur:60,  active:true, dayPrices:{ mar:16000 } },
+    { id:"s9",   name:"Corte hombre con barba",                              price:27000, dur:60,  active:true, dayPrices:{ mar:20000 } },
     { id:"s1",   name:"Corte dama",                                          price:20000, dur:60,  active:true },
     { id:"s12",  name:"Cepillado dama",                                      price:20000, dur:60,  active:true, note:"desde" },
     { id:"s13",  name:"Tinturas",                                            price:0,     dur:60,  active:true, quote:true },
@@ -98,7 +96,7 @@ const DEFAULT_ADMIN = () => ({
     { id:"s7",   name:"Asesoría de imagen",                                  price:0,     dur:60,  active:true },
   ],
   employees: [
-    { id:"e1", name:"Joxe",     role:"Estilista",   services:["s2","s9","s10","s11","s1","s12","s13","s6","s14","s15","s16","s17","s18","s19","s7"], active:true },
+    { id:"e1", name:"Joxe",     role:"Estilista",   services:["s2","s9","s1","s12","s13","s6","s14","s15","s16","s17","s18","s19","s7"], active:true },
     { id:"e2", name:"Laura M.", role:"Estilista",   services:["s1","s2","s6"], active:true },
     { id:"e3", name:"Camila R.",role:"Colorista",   services:["s6"], active:true },
   ],
@@ -414,6 +412,15 @@ const fmtServicePrice = (s) =>
   : (s.note ? `${s.note} ` : "") + fmtCOP(s.price);
 // Los gratis y los de valoración no cuentan para el precio promedio.
 const hasFixedPrice = (s) => !s.quote && Number(s.price) > 0;
+// Precio especial según el día de la cita, ej. { mar: 16000 } → "Mar $16.000".
+const DAY_SHORT = { lun:"Lun", mar:"Mar", mie:"Mié", jue:"Jue", vie:"Vie", sab:"Sáb", dom:"Dom" };
+const dayPriceLabels = (s) => Object.entries(s.dayPrices || {})
+  .filter(([k, v]) => DAY_SHORT[k] && Number(v) > 0)
+  .map(([k, v]) => `${DAY_SHORT[k]} ${fmtCOP(v)}`);
+// Deja solo los días con un precio válido; vacío si no queda ninguno.
+const cleanDayPrices = (dp) => Object.fromEntries(
+  Object.entries(dp || {}).map(([k, v]) => [k, Number(v)]).filter(([k, v]) => DAY_SHORT[k] && v > 0)
+);
 const fmtDateShort = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{day:"numeric",month:"short"});
 const fmtDateMed = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"});
 const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-digit",hour12:true});
@@ -3882,6 +3889,20 @@ const EmployeesView = () => {
 };
 
 // ==================== SERVICES ====================
+const DayPricesInput = ({value,onChange}) => (
+  <div style={{marginTop:12}}>
+    <Mono style={{color:C.muted,fontSize:9,display:"block",marginBottom:6}}>
+      Precio especial por día (opcional, vacío = precio normal)
+    </Mono>
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(90px,1fr))",gap:8,maxWidth:700}}>
+      {["lun","mar","mie","jue","vie","sab","dom"].map(k=>(
+        <FieldInput key={k} label={DAY_SHORT[k]} type="number" value={value?.[k] ?? ""}
+          onChange={e=>onChange({...(value||{}),[k]:e.target.value})} placeholder="—" />
+      ))}
+    </div>
+  </div>
+);
+
 const QuoteCheckbox = ({checked,onChange}) => (
   <label style={{display:"flex",alignItems:"center",gap:8,marginTop:12,cursor:"pointer"}}>
     <input type="checkbox" checked={!!checked} onChange={e=>onChange(e.target.checked)} />
@@ -3896,7 +3917,7 @@ const ServicesView = () => {
   const [editId,setEditId] = React.useState(null);
   const [editForm,setEditForm] = React.useState({});
   const [showAdd,setShowAdd] = React.useState(false);
-  const [newSvc,setNewSvc] = React.useState({name:"",price:"",dur:"",note:"",commissionFixed:"",quote:false});
+  const [newSvc,setNewSvc] = React.useState({name:"",price:"",dur:"",note:"",commissionFixed:"",quote:false,dayPrices:{}});
 
   const services = admin.services||[];
   const revenue  = (admin.revenue||[]).filter(r=>!r.deleted);
@@ -3908,12 +3929,12 @@ const ServicesView = () => {
 
   const startEdit = (s) => {
     setEditId(s.id);
-    setEditForm({name:s.name,price:s.price,dur:s.dur,note:s.note||"",commissionFixed:s.commissionFixed||"",quote:!!s.quote});
+    setEditForm({name:s.name,price:s.price,dur:s.dur,note:s.note||"",commissionFixed:s.commissionFixed||"",quote:!!s.quote,dayPrices:{...(s.dayPrices||{})}});
   };
 
   const saveEdit = (id) => {
     setAdmin(a=>({...a, services:a.services.map(s=>
-      s.id===id ? {...s,...editForm,price:Number(editForm.price)||0,dur:Number(editForm.dur),commissionFixed:Number(editForm.commissionFixed)||0} : s
+      s.id===id ? {...s,...editForm,dayPrices:cleanDayPrices(editForm.dayPrices),price:Number(editForm.price)||0,dur:Number(editForm.dur),commissionFixed:Number(editForm.commissionFixed)||0} : s
     )}));
     setEditId(null);
   };
@@ -3935,10 +3956,10 @@ const ServicesView = () => {
   const addService = () => {
     if (!canAdd) return;
     setAdmin(a=>({...a, services:[...a.services,{
-      id:genId(),...newSvc,price:Number(newSvc.price)||0,dur:Number(newSvc.dur)||60,
+      id:genId(),...newSvc,dayPrices:cleanDayPrices(newSvc.dayPrices),price:Number(newSvc.price)||0,dur:Number(newSvc.dur)||60,
       commissionFixed:Number(newSvc.commissionFixed)||0,active:true,
     }]}));
-    setNewSvc({name:"",price:"",dur:"",note:"",commissionFixed:"",quote:false});
+    setNewSvc({name:"",price:"",dur:"",note:"",commissionFixed:"",quote:false,dayPrices:{}});
     setShowAdd(false);
   };
 
@@ -3964,6 +3985,7 @@ const ServicesView = () => {
             <FieldInput label="Comisión fija (COP, opcional)" type="number" value={newSvc.commissionFixed}
               onChange={e=>setNewSvc({...newSvc,commissionFixed:e.target.value})} placeholder="0 = usar %" />
           </div>
+          <DayPricesInput value={newSvc.dayPrices} onChange={v=>setNewSvc({...newSvc,dayPrices:v})} />
           <QuoteCheckbox checked={newSvc.quote} onChange={v=>setNewSvc({...newSvc,quote:v})} />
           <div style={{display:"flex",gap:10,marginTop:14}}>
             <Btn onClick={addService} disabled={!canAdd}>Agregar servicio</Btn>
@@ -3997,6 +4019,9 @@ const ServicesView = () => {
                         {s.quote?"Valoración":Number(s.price)===0?"Gratis":fmtCOP(s.price)}
                       </div>
                       <Mono style={{fontSize:8,color:C.muted}}>precio</Mono>
+                      {dayPriceLabels(s).map(l=>(
+                        <Mono key={l} style={{fontSize:8,color:C.gold,display:"block"}}>{l}</Mono>
+                      ))}
                     </div>
                     <div style={{textAlign:"center"}}>
                       <div style={{fontSize:14,color:C.muted}}>{s.dur} min</div>
@@ -4042,6 +4067,7 @@ const ServicesView = () => {
                       <FieldInput label="Comisión fija (COP, opcional)" type="number" value={editForm.commissionFixed ?? ""}
                         onChange={e=>setEditForm({...editForm,commissionFixed:e.target.value})} placeholder="0 = usar %" />
                     </div>
+                    <DayPricesInput value={editForm.dayPrices} onChange={v=>setEditForm({...editForm,dayPrices:v})} />
                     <QuoteCheckbox checked={editForm.quote} onChange={v=>setEditForm({...editForm,quote:v})} />
                     <div style={{display:"flex",gap:8,marginTop:12}}>
                       <Btn small onClick={()=>saveEdit(s.id)}>Guardar</Btn>
@@ -7285,6 +7311,11 @@ const EmpBookingView = ({emp, onNav}) => {
                     <Mono style={{color:C.gold,fontSize:9}}>{s.dur} min</Mono>
                     <span style={{fontSize:12,color:C.muted}}>{fmtServicePrice(s)}</span>
                   </div>
+                  {dayPriceLabels(s).length>0 && (
+                    <div style={{fontSize:10,color:C.gold,marginTop:2,textAlign:"right"}}>
+                      {dayPriceLabels(s).join(" · ")}
+                    </div>
+                  )}
                 </button>
               );
             })}

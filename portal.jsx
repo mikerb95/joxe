@@ -508,6 +508,18 @@ const fmtServicePrice = (s) =>
   : Number(s.price) === 0 ? "Gratis"
   : (s.note ? s.note + " " : "") + fmtCOP(s.price);
 
+// Precio especial según el día de la cita, ej. { mar: 16000 }.
+const DAY_NAMES = { lun:"Lunes", mar:"Martes", mie:"Miércoles", jue:"Jueves", vie:"Viernes", sab:"Sábado", dom:"Domingo" };
+const dayKeyOf = (date) => ["dom","lun","mar","mie","jue","vie","sab"][new Date(date + "T12:00").getDay()];
+const dayPriceLabels = (s) => Object.entries(s.dayPrices || {})
+  .filter(([k, v]) => DAY_NAMES[k] && Number(v) > 0)
+  .map(([k, v]) => `${DAY_NAMES[k]} ${fmtCOP(v)}`);
+// Precio que aplica a una fecha concreta: el del día si existe, si no el normal.
+const priceForDate = (s, date) => {
+  const special = date && Number(s?.dayPrices?.[dayKeyOf(date)]);
+  return special > 0 ? { price: special, day: DAY_NAMES[dayKeyOf(date)] } : null;
+};
+
 // Convierte "HH:MM" (24h, formato interno) a "h:MM AM/PM" para mostrar en la UI.
 const formatTime12h = (t) => {
   if (!t) return "—";
@@ -553,10 +565,8 @@ const empWorksOnSlot = (emp, date, timeStr, dur) => {
 };
 
 const DEFAULT_SERVICES = [
-  { id:"s2",   name:"Corte hombre (con mascarilla puntos negros + cejas)", price:22000, dur:60 },
-  { id:"s9",   name:"Corte hombre con barba",                              price:27000, dur:60 },
-  { id:"s10",  name:"Martes: corte hombre + mascarilla + cejas",           price:16000, dur:60 },
-  { id:"s11",  name:"Martes: corte hombre con barba",                      price:20000, dur:60 },
+  { id:"s2",   name:"Corte hombre (con mascarilla puntos negros + cejas)", price:22000, dur:60, dayPrices:{ mar:16000 } },
+  { id:"s9",   name:"Corte hombre con barba",                              price:27000, dur:60, dayPrices:{ mar:20000 } },
   { id:"s1",   name:"Corte dama",                                          price:20000, dur:60 },
   { id:"s12",  name:"Cepillado dama",                                      price:20000, dur:60,  note:"desde" },
   { id:"s13",  name:"Tinturas",                                            price:0,     dur:60,  quote:true },
@@ -571,7 +581,7 @@ const DEFAULT_SERVICES = [
 ];
 
 const DEFAULT_EMPLOYEES = [
-  { id:"e1", name:"Joxe",      role:"Estilista",  services:["s2","s9","s10","s11","s1","s12","s13","s6","s14","s15","s16","s17","s18","s19","s7"] },
+  { id:"e1", name:"Joxe",      role:"Estilista",  services:["s2","s9","s1","s12","s13","s6","s14","s15","s16","s17","s18","s19","s7"] },
   { id:"e2", name:"Laura M.",  role:"Estilista",  services:["s1","s2","s6"] },
   { id:"e3", name:"Camila R.", role:"Colorista",  services:["s6"] },
 ];
@@ -900,6 +910,12 @@ const BookingPortal = () => {
                       <span>{s.dur} min</span>
                       <span>{fmtServicePrice(s)}</span>
                     </div>
+                    {dayPriceLabels(s).map(label => (
+                      <div key={label} style={{
+                        fontSize: 11, marginTop: 6, fontFamily: "'JetBrains Mono', monospace",
+                        color: sel ? "#C29E66" : "#9A7A45", textAlign: "right",
+                      }}>{label}</div>
+                    ))}
                   </button>
                 );
               })}
@@ -1195,6 +1211,16 @@ const BookingPortal = () => {
                 <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
                   {form.stylist}
                 </div>
+                {(() => {
+                  const svc = services.find(s => s.id === form.serviceId);
+                  if (!svc) return null;
+                  const special = priceForDate(svc, form.date);
+                  return (
+                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, marginTop: 10, color: "#C29E66" }}>
+                      {special ? `${fmtCOP(special.price)} · precio de ${special.day.toLowerCase()}` : fmtServicePrice(svc)}
+                    </div>
+                  );
+                })()}
               </div>
 
               <div style={{

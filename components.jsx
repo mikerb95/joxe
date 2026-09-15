@@ -311,6 +311,12 @@ const formatServicePrice = (s) => {
   return formatPrice(s.price, s.note);
 };
 
+// Precio especial según el día de la cita, ej. { mar: 16000 } → "Martes $16.000".
+const DAY_NAMES = { lun:"Lunes", mar:"Martes", mie:"Miércoles", jue:"Jueves", vie:"Viernes", sab:"Sábado", dom:"Domingo" };
+const dayPriceLabels = (s) => Object.entries(s.dayPrices || {})
+  .filter(([k, v]) => DAY_NAMES[k] && Number(v) > 0)
+  .map(([k, v]) => `${DAY_NAMES[k]} ${formatPrice(v)}`);
+
 const formatDur = (mins) => {
   if (!mins) return "";
   if (mins >= 60 && mins % 60 === 0) return `${mins / 60} hrs`;
@@ -319,10 +325,8 @@ const formatDur = (mins) => {
 };
 
 const FALLBACK_SERVICES = [
-  { id:"s2",   name:"Corte hombre (con mascarilla puntos negros + cejas)", price:22000, dur:60,  active:true },
-  { id:"s9",   name:"Corte hombre con barba",                              price:27000, dur:60,  active:true },
-  { id:"s10",  name:"Martes: corte hombre + mascarilla + cejas",           price:16000, dur:60,  active:true },
-  { id:"s11",  name:"Martes: corte hombre con barba",                      price:20000, dur:60,  active:true },
+  { id:"s2",   name:"Corte hombre (con mascarilla puntos negros + cejas)", price:22000, dur:60,  active:true, dayPrices:{ mar:16000 } },
+  { id:"s9",   name:"Corte hombre con barba",                              price:27000, dur:60,  active:true, dayPrices:{ mar:20000 } },
   { id:"s1",   name:"Corte dama",                                          price:20000, dur:60,  active:true },
   { id:"s12",  name:"Cepillado dama",                                      price:20000, dur:60,  active:true, note:"desde" },
   { id:"s13",  name:"Tinturas",                                            price:0,     dur:60,  active:true, quote:true },
@@ -401,11 +405,18 @@ const Services = () => {
                     </Mono>
                   )}
                 </div>
-                <div style={{
-                  fontFamily: "var(--sans)", fontSize: 20,
-                  fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
-                  letterSpacing: "-0.01em",
-                }}>{formatServicePrice(item)}</div>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{
+                    fontFamily: "var(--sans)", fontSize: 20,
+                    fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+                    letterSpacing: "-0.01em",
+                  }}>{formatServicePrice(item)}</div>
+                  {dayPriceLabels(item).map(label => (
+                    <Mono key={label} style={{ color: "var(--bronze)", fontSize: 10, display: "block", marginTop: 8 }}>
+                      {label}
+                    </Mono>
+                  ))}
+                </div>
               </div>
             ))}
             <div style={{ borderTop: "1px solid rgba(20,18,18,0.08)" }} />
