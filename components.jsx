@@ -88,7 +88,10 @@ const Nav = ({ onReserveClick, scrolled, hasReviews, hasAcademy, hrefPrefix = ""
     ["Servicios", `${hrefPrefix}#servicios`],
     ["Galería", `${hrefPrefix}#galeria`],
     ...(hasReviews ? [["Reseñas", `${hrefPrefix}#resenas`]] : []),
-    ...(hasAcademy ? [["Academia", "/academia"]] : []),
+    // El enlace lleva al adelanto del home, no directo a /academia: desde ahí
+    // el botón "Ver las clases" abre la página completa. Fuera del home el
+    // prefijo lo convierte en "/#academia".
+    ...(hasAcademy ? [["Academia", `${hrefPrefix}#academia`]] : []),
     ["Ubicación", `${hrefPrefix}#ubicacion`],
   ];
   return (
