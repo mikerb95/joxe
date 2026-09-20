@@ -43,6 +43,19 @@ function App() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Reseñas y academia aparecen solo cuando hay contenido, así que el número
+  // de cada sección se calcula sobre las que de verdad se pintan. Si no, el
+  // home saltaba de "02" a "04" en cuanto faltaba una.
+  const hasReviews = !!(reviews && reviews.count);
+  const hasAcademy = !!academy?.enabled;
+  const order = [
+    "servicios", "galeria",
+    ...(hasReviews ? ["resenas"] : []),
+    ...(hasAcademy ? ["academia"] : []),
+    "ubicacion",
+  ];
+  const num = id => String(order.indexOf(id) + 1).padStart(2, "0");
+
   const palette = PALETTES[tweaks.palette] || PALETTES["noir-bronze"];
   const fonts = FONTS[tweaks.fonts] || FONTS["marcellus-outfit"];
 
@@ -64,16 +77,15 @@ function App() {
   return (
     <div style={{ background: "var(--ivory)", minHeight: "100vh" }}>
       <Nav onReserveClick={goToBooking} scrolled={scrolled}
-        hasReviews={!!(reviews && reviews.count)}
-        hasAcademy={!!academy?.enabled} />
+        hasReviews={hasReviews} hasAcademy={hasAcademy} />
       <Hero onReserveClick={goToBooking} />
       <Marquee />
-      <Services />
-      <Gallery />
-      <Reviews data={reviews} />
-      <AcademyTeaser data={academy} />
-      <LocationMap />
-      <Footer hasAcademy={!!academy?.enabled} />
+      <Services num={num("servicios")} />
+      <Gallery num={num("galeria")} />
+      <Reviews data={reviews} num={num("resenas")} />
+      <AcademyTeaser data={academy} num={num("academia")} />
+      <LocationMap num={num("ubicacion")} />
+      <Footer hasAcademy={hasAcademy} />
       <WhatsAppBlob />
       <ReviewInviteBlob />
 

@@ -340,7 +340,7 @@ const FALLBACK_SERVICES = [
   { id:"s7",   name:"Asesoría de imagen",                                  price:0,     dur:60,  active:true },
 ];
 
-const Services = () => {
+const Services = ({ num = "01" }) => {
   const [services, setServices] = React.useState(FALLBACK_SERVICES);
 
   React.useEffect(() => {
@@ -360,7 +360,7 @@ const Services = () => {
         maxWidth: 1400, margin: "0 auto",
       }} className="services-grid">
         <div>
-          <Mono style={{ color: "var(--bronze)" }}>01 — Servicios</Mono>
+          <Mono style={{ color: "var(--bronze)" }}>{num} · Servicios</Mono>
           <h2 style={{
             fontFamily: "var(--display)", fontWeight: 400,
             fontSize: "clamp(40px, 4.5vw, 64px)", lineHeight: 1.05,
@@ -491,7 +491,7 @@ const BeforeAfter = () => {
 // ——————————————————————————————————————————————
 // GALERÍA
 // ——————————————————————————————————————————————
-const Gallery = () => {
+const Gallery = ({ num = "02" }) => {
   const [idx, setIdx] = React.useState(0);
   const cases = [
     { title: "Tono miel sobre base oscura", meta: "Tintura" },
@@ -510,7 +510,7 @@ const Gallery = () => {
           marginBottom: 64, flexWrap: "wrap", gap: 24,
         }}>
           <div>
-            <Mono style={{ color: "var(--bronze)" }}>02 — Trabajos reales</Mono>
+            <Mono style={{ color: "var(--bronze)" }}>{num} · Trabajos reales</Mono>
             <h2 style={{
               fontFamily: "var(--display)", fontWeight: 400,
               fontSize: "clamp(40px, 4.5vw, 64px)", lineHeight: 1.05,
@@ -662,7 +662,7 @@ const ReviewCard = ({ r }) => (
   </article>
 );
 
-const Reviews = ({ data }) => {
+const Reviews = ({ data, num = "03" }) => {
   const [showAll, setShowAll] = React.useState(false);
 
   if (!data || !data.count) return null;
@@ -680,7 +680,7 @@ const Reviews = ({ data }) => {
           marginBottom: 64, flexWrap: "wrap", gap: 32,
         }}>
           <div>
-            <Mono style={{ color: "var(--bronze)" }}>03 — Reseñas</Mono>
+            <Mono style={{ color: "var(--bronze)" }}>{num} · Reseñas</Mono>
             <h2 style={{
               fontFamily: "var(--display)", fontWeight: 400,
               fontSize: "clamp(36px, 4vw, 58px)", lineHeight: 1.05,
@@ -759,76 +759,141 @@ const Reviews = ({ data }) => {
 // ——————————————————————————————————————————————
 // Solo se pinta cuando hay contenido publicado desde el panel. Sin cursos
 // cargados no hay sección: el home no anuncia algo que todavía no existe.
-const AcademyTeaser = ({ data }) => {
+// Es la única sección en bronce de toda la página. Va entre la galería (negra)
+// y la ubicación (marfil), así que sin un color propio quedaba pegada a la de
+// arriba: el tercer color de la marca la separa y de paso marca que aquí se
+// vende algo distinto a los servicios de la silla.
+const AcademyTeaser = ({ data, num = "04" }) => {
   const content = data?.enabled ? data.content : null;
   if (!content) return null;
   const courses = (content.courses || []).slice(0, 4);
+  const includes = (content.includes || []).slice(0, 3);
 
   return (
     <section id="academia" style={{
-      background: "var(--noir)", color: "var(--ivory)", padding: "120px 64px",
+      background: "var(--bronze)", color: "var(--noir)", padding: "120px 64px",
     }} className="section">
       <div style={{
         maxWidth: 1400, margin: "0 auto",
-        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 80, alignItems: "start",
+        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 72, alignItems: "start",
       }} className="services-grid">
         <div>
-          <Mono style={{ color: "var(--bronze)" }}>04 — Academia</Mono>
+          <Mono style={{ color: "rgba(12,12,12,0.5)" }}>{num} · Academia</Mono>
           <h2 style={{
             fontFamily: "var(--display)", fontWeight: 400,
             fontSize: "clamp(40px, 4.5vw, 64px)", lineHeight: 1.05,
             margin: "24px 0 32px", letterSpacing: "-0.01em",
           }}>
-            {content.headline || <>Aprende el oficio<br /><em style={{ color: "var(--bronze)" }}>en la silla.</em></>}
+            {content.headline || <>Aprende el oficio<br /><em>en la silla.</em></>}
           </h2>
           {content.intro && (
             <p style={{
-              fontFamily: "var(--sans)", fontSize: 15, lineHeight: 1.7,
-              opacity: 0.7, maxWidth: 420, margin: "0 0 36px",
+              fontFamily: "var(--sans)", fontSize: 15, lineHeight: 1.75,
+              color: "rgba(12,12,12,0.75)", maxWidth: 440, margin: "0 0 36px",
             }}>{content.intro}</p>
           )}
           <a href="/academia" style={{
             display: "inline-flex", alignItems: "center", gap: 12,
-            border: "1px solid var(--bronze)", color: "var(--bronze)",
+            background: "var(--noir)", color: "var(--ivory)",
+            border: "1px solid var(--noir)",
             textDecoration: "none", padding: "16px 28px",
             fontFamily: "var(--sans)", fontSize: 12, letterSpacing: "0.2em",
-            textTransform: "uppercase",
-          }}>
+            textTransform: "uppercase", transition: "all 0.25s",
+          }}
+            onMouseEnter={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--noir)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "var(--noir)"; e.currentTarget.style.color = "var(--ivory)"; }}
+          >
             Ver las clases →
           </a>
           {content.nextStart && (
             <div style={{
-              marginTop: 24, fontFamily: "var(--sans)", fontSize: 13, opacity: 0.55,
+              marginTop: 24, fontFamily: "var(--sans)", fontSize: 13,
+              color: "rgba(12,12,12,0.6)",
             }}>{content.nextStart}</div>
           )}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          {courses.map((c, i) => (
-            <a key={c.id || i} href="/academia" style={{
-              display: "grid", gridTemplateColumns: "1fr auto", gap: 24,
-              alignItems: "baseline", padding: "26px 0", textDecoration: "none",
-              color: "var(--ivory)",
-              borderTop: `1px solid rgba(245,241,234,${i === 0 ? "0.18" : "0.08"})`,
-            }}>
-              <div>
-                <h3 style={{
-                  fontFamily: "var(--display)", fontWeight: 400, fontSize: 26,
-                  margin: "0 0 8px", letterSpacing: "-0.01em",
-                }}>{c.name}</h3>
-                <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>
+        {/* Con un solo curso la lista de filas finas dejaba media pantalla en
+            blanco. La ficha en negro sobre el bronce llena ese hueco y adelanta
+            el temario, que es lo que de verdad convence a quien duda. */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {courses.map((c, i) => {
+            const topics = (c.topics || []).slice(0, 8);
+            const hidden = (c.topics || []).length - topics.length;
+            return (
+              <a key={c.id || i} href="/academia" style={{
+                display: "block", textDecoration: "none",
+                background: "var(--noir)", color: "var(--ivory)",
+                padding: "34px 36px", transition: "transform 0.25s, box-shadow 0.25s",
+              }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.transform = "translateY(-3px)";
+                  e.currentTarget.style.boxShadow = "0 18px 40px rgba(12,12,12,0.28)";
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = "none";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                <div style={{
+                  display: "grid", gridTemplateColumns: "1fr auto", gap: 24,
+                  alignItems: "baseline",
+                }}>
+                  <h3 style={{
+                    fontFamily: "var(--display)", fontWeight: 400, fontSize: 28,
+                    margin: 0, letterSpacing: "-0.01em",
+                  }}>{c.name}</h3>
+                  {c.price > 0 && (
+                    <div style={{
+                      fontFamily: "var(--sans)", fontSize: 18, color: "var(--bronze)",
+                      fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+                    }}>{formatPrice(c.price, c.note)}</div>
+                  )}
+                </div>
+
+                <Mono style={{ color: "var(--bronze)", fontSize: 10, display: "block", marginTop: 12 }}>
                   {[c.level, c.duration].filter(Boolean).join(" · ")}
                 </Mono>
-              </div>
-              {c.price > 0 && (
-                <div style={{
-                  fontFamily: "var(--sans)", fontSize: 18,
-                  fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
-                }}>{formatPrice(c.price, c.note)}</div>
-              )}
-            </a>
-          ))}
-          <div style={{ borderTop: "1px solid rgba(245,241,234,0.08)" }} />
+
+                {c.schedule && (
+                  <div style={{
+                    fontFamily: "var(--sans)", fontSize: 13, marginTop: 10,
+                    color: "rgba(245,241,234,0.6)",
+                  }}>{c.schedule}</div>
+                )}
+
+                {topics.length > 0 && (
+                  <div style={{
+                    display: "flex", flexWrap: "wrap", gap: 8, marginTop: 24,
+                    paddingTop: 24, borderTop: "1px solid rgba(245,241,234,0.12)",
+                  }}>
+                    {topics.map((t, j) => (
+                      <span key={j} style={{
+                        fontFamily: "var(--sans)", fontSize: 11.5,
+                        padding: "6px 12px", border: "1px solid rgba(245,241,234,0.18)",
+                        color: "rgba(245,241,234,0.85)",
+                      }}>{t}</span>
+                    ))}
+                    {hidden > 0 && (
+                      <span style={{
+                        fontFamily: "var(--sans)", fontSize: 11.5, padding: "6px 12px",
+                        color: "var(--bronze)",
+                      }}>+{hidden} temas más</span>
+                    )}
+                  </div>
+                )}
+              </a>
+            );
+          })}
+
+          {includes.length > 0 && (
+            <div style={{
+              fontFamily: "var(--sans)", fontSize: 13, lineHeight: 1.6,
+              color: "rgba(12,12,12,0.65)", paddingTop: 4,
+            }}>
+              Incluye: {includes.join(" · ")}
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -838,7 +903,7 @@ const AcademyTeaser = ({ data }) => {
 // ——————————————————————————————————————————————
 // MAPA DE UBICACIÓN
 // ——————————————————————————————————————————————
-const LocationMap = () => (
+const LocationMap = ({ num = "05" }) => (
   <section id="ubicacion" style={{ background: "var(--ivory)", color: "var(--noir)" }}>
     <div style={{
       maxWidth: 1400, margin: "0 auto",
@@ -847,7 +912,7 @@ const LocationMap = () => (
       alignItems: "flex-end", flexWrap: "wrap", gap: 24,
     }}>
       <div>
-        <Mono style={{ color: "var(--bronze)" }}>06 — Ubicación</Mono>
+        <Mono style={{ color: "var(--bronze)" }}>{num} · Ubicación</Mono>
         <h2 style={{
           fontFamily: "var(--display)", fontWeight: 400,
           fontSize: "clamp(32px, 3.5vw, 52px)", lineHeight: 1.05,
