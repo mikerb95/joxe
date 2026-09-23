@@ -58,7 +58,14 @@ export default async function handler(req, res) {
     const chairsCount = admin?.chairsCount ?? 3;
     const chairAssignments = admin?.chairAssignments ?? {};
 
-    return res.status(200).json({ services, employees, chairsCount, chairAssignments });
+    // Modo de cada tema de temporada (auto/on/off). Las fechas y los archivos
+    // viven en temas/catalogo.js; aquí solo viaja lo que eligió el admin.
+    const themes = Object.fromEntries(
+      Object.entries(admin?.themes || {})
+        .filter(([id, modo]) => /^[a-z0-9-]{1,40}$/.test(id) && ["auto", "on", "off"].includes(modo))
+    );
+
+    return res.status(200).json({ services, employees, chairsCount, chairAssignments, themes });
   } catch (err) {
     console.error("[catalog]", err.message);
     return res.status(500).json({ error: err.message });

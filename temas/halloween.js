@@ -4,18 +4,10 @@
 // compositor y nunca disparan layout. La capa entera y cada pieza llevan
 // pointer-events: none, de modo que no bloquea ningún clic.
 //
-// Se activa sola entre DESDE y HASTA (hora local del visitante). Para verla
-// fuera de temporada basta abrir la página con ?halloween=1; ?halloween=0 la
-// apaga aunque sea octubre.
+// Este archivo solo pinta. Cuándo se muestra (octubre, o cuando el admin lo
+// enciende) lo decide temas/cargador.js con los datos de temas/catalogo.js.
 (() => {
-  const DESDE = "10-01"; // MM-DD, ambos días incluidos
-  const HASTA = "10-31";
-
-  const forzar = new URLSearchParams(location.search).get("halloween");
-  const hoy = new Date();
-  const mmdd = `${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
-  const activa = forzar === "1" || (forzar !== "0" && mmdd >= DESDE && mmdd <= HASTA);
-  if (!activa || document.getElementById("hw-capa")) return;
+  if (document.getElementById("hw-capa")) return;
 
   // ruta: trayectoria diagonal (ver @keyframes hw-ruta-*). t: ancho en px.
   // d: duración del ciclo; el vuelo ocupa ~40% y el resto espera fuera de
