@@ -22,15 +22,15 @@
   // pantalla, así no hay murciélagos cruzando todo el tiempo. y: desfase
   // vertical de la ruta. a/b: ritmo del aleteo y del vaivén.
   const MURCIELAGOS = [
-    { ruta: "a", t: 46, d: 24, r: 1.5, y: 0,  o: 1,   a: 0.28, b: 1.7 },
-    { ruta: "a", t: 30, d: 24, r: 2.6, y: 12, o: 0.75, a: 0.24, b: 1.4, soloEscritorio: true },
-    { ruta: "b", t: 38, d: 31, r: 10,  y: 0,  o: 1,   a: 0.32, b: 2.0 },
-    { ruta: "c", t: 26, d: 37, r: 18,  y: 0,  o: 0.7, a: 0.22, b: 1.5, soloEscritorio: true },
+    { ruta: "a", t: 62, d: 24, r: 1.5, y: 0,  o: 1,    a: 0.28, b: 1.7 },
+    { ruta: "a", t: 40, d: 24, r: 2.6, y: 12, o: 0.75, a: 0.24, b: 1.4, soloEscritorio: true },
+    { ruta: "b", t: 52, d: 31, r: 10,  y: 0,  o: 1,    a: 0.32, b: 2.0 },
+    { ruta: "c", t: 34, d: 37, r: 18,  y: 0,  o: 0.7,  a: 0.22, b: 1.5, soloEscritorio: true },
   ];
 
   // x: columna fija en vw, pegada a los márgenes para no tapar el contenido.
   const FANTASMAS = [
-    { x: 3,  t: 38, d: 26, r: 4,  b: 3.2 },
+    { x: 1,  t: 38, d: 26, r: 4,  b: 3.2 },
     { x: 88, t: 30, d: 30, r: 13, b: 2.6 },
     { x: 64, t: 24, d: 34, r: 22, b: 3.6, soloEscritorio: true },
   ];
@@ -189,7 +189,7 @@
       /* Contorno bronce: sin él, el murciélago desaparece sobre las
          secciones oscuras del sitio. */
       stroke: var(--hw-bronce);
-      stroke-opacity: .7;
+      stroke-opacity: .85;
       stroke-width: 1;
       stroke-linejoin: round;
       vector-effect: non-scaling-stroke;
@@ -250,12 +250,12 @@
     }
     @keyframes hw-aleteo {
       from { transform: scale(1, 1); }
-      to   { transform: scale(.86, .28); }
+      to   { transform: scale(.88, .42); }
     }
     @keyframes hw-subida {
       0%        { transform: translate3d(0, 105vh, 0); opacity: 0; }
-      8%        { opacity: .9; }
-      38%       { opacity: .9; }
+      8%        { opacity: .85; }
+      38%       { opacity: .85; }
       48%, 100% { transform: translate3d(0, 22vh, 0); opacity: 0; }
     }
     @keyframes hw-vaiven {
