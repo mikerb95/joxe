@@ -4805,6 +4805,92 @@ const StylistSettingsView = ({ empId, onNav }) => {
   );
 };
 
+// Temas de temporada. La biblioteca (fechas, descripción, archivo) vive en
+// temas/catalogo.js; aquí solo se elige el modo de cada tema, que se guarda en
+// admin.themes y el sitio lee por /api/catalog.
+const THEME_MODES = [
+  {id:"auto", label:"Automático", color:C.gold},
+  {id:"on",   label:"Encendido",  color:C.green},
+  {id:"off",  label:"Apagado",    color:C.text},
+];
+
+const ThemesCard = ({admin,setAdmin}) => {
+  const T = window.JoxeTemas;
+  if (!T) return null;
+  const activo = T.temaActivo(admin.themes);
+  const setMode = (id,mode) => setAdmin(a=>({...a,themes:{...(a.themes||{}),[id]:mode}}));
+
+  const status = (t) => {
+    const mode = T.modoDe(admin.themes,t.id);
+    if (mode==="off") return {color:C.muted2,text:"Apagado. No aparece aunque sea temporada."};
+    if (activo?.id===t.id) return {color:C.green,text:mode==="on"
+      ? "Visible ahora en el sitio. Encendido a mano."
+      : "Visible ahora en el sitio por temporada."};
+    if (mode==="on" || T.enTemporada(t)) return {color:C.gold,text:`En espera: ${activo.nombre} tiene prioridad.`};
+    return {color:C.muted,text:`Se enciende solo el ${T.fechaLarga(t.desde)}.`};
+  };
+
+  return (
+    <Card>
+      <Mono style={{color:C.gold,display:"block",marginBottom:8}}>Temas de temporada</Mono>
+      <div style={{fontSize:12,color:C.muted,marginBottom:16,lineHeight:1.5}}>
+        Decoraciones animadas para la página de inicio. En automático, cada tema se
+        enciende solo durante su temporada, todos los años. Se muestra uno a la vez:
+        si enciendes uno a mano, tiene prioridad sobre los automáticos.
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:10}}>
+        {T.TEMAS.map(t=>{
+          const mode = T.modoDe(admin.themes,t.id);
+          const st = status(t);
+          return (
+            <div key={t.id} style={{padding:"14px 16px",background:C.s2,border:`1px solid ${C.bdr}`,
+              display:"flex",flexDirection:"column",gap:12}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,flexWrap:"wrap"}}>
+                <div style={{flex:"1 1 220px",minWidth:0}}>
+                  <div style={{fontSize:14}}>{t.nombre}</div>
+                  <div style={{fontSize:12,color:C.muted,marginTop:4}}>{t.descripcion}</div>
+                  <div style={{fontSize:12,color:C.muted,marginTop:4}}>
+                    Temporada: del {T.fechaLarga(t.desde)} al {T.fechaLarga(t.hasta)}.
+                  </div>
+                </div>
+                <a href={`/?tema=${t.id}`} target="_blank" rel="noopener" style={{
+                  color:C.muted,textDecoration:"none",fontFamily:"'JetBrains Mono',monospace",
+                  fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",whiteSpace:"nowrap",
+                  padding:"5px 0",
+                }} title="Abre el sitio con este tema, sin cambiar la configuración">
+                  Vista previa ↗
+                </a>
+              </div>
+              <div role="group" aria-label={`Modo del tema ${t.nombre}`} style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {THEME_MODES.map(m=>{
+                  const sel = mode===m.id;
+                  return (
+                    <button key={m.id} onClick={()=>setMode(t.id,m.id)} aria-pressed={sel} style={{
+                      flex:"1 1 0",padding:"8px 12px",cursor:"pointer",
+                      background:sel?`${m.color}18`:C.s3,
+                      border:`1px solid ${sel?m.color+"55":C.bdr}`,
+                      color:sel?m.color:C.muted,
+                      fontFamily:"'JetBrains Mono',monospace",fontSize:10,
+                      letterSpacing:"0.1em",textTransform:"uppercase",whiteSpace:"nowrap",
+                    }}>{m.label}</button>
+                  );
+                })}
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:C.muted}}>
+                <span style={{width:7,height:7,borderRadius:"50%",background:st.color,flexShrink:0}} />
+                {st.text}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{marginTop:12,fontSize:11,color:C.muted2}}>
+        Los cambios pueden tardar hasta un minuto en verse en el sitio.
+      </div>
+    </Card>
+  );
+};
+
 const SettingsView = ({ onNav }) => {
   const [admin,setAdmin] = useAdmin();
   const [,setAppts] = useAppts();
@@ -5240,6 +5326,9 @@ const SettingsView = ({ onNav }) => {
             </div>
           </div>
         </Card>
+
+        {/* Temas de temporada (Halloween, etc.) */}
+        <ThemesCard admin={admin} setAdmin={setAdmin} />
 
         {/* Push notifications */}
         <NotificationsCard />
