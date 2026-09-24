@@ -7,6 +7,7 @@
 //   grupo     sus hijos entran en cadena
 //   traza     línea que se dibuja de izquierda a derecha
 //   odometro  los dígitos ruedan hasta su valor
+//   estrellas las estrellas de la nota aparecen una por una
 //   iman      botón que se deja atraer por el cursor
 //   cinta     la cinta de servicios, cuya velocidad sigue al scroll
 //   mapa      el mapa se abre desde el centro
@@ -70,7 +71,19 @@
         onEnter: () => gsap.to(hijos, {
           y: 0, opacity: 1, duration: 0.9, ease: EASE,
           stagger: Number(el.dataset.mvPaso) || 0.07, clearProps: "transform",
+          ...sinTransicion(hijos),
         }),
+      });
+    },
+
+    // La opacidad de cada estrella vive en su atributo (las vacías van al
+    // 30 %), así que aquí solo se escala: tocar la opacidad las llenaría.
+    estrellas(el) {
+      const svgs = el.querySelectorAll("svg");
+      gsap.set(svgs, { scale: 0, transformOrigin: "50% 50%" });
+      ST.create({
+        trigger: el, start: INICIO, once: true,
+        onEnter: () => gsap.to(svgs, { scale: 1, duration: 0.6, ease: "back.out(2.2)", stagger: 0.08, delay: 0.3, clearProps: "transform" }),
       });
     },
 
@@ -112,15 +125,21 @@
     // se sube, retrocede. Fuera de pantalla se detiene.
     cinta(el) {
       el.classList.add("mv-cinta-on");
-      let x = 0, vel = 0, dir = 1, visible = false;
+      // La regla va aparte y lleva su propio recorrido sin envolver: al dar
+      // la vuelta la pista salta un tercio de su ancho, que no es múltiplo
+      // de la separación de las marcas, y las marcas saltarían con ella.
+      const regla = el.parentElement.querySelector(".cinta-regla");
+      let x = 0, recorrido = 0, vel = 0, dir = 1, visible = false;
       const BASE = 38; // px por segundo
       const tick = (t, dt) => {
         const ancho = el.scrollWidth / 3;
         if (!ancho) return;
         vel *= 0.92;
-        x -= ((BASE + Math.min(Math.abs(vel), 3000) * 0.12) * dir * dt) / 1000;
-        x = gsap.utils.wrap(-ancho, 0, x);
+        const paso = ((BASE + Math.min(Math.abs(vel), 3000) * 0.12) * dir * dt) / 1000;
+        x = gsap.utils.wrap(-ancho, 0, x - paso);
+        recorrido = (recorrido - paso) % 60;
         gsap.set(el, { x });
+        if (regla) regla.style.backgroundPosition = `${recorrido}px 100%, ${recorrido}px 100%`;
       };
       ST.create({
         trigger: el, start: "top bottom", end: "bottom top",
@@ -144,13 +163,25 @@
     },
   };
 
+  // Si el elemento ya trae una transición CSS de transform (tarjetas con
+  // hover), la transición suavizaría cada fotograma de GSAP y la entrada se
+  // arrastraría. Se apaga mientras dura y se devuelve la original al final.
+  const sinTransicion = els => {
+    const antes = els.map(e => e.style.transition);
+    els.forEach(e => { if (e.style.transition) e.style.transition = "none"; });
+    return { onComplete: () => els.forEach((e, i) => { e.style.transition = antes[i]; }) };
+  };
+
   // "sube" se agrupa: los bloques que entran en pantalla a la vez lo hacen en
   // cadena en lugar de todos juntos.
   const subir = els => {
     gsap.set(els, { y: 32, opacity: 0 });
     ST.batch(els, {
       start: INICIO, once: true,
-      onEnter: lote => gsap.to(lote, { y: 0, opacity: 1, duration: 1, ease: EASE, stagger: 0.08, clearProps: "transform" }),
+      onEnter: lote => gsap.to(lote, {
+        y: 0, opacity: 1, duration: 1, ease: EASE, stagger: 0.08, clearProps: "transform",
+        ...sinTransicion(lote),
+      }),
     });
   };
 
@@ -158,7 +189,7 @@
   // que el motor pudo haber tocado.
   const rescatar = err => {
     console.error("[motor]", err);
-    gsap.set(".mv-li, .mv-trazo, .mv-rt, [data-mv=traza], [data-mv=grupo] > *, [data-mv=sube], [data-mv=mapa]",
+    gsap.set(".mv-li, .mv-trazo, .mv-rt, [data-mv=traza], [data-mv=grupo] > *, [data-mv=sube], [data-mv=mapa], [data-mv=estrellas] svg",
       { clearProps: "transform,opacity,clipPath" });
     document.querySelectorAll(".odo-t").forEach(t => gsap.set(t, { yPercent: Number(t.dataset.y) }));
   };

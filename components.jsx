@@ -432,7 +432,7 @@ const Services = ({ num = "01" }) => {
                   }}>
                   <span className="srv-regla" data-mv="traza" aria-hidden="true"
                     style={i === 0 ? { background: "rgba(20,18,18,0.15)" } : undefined} />
-                  <div>
+                  <div data-mv="sube">
                     <h3 style={{
                       fontFamily: "var(--display)", fontWeight: 400,
                       fontSize: 28, margin: "0 0 10px", letterSpacing: "-0.01em",
