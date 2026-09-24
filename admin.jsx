@@ -1991,7 +1991,7 @@ const CrmView = () => {
                             <div style={{display:"flex",flexDirection:"column",gap:10}}>
                               {[
                                 ["Cédula", c.cedula||"—"],
-                                ["Teléfono", c.phone ? fmtPhone(c.phone) : "—"],
+                                ["Teléfono", fmtPhone(c.phone)],
                                 ["Email", c.email],
                                 ["Cumpleaños", c.birthday?fmtDateShort(c.birthday):null],
                                 ["Notas", c.notes],
