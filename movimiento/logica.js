@@ -24,10 +24,10 @@
 
   // ------------------------------------------------------------------
   // CROQUIS: cabeza de perfil (mirando a la izquierda) en un lienzo de
-  // 640 x 720. Todas las piezas salen de los mismos tramos, así el pelo
+  // 680 x 720. Todas las piezas salen de los mismos tramos, así el pelo
   // calza exacto sobre el cuero cabelludo que dibuja el perfil.
   // ------------------------------------------------------------------
-  const ANCHO = 640;
+  const ANCHO = 680;
   const ALTO = 720;
 
   // Cráneo: de la línea frontal del pelo (u = 0) a la nuca (u = 1).
