@@ -258,7 +258,7 @@ const Hero = ({ onReserveClick }) => (
 );
 
 // ——————————————————————————————————————————————
-// CINTA
+// MARQUEE
 // ——————————————————————————————————————————————
 // Una cinta métrica con los servicios: el motor la mueve y el scroll la
 // acelera (o la hace retroceder si se sube). Sin motor corre con CSS, y con

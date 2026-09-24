@@ -234,8 +234,6 @@
     const p = puntoCuero(U_PIVOTE);
     const a = (clamp(grados, 0, 90) * Math.PI) / 180;
     const dir = [Math.cos(a) * p.tx + Math.sin(a) * p.nx, Math.cos(a) * p.ty + Math.sin(a) * p.ny];
-    const mitad = a / 2;
-    const bis = [Math.cos(mitad) * p.tx + Math.sin(mitad) * p.nx, Math.cos(mitad) * p.ty + Math.sin(mitad) * p.ny];
     const ini = [p.x + p.tx * radio, p.y + p.ty * radio];
     const fin = [p.x + dir[0] * radio, p.y + dir[1] * radio];
     return {
@@ -244,7 +242,6 @@
       rx2: r1(p.x + p.tx * largo * 0.9), ry2: r1(p.y + p.ty * largo * 0.9),
       // De la tangente hacia la normal el giro va en sentido antihorario.
       arco: `M${r1(ini[0])} ${r1(ini[1])}A${radio} ${radio} 0 0 0 ${r1(fin[0])} ${r1(fin[1])}`,
-      tx: r1(p.x + bis[0] * (radio + 26)), ty: r1(p.y + bis[1] * (radio + 26)),
     };
   };
 
