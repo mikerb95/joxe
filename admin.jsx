@@ -7667,7 +7667,8 @@ const EmpHelpView = ({onNav}) => {
           </div>
           <Step n="1" text={<>Entra a <strong style={{color:C.text}}>Confirmar citas</strong> — el número en el menú indica cuántas tienes pendientes.</>} />
           <Step n="2" text={<>Toca <strong style={{color:C.text}}>✓ Confirmar</strong> para aceptarla, o <strong style={{color:C.text}}>✕</strong> para rechazarla.</>} />
-          <Step n="3" text={<>Una cita <strong style={{color:C.text}}>expirada</strong> (sin confirmar a tiempo) se puede reactivar con <strong style={{color:C.text}}>↺</strong>.</>} />
+          <Step n="3" text={<>Al confirmarla aparece el botón <strong style={{color:C.text}}>WhatsApp</strong>: te abre el chat del cliente para escribirle sin buscar su número.</>} />
+          <Step n="4" text={<>Una cita <strong style={{color:C.text}}>expirada</strong> (sin confirmar a tiempo) se puede reactivar con <strong style={{color:C.text}}>↺</strong>.</>} />
           <div style={{
             padding:"12px 14px",fontSize:12,color:C.muted,lineHeight:1.6,
             background:"rgba(194,158,102,0.05)",border:`1px solid ${C.gold}20`,
