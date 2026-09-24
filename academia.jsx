@@ -345,7 +345,7 @@ const AcEnroll = React.forwardRef(({ content, courseId, onCourseChange }, ref) =
             </AcField>
             <AcField label="Celular">
               <PhoneField required ariaLabel="Celular" value={form.phone}
-                onChange={phone => setForm(f => ({ ...f, phone }))}
+                onChange={phone => { setForm(f => ({ ...f, phone })); setError(""); }}
                 fieldStyle={acInputStyle} focusColor="var(--bronze)" />
             </AcField>
             <AcField label="Correo (opcional)">
