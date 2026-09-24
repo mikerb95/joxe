@@ -412,7 +412,7 @@ const Services = ({ num = "01" }) => {
           </p>
           {window.FichaServicio && (
             <FichaServicio servicios={services} activa={activa} hoy={hoy}
-              precio={formatServicePrice} dias={dayPriceLabels} duracion={formatDur} />
+              precio={formatServicePrice} dias={dayPriceLabels} />
           )}
         </div>
         <div>

@@ -116,9 +116,11 @@
   }
   .ficha-hoy { display: inline-flex; align-items: center; gap: 7px; color: var(--ivory); }
   .ficha-hoy i { width: 6px; height: 6px; border-radius: 50%; background: var(--bronze); display: inline-block; }
+  /* Tres líneas reservadas: el nombre más largo del catálogo ocupa tres y la
+     ficha no debe cambiar de alto al pasar de un servicio a otro. */
   .ficha-nombre {
-    font-family: var(--display); font-size: 27px; line-height: 1.14; letter-spacing: -.01em;
-    margin: 16px 0 26px; min-height: 2.28em; text-wrap: balance;
+    font-family: var(--display); font-size: 25px; line-height: 1.14; letter-spacing: -.01em;
+    margin: 16px 0 22px; min-height: 3.42em; text-wrap: balance;
   }
   .ficha-dato { display: flex; justify-content: space-between; align-items: baseline; }
   .ficha-rot { font-size: 9px; letter-spacing: .2em; color: rgba(245,241,234,.5); }

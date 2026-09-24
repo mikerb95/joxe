@@ -93,7 +93,15 @@ const Asoma = ({ children, style }) => {
 // llegar al salón. La lista sigue siendo el contenido; la ficha es la prueba
 // de "sin sorpresas".
 // ------------------------------------------------------------------
-const FichaServicio = ({ servicios, activa, precio, dias, duracion, hoy }) => {
+// Duración con las mismas unidades que la regla de la ficha ("1 h", "2 h 30 min").
+const duracionFicha = mins => {
+  if (!mins) return "";
+  const h = Math.floor(mins / 60), m = mins % 60;
+  if (!h) return `${m} min`;
+  return m ? `${h} h ${m} min` : `${h} h`;
+};
+
+const FichaServicio = ({ servicios, activa, precio, dias, hoy }) => {
   const s = servicios[activa] || servicios[0];
   if (!s) return null;
   const maxDur = Math.max(240, ...servicios.map(x => x.dur || 0));
@@ -115,7 +123,7 @@ const FichaServicio = ({ servicios, activa, precio, dias, duracion, hoy }) => {
 
         <div className="ficha-dato">
           <span className="ficha-rot">Duración</span>
-          <span className="ficha-val">{duracion(s.dur)}</span>
+          <span className="ficha-val">{duracionFicha(s.dur)}</span>
         </div>
         <div className="ficha-regla">
           <span className="ficha-regla-fill" style={{ transform: `scaleX(${(s.dur || 0) / maxDur})` }} />
