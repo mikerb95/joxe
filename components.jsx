@@ -189,6 +189,10 @@ const Nav = ({ onReserveClick, scrolled, hasReviews, hasAcademy, hrefPrefix = ""
 // ——————————————————————————————————————————————
 // HERO
 // ——————————————————————————————————————————————
+// La mitad derecha es el croquis de movimiento/piezas.jsx: el corte se
+// dibuja antes de hacerse, que es lo que dice el titular. Las líneas del
+// titular y el rótulo entran solos al cargar (data-mv-carga); el resto de la
+// página entra con el scroll.
 const Hero = ({ onReserveClick }) => (
   <section id="top" style={{
     minHeight: "100vh", background: "var(--noir)", color: "var(--ivory)",
@@ -200,41 +204,44 @@ const Hero = ({ onReserveClick }) => (
       padding: "140px 64px 80px",
       display: "flex", flexDirection: "column", justifyContent: "center",
       gap: 32,
-    }} className="hero-text">
-      <Mono style={{ color: "var(--bronze)" }}>Soacha · San Mateo</Mono>
-      <h1 style={{
+    }} className="hero-text" data-mv-carga="0.15">
+      <Rotulo style={{ color: "var(--bronze)" }}>Soacha · San Mateo</Rotulo>
+      <h1 data-mv="lineas" data-mv-carga="0.25" style={{
         fontFamily: "var(--display)", fontWeight: 400,
         fontSize: "clamp(48px, 6vw, 92px)", lineHeight: 1.02,
         letterSpacing: "-0.01em", margin: 0,
       }}>
-        La imagen<br />
-        <em style={{ fontStyle: "italic", color: "var(--bronze)" }}>no se improvisa.</em><br />
-        Se diseña.
+        <L>La imagen</L>
+        <L><em style={{ fontStyle: "italic", color: "var(--bronze)" }}>no se improvisa.</em></L>
+        <L>Se diseña.</L>
       </h1>
-      <p style={{
+      <p data-mv="sube" style={{
         fontFamily: "var(--sans)", fontSize: 17, lineHeight: 1.6,
         maxWidth: 440, opacity: 0.75, margin: 0,
       }}>
         Un espacio donde el corte, el color y la asesoría se trabajan
         con precisión. Atención personalizada, sin apuros, sin plantillas.
       </p>
-      <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <button onClick={onReserveClick} style={{
+      <div data-mv="sube" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+        <button onClick={onReserveClick} data-mv="iman" style={{
           background: "var(--bronze)", border: "none", color: "var(--noir)",
           padding: "18px 32px", fontFamily: "var(--sans)",
           fontSize: 13, letterSpacing: "0.2em", textTransform: "uppercase",
           cursor: "pointer", fontWeight: 500,
         }}>
-          Reservar cita →
+          <span className="mv-iman-t">Reservar cita →</span>
         </button>
-        <a href="#galeria" style={{
-          color: "var(--ivory)", fontFamily: "var(--sans)", fontSize: 13,
-          letterSpacing: "0.2em", textTransform: "uppercase",
-          padding: "18px 8px", borderBottom: "1px solid rgba(245,241,234,0.3)",
-          textDecoration: "none",
-        }}>
-          Ver trabajos
-        </a>
+        {/* Sin fotos reales no hay galería, y el enlace no lleva a nada. */}
+        {HAS_GALLERY && (
+          <a href="#galeria" style={{
+            color: "var(--ivory)", fontFamily: "var(--sans)", fontSize: 13,
+            letterSpacing: "0.2em", textTransform: "uppercase",
+            padding: "18px 8px", borderBottom: "1px solid rgba(245,241,234,0.3)",
+            textDecoration: "none",
+          }}>
+            Ver trabajos
+          </a>
+        )}
       </div>
       <div style={{
         position: "absolute", bottom: 32, left: 64,
@@ -245,48 +252,30 @@ const Hero = ({ onReserveClick }) => (
       </div>
     </div>
     <div style={{ position: "relative" }} className="hero-image">
-      <Placeholder
-        label={"FOTO HERO\nTransformación reciente — retrato vertical\nIluminación cálida, fondo neutro"}
-        ratio="auto"
-        tone="noir"
-        note="1600×2000px · formato vertical"
-      />
-      <div style={{
-        position: "absolute", bottom: 32, right: 32,
-        padding: "14px 18px", background: "rgba(12,12,12,0.6)",
-        backdropFilter: "blur(10px)", border: "1px solid rgba(194,158,102,0.3)",
-      }}>
-        <Mono style={{ color: "var(--bronze)", fontSize: 9, display: "block", marginBottom: 4 }}>
-          Trabajo reciente
-        </Mono>
-        <div style={{
-          fontFamily: "var(--sans)", fontSize: 12, color: "var(--ivory)",
-          letterSpacing: "0.05em",
-        }}>
-          Tintura + corte
-        </div>
-      </div>
+      <Croquis />
     </div>
   </section>
 );
 
 // ——————————————————————————————————————————————
-// MARQUEE
+// CINTA
 // ——————————————————————————————————————————————
+// Una cinta métrica con los servicios: el motor la mueve y el scroll la
+// acelera (o la hace retroceder si se sube). Sin motor corre con CSS, y con
+// movimiento reducido se queda quieta. Las tres copias van sin gap entre
+// ellas (cada ítem lleva su propio margen) para que un tercio del ancho
+// sea exactamente una vuelta y no se note el empalme.
 const Marquee = () => {
   const items = ["Corte", "Barba", "Tinturas", "Keratina", "Cepillado", "Ondulado permanente", "Limpieza facial", "Asesoría de imagen"];
   return (
-    <div style={{
+    <div className="cinta" aria-hidden="true" style={{
       background: "var(--ivory)", color: "var(--noir)",
-      padding: "28px 0", borderTop: "1px solid rgba(20,18,18,0.1)",
-      borderBottom: "1px solid rgba(20,18,18,0.1)", overflow: "hidden",
+      padding: "28px 0 30px", borderTop: "1px solid rgba(20,18,18,0.1)",
+      borderBottom: "1px solid rgba(20,18,18,0.1)",
     }}>
-      <div style={{
-        display: "flex", gap: 64, whiteSpace: "nowrap",
-        animation: "marquee 40s linear infinite",
-      }}>
+      <div className="cinta-pista" data-mv="cinta">
         {[...items, ...items, ...items].map((item, i) => (
-          <div key={i} style={{ display: "flex", alignItems: "center", gap: 64 }}>
+          <div key={i} className="cinta-item">
             <span style={{
               fontFamily: "var(--display)", fontSize: 28,
               fontStyle: "italic", fontWeight: 400,
@@ -295,6 +284,7 @@ const Marquee = () => {
           </div>
         ))}
       </div>
+      <div className="cinta-regla" />
     </div>
   );
 };
