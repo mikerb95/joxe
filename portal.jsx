@@ -785,7 +785,7 @@ const BookingPortal = () => {
       date: form.date,
       time: form.time,
       name: form.name,
-      phone: form.phone,
+      phone: normPhone(form.phone),
       cedula: form.cedula,
       createdAt: Date.now(),
       status: "pending",
@@ -825,16 +825,14 @@ const BookingPortal = () => {
   const TOTAL_STEPS = 4;
 
   // Inline field validation for step 4
-  const cleanDigits = (s) => (s || "").replace(/\D/g, "");
   const trimmedName = form.name.trim();
-  const phoneDigits = cleanDigits(form.phone);
   const errors = {
     name:   trimmedName.length === 0 ? "" : nameLetters(trimmedName) < 3 ? "Ingresa al menos 3 letras." : "",
-    phone:  phoneDigits.length === 0 ? "" : phoneDigits.length !== 10 ? "Debe tener 10 dígitos (ej: 300 123 4567)." : "",
+    phone:  phoneError(form.phone),
     cedula: form.cedula.length === 0 ? "" : (form.cedula.length < 6 || form.cedula.length > 12) ? "Cédula entre 6 y 12 dígitos." : "",
   };
   const step4Valid = nameLetters(trimmedName) >= 3
-    && phoneDigits.length === 10
+    && normPhone(form.phone).startsWith("+") && !errors.phone
     && form.cedula.length >= 6 && form.cedula.length <= 12;
 
   const canNext = (step === 1 && !!form.service)
@@ -1157,12 +1155,11 @@ const BookingPortal = () => {
                 <label htmlFor="bk-phone">
                   <PMono style={{ display: "block", marginBottom: 10, fontSize: 10 }}>WhatsApp</PMono>
                 </label>
-                <input id="bk-phone" name="tel" type="tel" autoComplete="tel" required
-                  value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                  placeholder="300 123 4567" inputMode="tel"
-                  aria-invalid={!!errors.phone}
-                  aria-describedby={errors.phone ? "bk-phone-err" : undefined}
-                  style={{
+                <PhoneField id="bk-phone" required theme="light"
+                  value={form.phone} onChange={phone => setForm(f => ({ ...f, phone }))}
+                  invalid={!!errors.phone}
+                  describedBy={errors.phone ? "bk-phone-err" : undefined}
+                  fieldStyle={{
                     width: "100%", padding: "18px 20px",
                     border: `1px solid ${errors.phone ? "#C46666" : "rgba(12,12,12,0.2)"}`, background: "#FFF",
                     fontFamily: "'Outfit', sans-serif", fontSize: 15, color: "#0C0C0C",
@@ -1767,7 +1764,7 @@ const ScanPortal = () => {
                   </div>
                   <div>
                     <PMono style={{ color: "rgba(245,241,234,0.5)", fontSize: 9, display: "block", marginBottom: 6 }}>Contacto</PMono>
-                    <div style={{ fontSize: 14, fontFamily: "'JetBrains Mono', monospace" }}>{scanned.phone}</div>
+                    <div style={{ fontSize: 14, fontFamily: "'JetBrains Mono', monospace" }}>{fmtPhone(scanned.phone)}</div>
                   </div>
                 </div>
                 <button onClick={activateTurn} style={{
@@ -3391,7 +3388,7 @@ const CheckInAdminView = ({ store, setStore, employee, headerRight }) => {
                 padding: "24px", marginBottom: 28,
                 display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
                 {[["Servicio", inService.service], ["Estilista", inService.stylist],
-                  ["Teléfono", inService.phone], ["Cédula", inService.cedula]].map(([label, val]) => (
+                  ["Teléfono", fmtPhone(inService.phone)], ["Cédula", inService.cedula]].map(([label, val]) => (
                   <div key={label}>
                     <PMono style={{ color: "rgba(245,241,234,0.35)", fontSize: 9, display: "block", marginBottom: 6 }}>{label}</PMono>
                     <div style={{ fontFamily: "'Marcellus', serif", fontSize: 17 }}>{val || "—"}</div>
@@ -4500,7 +4497,7 @@ const AgendaPortal = () => {
                   {a.phone && (
                     <div style={{ marginBottom: 14 }}>
                       <PMono style={{ color: "rgba(245,241,234,0.3)", fontSize: 9, display: "block", marginBottom: 4 }}>WhatsApp</PMono>
-                      <div style={{ fontSize: 13, color: "rgba(245,241,234,0.7)" }}>{a.phone}</div>
+                      <div style={{ fontSize: 13, color: "rgba(245,241,234,0.7)" }}>{fmtPhone(a.phone)}</div>
                     </div>
                   )}
 

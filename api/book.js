@@ -1,4 +1,4 @@
-import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr, cleanName, nameError } from "../lib/db.js";
+import { initTables, kvGet, kvGetWithMeta, kvCas, applyCors, clientIp, rateLimit, sanitizeStr, cleanName, nameError, normPhone, phoneError } from "../lib/db.js";
 // kvGet: reads admin_store (catalog); kvGetWithMeta + kvCas: optimistic append.
 import { blocksFromStore, blockConflict } from "../lib/blocks.js";
 import { notifyStaff } from "../lib/notify.js";
@@ -34,6 +34,8 @@ function validateAppt(raw) {
   // puede hacer a mano.
   const nameErr = nameError(raw.name, { min: 3, max: 120 });
   if (nameErr) return { error: nameErr };
+  const phoneErr = phoneError(raw.phone);
+  if (phoneErr) return { error: phoneErr };
 
   // Whitelist fields. Sanitize free-text. Cap lengths.
   const appt = {
@@ -45,7 +47,7 @@ function validateAppt(raw) {
     date: String(raw.date),
     time: String(raw.time),
     name: cleanName(raw.name, 120),
-    phone: String(raw.phone ?? "").replace(/\D/g, "").slice(0, 20),
+    phone: normPhone(raw.phone),
     cedula: String(raw.cedula ?? "").replace(/\D/g, "").slice(0, 20),
     createdAt: Number.isFinite(Number(raw.createdAt)) ? Number(raw.createdAt) : Date.now(),
     status: ["pending", "scheduled", "confirmed"].includes(raw.status) ? raw.status : "pending",

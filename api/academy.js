@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   initTables, kvGet, kvGetCached, kvGetWithMeta, kvCas, kvInvalidate,
   applyCors, clientIp, rateLimit, sanitizeStr, cleanName, nameError,
-  verifyStaffAuth, verifyAdminAuth,
+  normPhone, phoneError, verifyStaffAuth, verifyAdminAuth,
 } from "../lib/db.js";
 import { notifyStaff } from "../lib/notify.js";
 
@@ -197,8 +197,9 @@ export default async function handler(req, res) {
     if (nameErr) return res.status(400).json({ error: nameErr });
     const name = cleanName(rawName, 80);
 
-    const phone = String(rawPhone ?? "").replace(/\D/g, "").slice(0, 15);
-    if (phone.length < 7) return res.status(400).json({ error: "Escribe un celular válido" });
+    const phoneErr = phoneError(rawPhone);
+    if (phoneErr) return res.status(400).json({ error: phoneErr });
+    const phone = normPhone(rawPhone);
 
     const email = str(rawEmail, 120);
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
