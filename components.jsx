@@ -86,7 +86,7 @@ const Nav = ({ onReserveClick, scrolled, hasReviews, hasAcademy, hrefPrefix = ""
   const [open, setOpen] = React.useState(false);
   const links = [
     ["Servicios", `${hrefPrefix}#servicios`],
-    ["Galería", `${hrefPrefix}#galeria`],
+    ...(HAS_GALLERY ? [["Galería", `${hrefPrefix}#galeria`]] : []),
     ...(hasReviews ? [["Reseñas", `${hrefPrefix}#resenas`]] : []),
     // El enlace lleva al adelanto del home, no directo a /academia: desde ahí
     // el botón "Ver las clases" abre la página completa. Fuera del home el
@@ -335,6 +335,9 @@ const FALLBACK_SERVICES = [
 
 const Services = ({ num = "01" }) => {
   const [services, setServices] = React.useState(FALLBACK_SERVICES);
+  const [activa, setActiva] = React.useState(0);
+  const lista = React.useRef(null);
+  const apuntando = React.useRef(false);
 
   React.useEffect(() => {
     fetch("/api/catalog")
@@ -342,6 +345,37 @@ const Services = ({ num = "01" }) => {
       .then(data => { if (data.services?.length) setServices(data.services); })
       .catch(() => {});
   }, []);
+
+  // La ficha (solo escritorio) sigue a la fila que cruza la línea de
+  // lectura, un poco por encima del centro de la pantalla. Si el cursor está
+  // sobre la lista manda el cursor, y el scroll no la cambia bajo la mano.
+  React.useEffect(() => {
+    const M = window.JoxeMovimiento;
+    if (!M || !lista.current) return;
+    const escritorio = window.matchMedia("(min-width: 901px)");
+    let frame = null;
+    const medir = () => {
+      frame = null;
+      if (apuntando.current || !escritorio.matches || !lista.current) return;
+      const filas = Array.from(lista.current.querySelectorAll("[data-fila]"))
+        .map(el => el.getBoundingClientRect());
+      const i = M.filaActiva(filas, window.innerHeight * 0.45);
+      if (i >= 0) setActiva(i);
+    };
+    const programar = () => { if (frame == null) frame = requestAnimationFrame(medir); };
+    programar();
+    window.addEventListener("scroll", programar, { passive: true });
+    window.addEventListener("resize", programar);
+    return () => {
+      window.removeEventListener("scroll", programar);
+      window.removeEventListener("resize", programar);
+      if (frame != null) cancelAnimationFrame(frame);
+    };
+  }, [services]);
+
+  // Precio especial de hoy (hora de Colombia), si el servicio lo tiene.
+  const claveHoy = window.JoxeMovimiento ? window.JoxeMovimiento.diaBogota() : null;
+  const hoy = claveHoy ? { clave: claveHoy, nombre: DAY_NAMES[claveHoy] } : null;
 
   return (
     <section id="servicios" style={{
@@ -353,66 +387,80 @@ const Services = ({ num = "01" }) => {
         maxWidth: 1400, margin: "0 auto",
       }} className="services-grid">
         <div>
-          <Mono style={{ color: "var(--bronze)" }}>{num} · Servicios</Mono>
-          <h2 style={{
+          <Rotulo style={{ color: "var(--bronze)" }}>{num} · Servicios</Rotulo>
+          <h2 data-mv="lineas" style={{
             fontFamily: "var(--display)", fontWeight: 400,
             fontSize: "clamp(40px, 4.5vw, 64px)", lineHeight: 1.05,
             margin: "24px 0 32px", letterSpacing: "-0.01em",
           }}>
-            Precios claros.<br />
-            <em style={{ color: "var(--bronze)" }}>Sin sorpresas.</em>
+            <L>Precios claros.</L>
+            <L><em style={{ color: "var(--bronze)" }}>Sin sorpresas.</em></L>
           </h2>
-          <p style={{
+          <p data-mv="sube" style={{
             fontFamily: "var(--sans)", fontSize: 15, lineHeight: 1.6,
             opacity: 0.7, maxWidth: 340, marginBottom: 40,
           }}>
             La consulta inicial siempre es gratis. Te contamos qué
             necesita tu cabello antes de tocarlo.
           </p>
-          <p style={{
+          <p data-mv="sube" style={{
             fontFamily: "var(--sans)", fontSize: 13, lineHeight: 1.6,
             opacity: 0.5, maxWidth: 340,
           }}>
             Los precios pueden variar según largo, densidad y estado del cabello.
             Te confirmamos el valor exacto en la consulta.
           </p>
+          {window.FichaServicio && (
+            <FichaServicio servicios={services} activa={activa} hoy={hoy}
+              precio={formatServicePrice} dias={dayPriceLabels} duracion={formatDur} />
+          )}
         </div>
         <div>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {services.map((item, i) => (
-              <div key={item.id || i} style={{
-                display: "grid",
-                gridTemplateColumns: "1fr auto",
-                gap: 32, padding: "28px 0",
-                borderTop: i === 0 ? "1px solid rgba(20,18,18,0.15)" : "1px solid rgba(20,18,18,0.08)",
-                alignItems: "baseline",
-              }}>
-                <div>
-                  <h3 style={{
-                    fontFamily: "var(--display)", fontWeight: 400,
-                    fontSize: 28, margin: "0 0 10px", letterSpacing: "-0.01em",
-                  }}>{item.name}</h3>
-                  {item.dur > 0 && (
-                    <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>
-                      {formatDur(item.dur)}
-                    </Mono>
-                  )}
+          <div ref={lista} style={{ display: "flex", flexDirection: "column" }}
+            onMouseLeave={() => { apuntando.current = false; }}>
+            {services.map((item, i) => {
+              const hoyPrecio = hoy && Number(item.dayPrices?.[hoy.clave]) > 0;
+              return (
+                <div key={item.id || i} data-fila
+                  className={"srv-fila" + (i === activa ? " activa" : "")}
+                  onMouseEnter={() => { apuntando.current = true; setActiva(i); }}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr auto",
+                    gap: 32, padding: "28px 0",
+                    alignItems: "baseline",
+                  }}>
+                  <span className="srv-regla" data-mv="traza" aria-hidden="true"
+                    style={i === 0 ? { background: "rgba(20,18,18,0.15)" } : undefined} />
+                  <div>
+                    <h3 style={{
+                      fontFamily: "var(--display)", fontWeight: 400,
+                      fontSize: 28, margin: "0 0 10px", letterSpacing: "-0.01em",
+                    }}>{item.name}</h3>
+                    {item.dur > 0 && (
+                      <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>
+                        {formatDur(item.dur)}
+                      </Mono>
+                    )}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{
+                      fontFamily: "var(--sans)", fontSize: 20,
+                      fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+                      letterSpacing: "-0.01em",
+                    }}><Odometro texto={formatServicePrice(item)} /></div>
+                    {dayPriceLabels(item).map(label => (
+                      <Mono key={label} style={{ color: "var(--bronze)", fontSize: 10, display: "block", marginTop: 8 }}>
+                        {label}{hoyPrecio && label.startsWith(hoy.nombre) ? " · hoy" : ""}
+                      </Mono>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ textAlign: "right" }}>
-                  <div style={{
-                    fontFamily: "var(--sans)", fontSize: 20,
-                    fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
-                    letterSpacing: "-0.01em",
-                  }}>{formatServicePrice(item)}</div>
-                  {dayPriceLabels(item).map(label => (
-                    <Mono key={label} style={{ color: "var(--bronze)", fontSize: 10, display: "block", marginTop: 8 }}>
-                      {label}
-                    </Mono>
-                  ))}
-                </div>
-              </div>
-            ))}
-            <div style={{ borderTop: "1px solid rgba(20,18,18,0.08)" }} />
+              );
+            })}
+            <div style={{ position: "relative", height: 1 }}>
+              <span className="srv-regla" data-mv="traza" aria-hidden="true" />
+            </div>
           </div>
         </div>
       </div>
@@ -423,8 +471,15 @@ const Services = ({ num = "01" }) => {
 // ——————————————————————————————————————————————
 // ANTES / DESPUÉS
 // ——————————————————————————————————————————————
-const BeforeAfter = () => {
+// Recibe las URLs de las dos fotos del caso. Sin ellas muestra los
+// marcadores, pero la galería no se pinta mientras no haya casos reales.
+const BeforeAfter = ({ before, after }) => {
   const [pos, setPos] = React.useState(50);
+  const foto = (src, alt) => (
+    <img src={src} alt={alt} loading="lazy" draggable="false" style={{
+      width: "100%", height: "100%", objectFit: "cover", display: "block",
+    }} />
+  );
   return (
     <div style={{
       position: "relative", aspectRatio: "4/5", overflow: "hidden",
@@ -443,12 +498,12 @@ const BeforeAfter = () => {
     }}
     >
       <div style={{ position: "absolute", inset: 0 }}>
-        <Placeholder label={"DESPUÉS\nFoto final del cliente"} ratio="auto" tone="noir" />
+        {after ? foto(after, "Después") : <Placeholder label={"DESPUÉS\nFoto final del cliente"} ratio="auto" tone="noir" />}
       </div>
       <div style={{
         position: "absolute", inset: 0, clipPath: `inset(0 ${100 - pos}% 0 0)`,
       }}>
-        <Placeholder label={"ANTES\nFoto inicial del cliente"} ratio="auto" tone="ivory" />
+        {before ? foto(before, "Antes") : <Placeholder label={"ANTES\nFoto inicial del cliente"} ratio="auto" tone="ivory" />}
       </div>
       <div style={{
         position: "absolute", top: 0, bottom: 0, left: `${pos}%`,
@@ -484,14 +539,18 @@ const BeforeAfter = () => {
 // ——————————————————————————————————————————————
 // GALERÍA
 // ——————————————————————————————————————————————
+// Casos reales del salón, con permiso del cliente. Cada uno:
+//   { title, meta, stylist, before: "/galeria/x-antes.webp", after: "/galeria/x-despues.webp" }
+// Mientras la lista esté vacía la galería no se pinta y el menú, el hero y
+// el footer no la enlazan: la sección se llama "Trabajos reales" y no puede
+// mostrar marcadores ni casos de ejemplo.
+const GALLERY_CASES = [];
+const HAS_GALLERY = GALLERY_CASES.length > 0;
+
 const Gallery = ({ num = "02" }) => {
   const [idx, setIdx] = React.useState(0);
-  const cases = [
-    { title: "Tono miel sobre base oscura", meta: "Tintura" },
-    { title: "Corte bob francés", meta: "Corte + styling · 90 min" },
-    { title: "Recuperación post-decoloración", meta: "Tratamiento + color · 3.5 hrs" },
-    { title: "Rubio platino", meta: "Decoloración + matiz · 5 hrs" },
-  ];
+  const cases = GALLERY_CASES;
+  if (!cases.length) return null;
   return (
     <section id="galeria" style={{
       background: "var(--noir)", color: "var(--ivory)",
@@ -525,7 +584,7 @@ const Gallery = ({ num = "02" }) => {
           display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 48,
           alignItems: "center",
         }} className="gallery-grid">
-          <BeforeAfter key={idx} />
+          <BeforeAfter key={idx} before={cases[idx].before} after={cases[idx].after} />
           <div>
             <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>
               Caso {String(idx + 1).padStart(2, "0")} / {String(cases.length).padStart(2, "0")}
@@ -559,7 +618,7 @@ const Gallery = ({ num = "02" }) => {
                   Estilista
                 </Mono>
                 <div style={{ fontFamily: "var(--sans)", fontSize: 14 }}>
-                  Joxe
+                  {cases[idx].stylist}
                 </div>
               </div>
             </div>
@@ -673,35 +732,35 @@ const Reviews = ({ data, num = "03" }) => {
           marginBottom: 64, flexWrap: "wrap", gap: 32,
         }}>
           <div>
-            <Mono style={{ color: "var(--bronze)" }}>{num} · Reseñas</Mono>
-            <h2 style={{
+            <Rotulo style={{ color: "var(--bronze)" }}>{num} · Reseñas</Rotulo>
+            <h2 data-mv="lineas" style={{
               fontFamily: "var(--display)", fontWeight: 400,
               fontSize: "clamp(36px, 4vw, 58px)", lineHeight: 1.05,
               margin: "24px 0 0", letterSpacing: "-0.01em",
             }}>
-              Lo que dicen<br />
-              <em style={{ color: "var(--bronze)" }}>quienes ya vinieron.</em>
+              <L>Lo que dicen</L>
+              <L><em style={{ color: "var(--bronze)" }}>quienes ya vinieron.</em></L>
             </h2>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          <div data-mv="sube" style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <div style={{
               fontFamily: "var(--display)", fontSize: 64, lineHeight: 1,
               letterSpacing: "-0.02em",
             }}>
-              {data.avg.toLocaleString("es-CO", { minimumFractionDigits: 1 })}
+              <Odometro texto={data.avg.toLocaleString("es-CO", { minimumFractionDigits: 1 })} />
             </div>
             <div>
-              <StarRow value={Math.round(data.avg)} size={17} />
+              <div data-mv="estrellas"><StarRow value={Math.round(data.avg)} size={17} /></div>
               <div style={{
                 fontFamily: "var(--sans)", fontSize: 13, opacity: 0.5, marginTop: 8,
               }}>
-                {data.count} {data.count === 1 ? "reseña" : "reseñas"} verificadas
+                {data.count} {data.count === 1 ? "reseña verificada" : "reseñas verificadas"}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="reviews-grid" style={{
+        <div className="reviews-grid" data-mv="grupo" style={{
           display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24,
           alignItems: "start",
         }}>
@@ -771,21 +830,23 @@ const AcademyTeaser = ({ data, num = "04" }) => {
         display: "grid", gridTemplateColumns: "1fr 1fr", gap: 72, alignItems: "start",
       }} className="services-grid">
         <div>
-          <Mono style={{ color: "rgba(12,12,12,0.5)" }}>{num} · Academia</Mono>
-          <h2 style={{
+          <Rotulo style={{ color: "rgba(12,12,12,0.5)" }}>{num} · Academia</Rotulo>
+          <h2 data-mv="lineas" style={{
             fontFamily: "var(--display)", fontWeight: 400,
             fontSize: "clamp(40px, 4.5vw, 64px)", lineHeight: 1.05,
             margin: "24px 0 32px", letterSpacing: "-0.01em",
           }}>
-            {content.headline || <>Aprende el oficio<br /><em>en la silla.</em></>}
+            {content.headline
+              ? <L>{content.headline}</L>
+              : <><L>Aprende el oficio</L><L><em>en la silla.</em></L></>}
           </h2>
           {content.intro && (
-            <p style={{
+            <p data-mv="sube" style={{
               fontFamily: "var(--sans)", fontSize: 15, lineHeight: 1.75,
               color: "rgba(12,12,12,0.75)", maxWidth: 440, margin: "0 0 36px",
             }}>{content.intro}</p>
           )}
-          <a href="/academia" style={{
+          <a href="/academia" data-mv="sube" style={{
             display: "inline-flex", alignItems: "center", gap: 12,
             background: "var(--noir)", color: "var(--ivory)",
             border: "1px solid var(--noir)",
@@ -814,7 +875,7 @@ const AcademyTeaser = ({ data, num = "04" }) => {
             const topics = (c.topics || []).slice(0, 8);
             const hidden = (c.topics || []).length - topics.length;
             return (
-              <a key={c.id || i} href="/academia" style={{
+              <a key={c.id || i} href="/academia" className="ac-ficha" data-mv="sube" style={{
                 display: "block", textDecoration: "none",
                 background: "var(--noir)", color: "var(--ivory)",
                 padding: "34px 36px", transition: "transform 0.25s, box-shadow 0.25s",
@@ -828,7 +889,7 @@ const AcademyTeaser = ({ data, num = "04" }) => {
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                <div style={{
+                <div className="ac-ficha-cab" style={{
                   display: "grid", gridTemplateColumns: "1fr auto", gap: 24,
                   alignItems: "baseline",
                 }}>
@@ -855,8 +916,10 @@ const AcademyTeaser = ({ data, num = "04" }) => {
                   }}>{c.schedule}</div>
                 )}
 
+                {/* El temario entra en su orden, del manejo de las herramientas
+                    al corte terminado, como avanza el curso. */}
                 {topics.length > 0 && (
-                  <div style={{
+                  <div data-mv="grupo" data-mv-paso="0.045" style={{
                     display: "flex", flexWrap: "wrap", gap: 8, marginTop: 24,
                     paddingTop: 24, borderTop: "1px solid rgba(245,241,234,0.12)",
                   }}>
@@ -896,23 +959,26 @@ const AcademyTeaser = ({ data, num = "04" }) => {
 // ——————————————————————————————————————————————
 // MAPA DE UBICACIÓN
 // ——————————————————————————————————————————————
+// Coordenadas del salón, las mismas del mapa embebido.
+const SALON_COORD = { lat: 4.5808563, lng: -74.2037333 };
+
 const LocationMap = ({ num = "05" }) => (
   <section id="ubicacion" style={{ background: "var(--ivory)", color: "var(--noir)" }}>
-    <div style={{
+    <div className="ubi-cab" style={{
       maxWidth: 1400, margin: "0 auto",
       padding: "80px 64px 40px",
       display: "flex", justifyContent: "space-between",
       alignItems: "flex-end", flexWrap: "wrap", gap: 24,
     }}>
       <div>
-        <Mono style={{ color: "var(--bronze)" }}>{num} · Ubicación</Mono>
-        <h2 style={{
+        <Rotulo style={{ color: "var(--bronze)" }}>{num} · Ubicación</Rotulo>
+        <h2 data-mv="lineas" style={{
           fontFamily: "var(--display)", fontWeight: 400,
           fontSize: "clamp(32px, 3.5vw, 52px)", lineHeight: 1.05,
           margin: "20px 0 0", letterSpacing: "-0.01em",
         }}>
-          Nos encontrarás<br />
-          <em style={{ color: "var(--bronze)" }}>en San Mateo, Soacha.</em>
+          <L>Nos encontrarás</L>
+          <L><em style={{ color: "var(--bronze)" }}>en San Mateo, Soacha.</em></L>
         </h2>
       </div>
       <a
@@ -929,9 +995,9 @@ const LocationMap = ({ num = "05" }) => (
         Abrir en Google Maps ↗
       </a>
     </div>
-    <div style={{ width: "100%", height: "480px", position: "relative" }}>
+    <div data-mv="mapa" style={{ width: "100%", height: "480px", position: "relative" }}>
       <iframe
-        src="https://maps.google.com/maps?q=4.5808563,-74.2037333&hl=es&z=17&output=embed"
+        src={`https://maps.google.com/maps?q=${SALON_COORD.lat},${SALON_COORD.lng}&hl=es&z=17&output=embed`}
         width="100%" height="100%"
         style={{ border: 0, display: "block", filter: "grayscale(20%) contrast(1.05)" }}
         allowFullScreen=""
@@ -939,6 +1005,15 @@ const LocationMap = ({ num = "05" }) => (
         referrerPolicy="no-referrer-when-downgrade"
         title="Ubicación JOXE Asesores de Imagen"
       />
+      {/* Marcas de esquina y coordenadas: el mismo lenguaje del croquis. */}
+      {[["top", "left", "M1 15V1H15"], ["top", "right", "M1 1H15V15"],
+        ["bottom", "left", "M1 1V15H15"], ["bottom", "right", "M1 15H15V1"]].map(([v, h, d]) => (
+        <svg key={v + h} className="mapa-esq" viewBox="0 0 16 16" aria-hidden="true"
+          style={{ [v]: 14, [h]: 14 }}><path d={d} /></svg>
+      ))}
+      <div className="mapa-coord" aria-hidden="true">
+        {SALON_COORD.lat.toFixed(4)}° N · {Math.abs(SALON_COORD.lng).toFixed(4)}° O
+      </div>
     </div>
   </section>
 );
@@ -954,7 +1029,7 @@ const Footer = ({ hasAcademy }) => (
     <div style={{
       maxWidth: 1400, margin: "0 auto",
       display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 48,
-    }} className="footer-grid">
+    }} className="footer-grid" data-mv="grupo">
       <div>
         <div style={{
           fontFamily: "var(--display)", fontSize: 36, letterSpacing: "0.2em",
@@ -971,7 +1046,8 @@ const Footer = ({ hasAcademy }) => (
       <div>
         <Mono style={{ color: "var(--bronze)", display: "block", marginBottom: 18 }}>Navegación</Mono>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[["Servicios", "/#servicios"], ["Galería", "/#galeria"],
+          {[["Servicios", "/#servicios"],
+            ...(HAS_GALLERY ? [["Galería", "/#galeria"]] : []),
             ...(hasAcademy ? [["Academia", "/academia"]] : []),
             ["Mi cuenta", "Cuenta.html"]].map(([l, h]) => (
             <a key={h} href={h} style={{
