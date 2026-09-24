@@ -4861,17 +4861,18 @@ const ThemesCard = ({admin,setAdmin}) => {
                   Vista previa ↗
                 </a>
               </div>
-              <div role="group" aria-label={`Modo del tema ${t.nombre}`} style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <div role="group" aria-label={`Modo del tema ${t.nombre}`}
+                style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:4}}>
                 {THEME_MODES.map(m=>{
                   const sel = mode===m.id;
                   return (
                     <button key={m.id} onClick={()=>setMode(t.id,m.id)} aria-pressed={sel} style={{
-                      flex:"1 1 0",padding:"8px 12px",cursor:"pointer",
+                      minWidth:0,padding:"9px 4px",cursor:"pointer",
                       background:sel?`${m.color}18`:C.s3,
                       border:`1px solid ${sel?m.color+"55":C.bdr}`,
                       color:sel?m.color:C.muted,
                       fontFamily:"'JetBrains Mono',monospace",fontSize:10,
-                      letterSpacing:"0.1em",textTransform:"uppercase",whiteSpace:"nowrap",
+                      letterSpacing:"0.06em",textTransform:"uppercase",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",
                     }}>{m.label}</button>
                   );
                 })}
