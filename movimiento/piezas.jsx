@@ -154,7 +154,10 @@ const FichaServicio = ({ servicios, activa, precio, dias, duracion, hoy }) => {
 // responde (a poca elevación el peso baja, a mucha las capas se emparejan).
 // Es una ilustración, no un trabajo del salón, y así lo dice su rótulo.
 // ------------------------------------------------------------------
-const Croquis = () => {
+// memo: el hero se vuelve a pintar cuando cambia el nav al hacer scroll, y
+// el croquis no tiene por qué repetir su render (lo que se mueve lo cambia
+// aplicar() directo en el SVG).
+const Croquis = React.memo(() => {
   const M = window.JoxeMovimiento;
   const C = M.CROQUIS;
   const raiz = React.useRef(null);
@@ -176,7 +179,6 @@ const Croquis = () => {
     e.mechones.setAttribute("d", M.mechones(grados));
     e.guia.setAttribute("x2", g.x2); e.guia.setAttribute("y2", g.y2);
     e.arco.setAttribute("d", g.arco);
-    e.lectura.setAttribute("transform", `translate(${g.tx + 14} ${g.ty + 4})`);
     e.valor.textContent = `${Math.round(grados)}°`;
     e.peso.setAttribute("cx", w.x); e.peso.setAttribute("cy", w.y);
     e.pesoLinea.setAttribute("d", `M${w.x + 5} ${w.y}H${PESO_X - 8}`);
@@ -237,8 +239,9 @@ const Croquis = () => {
 
     if (activo) {
       const q = sel => nodo.querySelectorAll(sel);
-      const trazos = sel => ({ strokeDasharray: 1, strokeDashoffset: 1 });
-      gsap.set(q(".cq-dib"), trazos());
+      // Los trazos llevan pathLength="1": con guion y desfase de 1 quedan
+      // sin dibujar y se dibujan llevando el desfase a 0.
+      gsap.set(q(".cq-dib"), { strokeDasharray: 1, strokeDashoffset: 1 });
       gsap.set(q(".cq-aparece, .cq-hebras path, .cq-rot"), { opacity: 0 });
       estado.g = 0;
       aplicar(0);
@@ -341,10 +344,13 @@ const Croquis = () => {
           <line ref={setRef("guia")} className="cq-guia" x1={g0.x} y1={g0.y} x2={g0.x2} y2={g0.y2} />
           <path ref={setRef("arco")} className="cq-arco" d={g0.arco} />
           <circle className="cq-pivote" cx={g0.x} cy={g0.y} r="3.5" />
-          <g ref={setRef("lectura")} transform={`translate(${g0.tx + 14} ${g0.ty + 4})`}>
-            <text className="cq-mono cq-rot" y="-16">ELEVACIÓN</text>
-            <text ref={setRef("valor")} className="cq-num cq-rot" y="8">{INICIAL}°</text>
-          </g>
+        </g>
+
+        {/* Cajetín con la lectura de la elevación, fijo para que ningún
+            ángulo lo haga chocar con la guía o con los rótulos. */}
+        <g className="cq-rot" transform="translate(54 58)">
+          <text className="cq-mono">ELEVACIÓN</text>
+          <text ref={setRef("valor")} className="cq-num" y="40">{INICIAL}°</text>
         </g>
 
         {/* Rótulos */}
@@ -358,7 +364,7 @@ const Croquis = () => {
           <text className="cq-mono" x={PESO_X} y="407.5">DEGRADADO</text>
         </g>
         <g className="cq-rot">
-          <path className="cq-lider" d="M300 150L340 58H566" />
+          <path className="cq-lider" d="M258 90L292 58H566" />
           <text className="cq-mono" x={PESO_X} y="61.5">TEXTURA</text>
         </g>
 
@@ -368,6 +374,6 @@ const Croquis = () => {
       <p className="cq-pista" aria-hidden="true">Mueve el cursor sobre el croquis para cambiar la elevación</p>
     </div>
   );
-};
+});
 
 Object.assign(window, { L, Rotulo, Odometro, Asoma, FichaServicio, Croquis });
