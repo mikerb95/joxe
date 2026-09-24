@@ -262,6 +262,8 @@ const AcEnroll = React.forwardRef(({ content, courseId, onCourseChange }, ref) =
   const submit = async (e) => {
     e.preventDefault();
     if (status === AC_STATUS.sending) return;
+    const phoneErr = phoneError(form.phone);
+    if (phoneErr) { setError(phoneErr); return; }
     setStatus(AC_STATUS.sending);
     setError("");
     try {
@@ -320,7 +322,7 @@ const AcEnroll = React.forwardRef(({ content, courseId, onCourseChange }, ref) =
           }}>
             <Mono style={{ color: "var(--bronze)" }}>Solicitud recibida</Mono>
             <p style={{ fontFamily: "var(--sans)", fontSize: 16, lineHeight: 1.7, margin: 0, opacity: 0.8 }}>
-              Gracias, {form.name.split(" ")[0]}. Te contactamos al {form.phone} para
+              Gracias, {form.name.split(" ")[0]}. Te contactamos al {fmtPhone(form.phone)} para
               darte los detalles del curso.
             </p>
             <a href={waUrl} target="_blank" rel="noopener noreferrer" style={{
@@ -342,9 +344,9 @@ const AcEnroll = React.forwardRef(({ content, courseId, onCourseChange }, ref) =
               )}
             </AcField>
             <AcField label="Celular">
-              <input required type="tel" inputMode="numeric" value={form.phone}
-                onChange={set("phone")} maxLength={15} placeholder="300 000 0000"
-                style={acInputStyle} />
+              <PhoneField required ariaLabel="Celular" value={form.phone}
+                onChange={phone => setForm(f => ({ ...f, phone }))}
+                fieldStyle={acInputStyle} focusColor="var(--bronze)" />
             </AcField>
             <AcField label="Correo (opcional)">
               <input type="email" value={form.email} onChange={set("email")}
