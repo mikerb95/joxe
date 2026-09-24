@@ -14,6 +14,7 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - **Academia**: página pública de las clases de barbería en `/academia`, con cursos, temario, preguntas frecuentes y formulario de inscripción. El contenido se edita desde el panel (Admin → Academia) y nace apagado: mientras no se publique, la página no muestra cursos y el enlace no aparece ni en el menú ni en el home. Las solicitudes llegan a la bandeja del panel y avisan al equipo.
 - **Reseñas**: calificaciones de clientes con cita completada, moderadas desde el panel y publicadas en el home. Hay tres formas de llegar al formulario: el link firmado que envía el salón, el botón "Deja tu reseña" en Mi Cuenta, y la página `/resena` abierta directamente, donde el cliente solo escribe su cédula. En ese caso se busca su visita completada más reciente sin reseñar (últimos 30 días) y se muestra el nombre enmascarado ("Ana M••• P•••") para que confirme que el registro es suyo. El nombre completo nunca sale del servidor: al formulario solo viaja el nombre de pila, que es lo único que se publica.
 - **Copia de seguridad**: en Admin → Configuración se descarga la base de datos completa en un archivo JSON y se restaura desde él. Toda la información vive en una sola tabla (`kv`), así que ese archivo basta para reconstruir el sistema desde cero: citas, clientes, caja, reseñas, academia, equipo y configuración. Al restaurar hay dos caminos: *restauración completa*, que deja la base exactamente como el archivo y descarta todo lo cargado después, y *combinar*, que sobrescribe solo las claves presentes en el archivo. El archivo también se puede descargar desde fuera del panel con `GET /api/backup` usando el `CRON_SECRET`, para respaldos automáticos.
+- **Galería de trabajos**: la sección "Trabajos reales" del home no se pinta mientras `GALLERY_CASES` (`components.jsx`) esté vacía, y con ella desaparecen sus enlaces del menú, del hero y del footer. Solo se llena con casos reales del salón y con permiso del cliente: cada caso lleva título, servicio, estilista y las fotos de antes y después.
 - **Temas de temporada**: decoraciones animadas para el home (por ahora Halloween) que se manejan desde Admin → Configuración → Temas de temporada. Cada tema tiene tres modos: *automático* (se enciende solo cada año en su temporada, contada en hora de Colombia; Halloween va del 1 al 31 de octubre), *encendido* y *apagado*. Se muestra uno a la vez y el encendido a mano gana sobre los automáticos. Para ver un tema sin tocar la configuración: `/?tema=halloween`.
 
 ## Nombres de personas
@@ -47,6 +48,28 @@ validación en `normPhone` / `phoneError` (`lib/db.js`); si cambia la regla, hay
 que cambiarla en los dos lados. En Windows, que no dibuja banderas con emoji,
 se carga una fuente solo de banderas desde jsDelivr.
 
+## Movimiento del home
+
+La portada muestra lo que dice su titular ("La imagen no se improvisa. Se
+diseña."): el hero es un croquis de corte que se dibuja solo (tercios del
+rostro, línea de degradado, silueta del pelo) con una guía de elevación que el
+visitante mueve con el cursor; en celular se pasea sola. El resto de la página
+usa el mismo lenguaje: trazos de bronce que se dibujan, titulares que suben
+línea por línea, precios que ruedan como un odómetro y una cinta métrica con
+los servicios que se acelera con el scroll. En escritorio, la sección de
+servicios tiene una ficha fija que muestra el servicio que se está leyendo o
+apuntando (duración, precio y, si hoy es martes en Colombia, el precio del día).
+
+- `movimiento/logica.js`: geometría del croquis, odómetro, fila activa y día en hora de Colombia. Sin DOM; se prueba con `npm test`.
+- `movimiento/motor.js`: enlaza por atributos `data-mv` las entradas con scroll (GSAP 3.15 y ScrollTrigger desde cdnjs, con SRI).
+- `movimiento/piezas.jsx`: el croquis, el odómetro y la ficha de servicios.
+
+El marcado es siempre el estado final. Si GSAP no carga o el visitante tiene
+activado "reducir movimiento", la página se ve completa y quieta; el motor solo
+esconde lo que va a animar y, si algo falla, lo devuelve a la vista. Las
+animaciones se detienen fuera de pantalla. Solo el home carga estos archivos:
+`/academia` comparte `components.jsx` pero no el motor.
+
 ## Estructura principal
 
 - `Admin.html` / `admin.jsx` — panel administrativo.
@@ -58,6 +81,7 @@ se carga una fuente solo de banderas desde jsDelivr.
   Mi Cuenta (`Cuenta.html`) no usa contraseña: el cliente entra con su cédula más los últimos 4 dígitos del celular con el que reservó.
 - `Resena.html` / `resena.jsx` — reseña del cliente: identificación por cédula o entrada directa con link firmado.
 - `Academia.html` / `academia.jsx` — página pública de las clases.
+- `movimiento/`: croquis del hero, motor de animación y su lógica con pruebas (ver "Movimiento del home").
 - `temas/`: biblioteca de temas de temporada. `catalogo.js` lista cada tema con su temporada y su archivo, `cargador.js` decide en el sitio cuál mostrar y cada tema vive en su propio script (`halloween.js`). Para sumar uno nuevo basta crear su archivo y agregarlo a `catalogo.js`.
 - `telefono.jsx`: campo de celular con indicativo y reglas para guardar, comparar y mostrar números (ver "Celulares").
 - `api/` — funciones backend.
