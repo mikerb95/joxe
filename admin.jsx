@@ -622,12 +622,23 @@ const Btn = ({children,onClick,variant="primary",small,disabled,style}) => {
   );
 };
 
+const FIELD_STYLE = {background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,padding:"11px 14px",
+  fontFamily:"'Outfit',sans-serif",fontSize:14,width:"100%"};
+
 const FieldInput = ({label,value,onChange,type="text",placeholder,style,min,max,onKeyDown}) => (
   <div style={{display:"flex",flexDirection:"column",gap:6,...style}}>
     {label && <Mono style={{color:C.muted,fontSize:9}}>{label}</Mono>}
     <input type={type} value={value} onChange={onChange} placeholder={placeholder} min={min} max={max} onKeyDown={onKeyDown}
-      style={{background:C.s2,border:`1px solid ${C.bdr}`,color:C.text,padding:"11px 14px",
-        fontFamily:"'Outfit',sans-serif",fontSize:14,width:"100%"}} />
+      style={FIELD_STYLE} />
+  </div>
+);
+
+// Como FieldInput, con selector de país. onChange recibe el número ya en
+// E.164 ("+573001234567"), no el evento.
+const FieldPhone = ({label,value,onChange,style}) => (
+  <div style={{display:"flex",flexDirection:"column",gap:6,...style}}>
+    {label && <Mono style={{color:C.muted,fontSize:9}}>{label}</Mono>}
+    <PhoneField value={value} onChange={onChange} ariaLabel={label} fieldStyle={FIELD_STYLE} />
   </div>
 );
 
@@ -5288,17 +5299,16 @@ const SettingsView = ({ onNav }) => {
         <Card>
           <Mono style={{color:C.gold,display:"block",marginBottom:16}}>WhatsApp</Mono>
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            <FieldInput
+            {/* Se guardan como los usa wa.me: indicativo y número, sin "+". */}
+            <FieldPhone
               label="Número del admin (recibe confirmaciones de reservas)"
               value={admin.whatsappAdminNumber||"573124499862"}
-              onChange={e=>setAdmin(a=>({...a,whatsappAdminNumber:e.target.value.replace(/\D/g,"")}))}
-              placeholder="573124499862"
+              onChange={v=>setAdmin(a=>({...a,whatsappAdminNumber:waNumber(v)}))}
             />
-            <FieldInput
+            <FieldPhone
               label="Número de contacto (botón flotante para clientes)"
               value={admin.whatsappNumber||"573124499862"}
-              onChange={e=>setAdmin(a=>({...a,whatsappNumber:e.target.value.replace(/\D/g,"")}))}
-              placeholder="573124499862"
+              onChange={v=>setAdmin(a=>({...a,whatsappNumber:waNumber(v)}))}
             />
             <FieldInput
               label="Etiqueta del botón (texto al pasar el cursor)"
@@ -7233,16 +7243,19 @@ const EmpBookingView = ({emp, onNav}) => {
   const apptAt   = (time)=>{ const cs=timeToMin(time), ce=cs+60; return dayAppts.find(a=>{ const as=timeToMin(a.time), ae=as+(a.serviceDur||60); return as<ce && cs<ae; }); };
   const isBlockedSlot = (time)=> blocked.some(b=>b.time===time);
 
-  const phoneDigits = (form.phone||"").replace(/\D/g,"");
-  const phoneOk = phoneDigits.length===10;
+  const phoneErr = phoneError(form.phone);
+  const phoneOk  = normPhone(form.phone).startsWith("+") && !phoneErr;
+  // Llave del cliente para reconocerlo: para Colombia son los 10 dígitos con
+  // que están guardadas las citas viejas (ver phoneKey en telefono.jsx).
+  const phoneId  = phoneKey(form.phone);
 
   // ── Directorio celular → nombre, construido con las citas existentes ──
   const phoneNameMap = React.useMemo(()=>{
     const m={};
     allAppts.forEach(a=>{
-      const p=(a.phone||"").replace(/\D/g,"");
+      const p=phoneKey(a.phone);
       const nm=(a.name||"").trim();
-      if(p.length===10 && nm && nm!=="Cliente sin nombre"){
+      if(p && nm && nm!=="Cliente sin nombre"){
         if(!m[p] || (a.createdAt||0) > m[p].at){
           m[p]={ name:nm, cedula:(a.cedula||"").replace(/\D/g,""), at:a.createdAt||0 };
         }
@@ -7251,14 +7264,14 @@ const EmpBookingView = ({emp, onNav}) => {
     return m;
   },[allAppts]);
 
-  const isRejected = rejectedPhones.includes(phoneDigits);
-  const knownName  = phoneOk && !isRejected ? (phoneNameMap[phoneDigits]?.name || null) : null;
+  const isRejected = rejectedPhones.includes(phoneId);
+  const knownName  = phoneOk && !isRejected ? (phoneNameMap[phoneId]?.name || null) : null;
   const showKnown  = !!knownName && form.name.trim()===knownName;
 
-  // Al completar 10 dígitos autocompleta el nombre del cliente ya conocido
+  // Al completar el número autocompleta el nombre del cliente ya conocido
   React.useEffect(()=>{
     if(!phoneOk) return;
-    const m = (!isRejected) ? phoneNameMap[phoneDigits] : null;
+    const m = (!isRejected) ? phoneNameMap[phoneId] : null;
     if(m){
       setForm(f=> (f.name.trim()==="" || f.name===autoNameRef.current) ? {...f, name:m.name} : f);
       autoNameRef.current = m.name;
@@ -7272,10 +7285,10 @@ const EmpBookingView = ({emp, onNav}) => {
       setForm(f=> (f.cedula!=="" && f.cedula===autoCedRef.current) ? {...f, cedula:""} : f);
       autoCedRef.current = "";
     }
-  },[phoneDigits, phoneOk, isRejected, phoneNameMap]);
+  },[phoneId, phoneOk, isRejected, phoneNameMap]);
 
   const dismissKnown = ()=>{
-    setRejectedPhones(p=> p.includes(phoneDigits)?p:[...p,phoneDigits]);
+    setRejectedPhones(p=> p.includes(phoneId)?p:[...p,phoneId]);
     setForm(f=> f.name===knownName ? {...f, name:""} : f);
     autoNameRef.current = "";
   };
@@ -7294,7 +7307,7 @@ const EmpBookingView = ({emp, onNav}) => {
 
   const submit = async () => {
     setErr("");
-    if (!phoneOk)            { setErr("Ingresa un celular válido de 10 dígitos."); return; }
+    if (!phoneOk)            { setErr(phoneErr || "Ingresa el celular del cliente."); return; }
     if (!nameOk)             { setErr("Ingresa el nombre del cliente (obligatorio para un celular nuevo)."); return; }
     if (!cedulaOk)           { setErr("La cédula debe tener entre 6 y 12 dígitos, o dejarse vacía."); return; }
     if (!selectedSvc)        { setErr("Selecciona el servicio."); return; }
@@ -7342,7 +7355,7 @@ const EmpBookingView = ({emp, onNav}) => {
       date: form.date,
       time: form.time,
       name: form.name.trim() || "Cliente sin nombre",
-      phone: phoneDigits,
+      phone: normPhone(form.phone),
       cedula: cedulaDigits,
       createdAt: Date.now(),
       status: "scheduled",
@@ -7429,11 +7442,9 @@ const EmpBookingView = ({emp, onNav}) => {
         <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:12}}>1 · Cliente</Mono>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:28}} className="adm-two-col">
           <div>
-            <FieldInput label="Celular *" type="tel" value={form.phone}
-              onChange={e=>setF("phone", e.target.value.replace(/[^\d\s]/g,"").slice(0,13))}
-              placeholder="300 123 4567" />
-            {phoneDigits.length>0 && !phoneOk && (
-              <div style={{marginTop:6,fontSize:11,color:C.red}}>Debe tener 10 dígitos.</div>
+            <FieldPhone label="Celular *" value={form.phone} onChange={v=>setF("phone", v)} />
+            {phoneErr && (
+              <div style={{marginTop:6,fontSize:11,color:C.red}}>{phoneErr}</div>
             )}
           </div>
           <div>

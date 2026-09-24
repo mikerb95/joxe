@@ -362,7 +362,7 @@ const PaymentScreen = ({ paymentId }) => {
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px 32px" }}>
                 {[
                   ["Cliente", appt.name],
-                  ["Teléfono", appt.phone],
+                  ["Teléfono", fmtPhone(appt.phone)],
                   ["Servicio", appt.service],
                   ["Estilista", appt.stylist || "Sin asignar"],
                   ["Fecha", fmtDate(appt.date)],
