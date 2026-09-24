@@ -33,6 +33,16 @@
   const vistos = new WeakSet();
   const puntero = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
 
+  // Muchos bloques traen su propia opacidad en el style de React (un párrafo
+  // al 70 %, una nota al 50 %). Antes de esconderlos se guarda esa opacidad
+  // y la entrada vuelve a ella, no a 1.
+  const opacidad = new WeakMap();
+  const esconder = (els, extra) => {
+    els.forEach(e => { if (!opacidad.has(e)) opacidad.set(e, getComputedStyle(e).opacity); });
+    gsap.set(els, { opacity: 0, ...extra });
+  };
+  const original = (i, e) => opacidad.get(e) ?? 1;
+
   const tipos = {
     lineas(el) {
       const lineas = el.querySelectorAll(".mv-li");
@@ -46,10 +56,10 @@
       const trazo = el.querySelector(".mv-trazo");
       const texto = el.querySelector(".mv-rt");
       gsap.set(trazo, { scaleX: 0 });
-      gsap.set(texto, { opacity: 0, x: -6 });
+      esconder([texto], { x: -6 });
       const ir = () => gsap.timeline()
         .to(trazo, { scaleX: 1, duration: 0.7, ease: "power2.inOut" })
-        .to(texto, { opacity: 1, x: 0, duration: 0.6, ease: "power2.out" }, "-=0.25");
+        .to(texto, { opacity: original, x: 0, duration: 0.6, ease: "power2.out" }, "-=0.25");
       const carga = el.closest("[data-mv-carga]");
       if (carga) gsap.delayedCall(Number(carga.dataset.mvCarga) || 0, ir);
       else ST.create({ trigger: el, start: INICIO, once: true, onEnter: ir });
@@ -65,11 +75,11 @@
 
     grupo(el) {
       const hijos = Array.from(el.children);
-      gsap.set(hijos, { y: 26, opacity: 0 });
+      esconder(hijos, { y: 26 });
       ST.create({
         trigger: el, start: INICIO, once: true,
         onEnter: () => gsap.to(hijos, {
-          y: 0, opacity: 1, duration: 0.9, ease: EASE,
+          y: 0, opacity: original, duration: 0.9, ease: EASE,
           stagger: Number(el.dataset.mvPaso) || 0.07, clearProps: "transform",
           ...sinTransicion(hijos),
         }),
@@ -177,11 +187,11 @@
   // "sube" se agrupa: los bloques que entran en pantalla a la vez lo hacen en
   // cadena en lugar de todos juntos.
   const subir = els => {
-    gsap.set(els, { y: 32, opacity: 0 });
+    esconder(els, { y: 32 });
     ST.batch(els, {
       start: INICIO, once: true,
       onEnter: lote => gsap.to(lote, {
-        y: 0, opacity: 1, duration: 1, ease: EASE, stagger: 0.08, clearProps: "transform",
+        y: 0, opacity: original, duration: 1, ease: EASE, stagger: 0.08, clearProps: "transform",
         ...sinTransicion(lote),
       }),
     });
@@ -192,7 +202,9 @@
   const rescatar = err => {
     console.error("[motor]", err);
     gsap.set(".mv-li, .mv-trazo, .mv-rt, [data-mv=traza], [data-mv=grupo] > *, [data-mv=sube], [data-mv=mapa], [data-mv=estrellas] svg",
-      { clearProps: "transform,opacity,clipPath" });
+      { clearProps: "transform,clipPath" });
+    document.querySelectorAll(".mv-rt, [data-mv=grupo] > *, [data-mv=sube], [data-mv=mapa]")
+      .forEach(e => gsap.set(e, { opacity: opacidad.get(e) ?? 1 }));
     document.querySelectorAll(".odo-t").forEach(t => gsap.set(t, { y: 0, yPercent: Number(t.dataset.y) }));
   };
 
@@ -214,9 +226,9 @@
         const carga = tipo === "sube" && el.closest("[data-mv-carga]");
         if (carga) {
           // En el hero los bloques siguen al titular en vez de adelantarse.
-          gsap.set(el, { y: 24, opacity: 0 });
+          esconder([el], { y: 24 });
           gsap.to(el, {
-            y: 0, opacity: 1, duration: 1, ease: EASE, clearProps: "transform",
+            y: 0, opacity: original, duration: 1, ease: EASE, clearProps: "transform",
             delay: (Number(carga.dataset.mvCarga) || 0) + 0.75 + enCarga++ * 0.14,
           });
         } else if (tipo === "sube") sube.push(el);
