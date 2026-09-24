@@ -425,14 +425,8 @@ const fmtDateShort = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString
 const fmtDateMed = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"});
 const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-digit",hour12:true});
 
-// El celular puede estar guardado con o sin indicativo: el portal exige 10
-// dígitos, pero en el panel se puede teclear "57 300 123 4567". Anteponer 57
-// a ciegas dejaba el enlace muerto (wa.me/57573001234567).
-const waNumber = (phone) => {
-  const d = String(phone||"").replace(/\D/g,"");
-  if (!d) return "";
-  return d.length > 10 ? d : `57${d}`;
-};
+// waNumber, normPhone, phoneKey, fmtPhone y PhoneField viven en telefono.jsx,
+// que Admin.html y Staff.html cargan antes que este archivo.
 
 const PENDING_EXPIRE_MS = 60 * 60 * 1000; // 1 hora
 const OVERNIGHT_REVIEW_HOUR = 8;
@@ -1451,9 +1445,7 @@ const AppointmentsView = () => {
       ``,
       `¡Gracias!`,
     ].join("\n");
-    const phone = (appt.phone||"").replace(/\D/g,"");
-    const num = phone.startsWith("57") ? phone : `57${phone}`;
-    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+    return `https://wa.me/${waNumber(appt.phone)}?text=${encodeURIComponent(msg)}`;
   };
 
   const registerPay = (appt) => {
@@ -1474,7 +1466,7 @@ const AppointmentsView = () => {
     }]}));
     if (addLoyalty && admin.loyalty?.enabled) {
       // Use cedula as CRM key; fall back to phone for old appointments without cedula
-      const key = (apptCedula||"").replace(/\D/g,"") || (phone||"").replace(/\D/g,"");
+      const key = (apptCedula||"").replace(/\D/g,"") || phoneKey(phone);
       if (key) {
         setCrm(d=>({...d, [key]:{...(d[key]||{}),
           loyaltyVisits:(d[key]?.loyaltyVisits||0)+1,
@@ -1571,7 +1563,7 @@ const AppointmentsView = () => {
                       <div style={{display:"flex",flexDirection:"column",gap:10}}>
                         {[
                           ["Nombre",a.name],
-                          ["Teléfono",a.phone],
+                          ["Teléfono",fmtPhone(a.phone)],
                           ["Cédula",a.cedula],
                           ["Ticket",a.code],
                           ["Estilista",a.stylist],
@@ -1766,7 +1758,7 @@ const CrmView = () => {
   // Group by cédula (primary identifier). Fall back to phone for old appointments without cédula.
   const byCedula = {};
   all.filter(a => a.cedula || a.phone).forEach(a => {
-    const k = (a.cedula || "").replace(/\D/g,"") || (a.phone || "").replace(/\D/g, "");
+    const k = (a.cedula || "").replace(/\D/g,"") || phoneKey(a.phone);
     if (!byCedula[k]) byCedula[k] = { name: a.name, phone: a.phone, cedula: a.cedula || "", crmKey: k, appts: [] };
     byCedula[k].appts.push(a);
     if (a.createdAt >= (byCedula[k].latestAt || 0)) {
@@ -1779,7 +1771,7 @@ const CrmView = () => {
 
   const clients = Object.entries(byCedula).map(([crmKey, base]) => {
     // Try cedula key first, then phone key for legacy CRM data
-    const cd = crm[crmKey] || crm[(base.phone||"").replace(/\D/g,"")] || {};
+    const cd = crm[crmKey] || crm[phoneKey(base.phone)] || {};
     const completed = base.appts.filter(a => a.computedStatus === "completed");
     return {
       crmKey, name: base.name, phone: base.phone, cedula: base.cedula,
@@ -1926,7 +1918,7 @@ const CrmView = () => {
                       <div style={{fontSize:14}}>{c.name}</div>
                       {c.cedula
                         ? <div style={{fontSize:11,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{c.cedula}</div>
-                        : <div style={{fontSize:11,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{(c.phone||"")}</div>
+                        : <div style={{fontSize:11,color:C.muted,fontFamily:"'JetBrains Mono',monospace"}}>{fmtPhone(c.phone)}</div>
                       }
                     </div>
                     <div style={{fontSize:12,color:C.muted}}>
@@ -1988,7 +1980,7 @@ const CrmView = () => {
                             <div style={{display:"flex",flexDirection:"column",gap:10}}>
                               {[
                                 ["Cédula", c.cedula||"—"],
-                                ["Teléfono", c.phone||"—"],
+                                ["Teléfono", c.phone ? fmtPhone(c.phone) : "—"],
                                 ["Email", c.email],
                                 ["Cumpleaños", c.birthday?fmtDateShort(c.birthday):null],
                                 ["Notas", c.notes],
@@ -6160,7 +6152,7 @@ const EmpAgendaView = ({emp, onNav}) => {
                         {/* Expandable phone */}
                         {isExpanded && canExpand && (
                           <div ref={revealRef} style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.bdr}`}}>
-                            <WaClientBtn phone={a.phone} compact>WhatsApp · {a.phone} ↗</WaClientBtn>
+                            <WaClientBtn phone={a.phone} compact>WhatsApp · {fmtPhone(a.phone)} ↗</WaClientBtn>
                           </div>
                         )}
                       </div>
@@ -6397,7 +6389,7 @@ const EmpCalendarView = ({emp, onNav}) => {
                     <a href={`https://wa.me/${waNumber(a.phone)}`}
                       target="_blank" rel="noopener"
                       style={{fontSize:11,color:C.gold,textDecoration:"none",display:"inline-block",marginTop:6}}>
-                      {a.phone} ↗
+                      {fmtPhone(a.phone)} ↗
                     </a>
                   )}
                 </div>
@@ -6534,7 +6526,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
                   {a.phone && (
                     <a href={`https://wa.me/${waNumber(a.phone)}`} target="_blank" rel="noopener"
                       style={{fontSize:11,color:C.gold,textDecoration:"none"}}>
-                      {a.phone} ↗
+                      {fmtPhone(a.phone)} ↗
                     </a>
                   )}
                 </div>
@@ -7400,7 +7392,7 @@ const EmpBookingView = ({emp, onNav}) => {
             <div style={{display:"flex",flexDirection:"column",gap:10}}>
               {[
                 ["Cliente", done.name],
-                ["Celular", done.phone],
+                ["Celular", fmtPhone(done.phone)],
                 ["Servicio", `${done.service} · ${done.serviceDur} min`],
                 ["Fecha", new Date(done.date+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"})],
                 ["Bloque", `${formatTime12h(done.time)} – ${formatTime12h(endT)}`],
@@ -8635,7 +8627,7 @@ const AcademyView = () => {
     l.status===leadFilter);
 
   const waLead = (l) => {
-    const num = `57${String(l.phone||"").replace(/\D/g,"")}`;
+    const num = waNumber(l.phone);
     const first = String(l.name||"").trim().split(/\s+/)[0]||"";
     const curso = l.courseName ? ` sobre ${l.courseName}` : "";
     const msg = `Hola ${first}, soy de JOXE. Recibimos tu solicitud${curso}. ¿Te cuento los detalles?`;
@@ -8821,7 +8813,7 @@ const AcademyView = () => {
                         <Mono style={{color:meta.color,fontSize:9}}>{meta.label}</Mono>
                       </div>
                       <div style={{fontSize:13,color:C.muted,marginTop:8,display:"flex",gap:14,flexWrap:"wrap"}}>
-                        <span>{l.phone}</span>
+                        <span>{fmtPhone(l.phone)}</span>
                         {l.email && <span>{l.email}</span>}
                         <span>{new Date(l.createdAt).toLocaleDateString("es-CO",{day:"2-digit",month:"short",year:"numeric"})}</span>
                       </div>
