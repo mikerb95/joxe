@@ -7272,19 +7272,18 @@ const EmpBookingView = ({emp, onNav}) => {
   React.useEffect(()=>{
     if(!phoneOk) return;
     const m = (!isRejected) ? phoneNameMap[phoneId] : null;
-    if(m){
-      setForm(f=> (f.name.trim()==="" || f.name===autoNameRef.current) ? {...f, name:m.name} : f);
-      autoNameRef.current = m.name;
-      if(m.cedula){
-        setForm(f=> (f.cedula==="" || f.cedula===autoCedRef.current) ? {...f, cedula:m.cedula} : f);
-        autoCedRef.current = m.cedula;
-      }
-    } else {
-      setForm(f=> (f.name!=="" && f.name===autoNameRef.current) ? {...f, name:""} : f);
-      autoNameRef.current = "";
-      setForm(f=> (f.cedula!=="" && f.cedula===autoCedRef.current) ? {...f, cedula:""} : f);
-      autoCedRef.current = "";
-    }
+    // Lo autocompletado antes se lee aquí y no dentro de setForm: esa función
+    // corre después, cuando las refs ya tienen el valor nuevo. Leerlas ahí
+    // dejaba el nombre del cliente anterior al cambiar de número.
+    const prevName = autoNameRef.current, prevCed = autoCedRef.current;
+    const name = m?.name || "", ced = m?.cedula || "";
+    setForm(f=>({
+      ...f,
+      name:   (f.name.trim()==="" || f.name===prevName) ? name : f.name,
+      cedula: (f.cedula==="" || f.cedula===prevCed) ? ced : f.cedula,
+    }));
+    autoNameRef.current = name;
+    autoCedRef.current  = ced;
   },[phoneId, phoneOk, isRejected, phoneNameMap]);
 
   const dismissKnown = ()=>{
