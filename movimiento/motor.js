@@ -205,10 +205,19 @@
     if (!nuevos.length) return;
     try {
       const sube = [];
+      let enCarga = 0;
       nuevos.forEach(el => {
         vistos.add(el);
         const tipo = el.dataset.mv;
-        if (tipo === "sube") sube.push(el);
+        const carga = tipo === "sube" && el.closest("[data-mv-carga]");
+        if (carga) {
+          // En el hero los bloques siguen al titular en vez de adelantarse.
+          gsap.set(el, { y: 24, opacity: 0 });
+          gsap.to(el, {
+            y: 0, opacity: 1, duration: 1, ease: EASE, clearProps: "transform",
+            delay: (Number(carga.dataset.mvCarga) || 0) + 0.75 + enCarga++ * 0.14,
+          });
+        } else if (tipo === "sube") sube.push(el);
         else if (tipos[tipo]) tipos[tipo](el);
       });
       if (sube.length) subir(sube);
