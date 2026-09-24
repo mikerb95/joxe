@@ -425,6 +425,15 @@ const fmtDateShort = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString
 const fmtDateMed = (d) => !d ? "—" : new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"});
 const fmtDateTime = (ts) => !ts ? "—" : new Date(ts).toLocaleTimeString("es-CO",{hour:"numeric",minute:"2-digit",hour12:true});
 
+// El celular puede estar guardado con o sin indicativo: el portal exige 10
+// dígitos, pero en el panel se puede teclear "57 300 123 4567". Anteponer 57
+// a ciegas dejaba el enlace muerto (wa.me/57573001234567).
+const waNumber = (phone) => {
+  const d = String(phone||"").replace(/\D/g,"");
+  if (!d) return "";
+  return d.length > 10 ? d : `57${d}`;
+};
+
 const PENDING_EXPIRE_MS = 60 * 60 * 1000; // 1 hora
 const OVERNIGHT_REVIEW_HOUR = 8;
 const OVERNIGHT_REVIEW_MINUTE = 15;
@@ -5716,6 +5725,28 @@ const empNeedsConfirm = (a) =>
   a.computedStatus === "expired" ||
   (a.computedStatus === "scheduled" && !a.confirmedBy);
 
+// Abre el chat del cliente en WhatsApp. Aparece al confirmar una cita para que
+// el empleado le escriba sin tener que buscar el número. Sin celular no pinta
+// nada. Frena el clic para no plegar la tarjeta que lo contiene.
+const WaClientBtn = ({phone, compact, children}) => {
+  const num = waNumber(phone);
+  if (!num) return null;
+  return (
+    <a href={`https://wa.me/${num}`} target="_blank" rel="noopener"
+      onClick={e=>e.stopPropagation()}
+      style={{
+        display:"inline-flex",alignItems:"center",gap:6,
+        padding:compact?"5px 10px":"7px 14px",
+        background:"rgba(37,211,102,0.12)",border:"1px solid rgba(37,211,102,0.4)",
+        color:"#25D366",textDecoration:"none",whiteSpace:"nowrap",
+        fontFamily:"'JetBrains Mono',monospace",fontSize:compact?10:9,
+        letterSpacing:"0.08em",textTransform:"uppercase",
+      }}>
+      {children || "WhatsApp ↗"}
+    </a>
+  );
+};
+
 const EmpDashboardView = ({emp, onNav}) => {
   const [appts]  = useAppts();
   const [admin]  = useAdmin();
@@ -5885,6 +5916,8 @@ const EmpAgendaView = ({emp, onNav}) => {
         : a
     );
     setAppts(s=>({...s, appointments:patch(s.appointments), active:patch(s.active)}));
+    // Deja la tarjeta abierta: ahí queda el botón para escribirle al cliente.
+    setExpandedId(apptId);
   };
 
   const cancelAppt = (apptId) => {
@@ -6121,12 +6154,7 @@ const EmpAgendaView = ({emp, onNav}) => {
                         {/* Expandable phone */}
                         {isExpanded && canExpand && (
                           <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.bdr}`}}>
-                            <a href={`https://wa.me/57${a.phone.replace(/\D/g,"")}`}
-                              target="_blank" rel="noopener"
-                              onClick={e=>e.stopPropagation()}
-                              style={{fontSize:12,color:C.gold,textDecoration:"none",display:"inline-flex",alignItems:"center",gap:6}}>
-                              {a.phone} ↗
-                            </a>
+                            <WaClientBtn phone={a.phone} compact>WhatsApp · {a.phone} ↗</WaClientBtn>
                           </div>
                         )}
                       </div>
@@ -8217,15 +8245,6 @@ const ReviewsView = () => {
   const attentionCount = data.reviews.filter(needsAttention).length;
   const stylistRows  = Object.entries(data.byStylist||{})
     .sort((a,b)=>b[1].avg-a[1].avg);
-
-  // El celular puede estar guardado con o sin indicativo: el portal exige 10
-  // dígitos, pero en el panel se puede teclear "57 300 123 4567". Anteponer 57
-  // a ciegas dejaba el enlace muerto (wa.me/57573001234567).
-  const waNumber = (phone) => {
-    const d = String(phone||"").replace(/\D/g,"");
-    if (!d) return "";
-    return d.length > 10 ? d : `57${d}`;
-  };
 
   const waLink = (a, url) => {
     const num = waNumber(a.phone);
