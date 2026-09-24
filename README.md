@@ -28,6 +28,25 @@ front (`portal.jsx`, `resena.jsx`, `academia.jsx`, `admin.jsx`), que se cargan
 sueltos en el navegador y no comparten bundler. Si cambia la regla, hay que
 cambiarla en los dos lados.
 
+## Celulares
+
+Todo campo de celular (reserva, "Reservar turno" del Staff, inscripción de la
+Academia y los números de WhatsApp de Configuración) tiene una lista de países
+con bandera e indicativo, con Colombia por defecto. Los celulares de clientes
+se guardan en formato E.164: `+573001234567`.
+
+Las citas anteriores tienen 10 dígitos sin indicativo (`3001234567`). No se
+migraron: todas eran de celulares colombianos y se leen como +57. Para
+reconocer al mismo cliente (CRM, autocompletar el nombre en el Staff) se usa
+`phoneKey`, que para Colombia sigue siendo esos 10 dígitos, así que las fichas
+viejas y las nuevas coinciden.
+
+El campo y las reglas viven en `telefono.jsx`, que cargan todas las páginas que
+piden o muestran un celular. El servidor repite la normalización y la
+validación en `normPhone` / `phoneError` (`lib/db.js`); si cambia la regla, hay
+que cambiarla en los dos lados. En Windows, que no dibuja banderas con emoji,
+se carga una fuente solo de banderas desde jsDelivr.
+
 ## Estructura principal
 
 - `Admin.html` / `admin.jsx` — panel administrativo.
@@ -40,6 +59,7 @@ cambiarla en los dos lados.
 - `Resena.html` / `resena.jsx` — reseña del cliente: identificación por cédula o entrada directa con link firmado.
 - `Academia.html` / `academia.jsx` — página pública de las clases.
 - `temas/`: biblioteca de temas de temporada. `catalogo.js` lista cada tema con su temporada y su archivo, `cargador.js` decide en el sitio cuál mostrar y cada tema vive en su propio script (`halloween.js`). Para sumar uno nuevo basta crear su archivo y agregarlo a `catalogo.js`.
+- `telefono.jsx`: campo de celular con indicativo y reglas para guardar, comparar y mostrar números (ver "Celulares").
 - `api/` — funciones backend.
 - `lib/` — utilidades compartidas.
 - `manifest.json` y `sw.js` — soporte PWA.
