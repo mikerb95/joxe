@@ -175,7 +175,11 @@ const Croquis = React.memo(() => {
   const hebras = React.useMemo(() => M.hebras(), []);
   const INICIAL = 45;
   const s0 = M.siluetaPelo(INICIAL), g0 = M.guia(INICIAL), w0 = M.puntoPeso(INICIAL);
-  const PESO_X = 574; // columna de rótulos a la derecha
+  // Columna de rótulos a la derecha: el texto va alineado al borde del
+  // lienzo y las líneas guía terminan antes, así el rótulo no se sale del
+  // SVG aunque en móvil la letra sea más grande.
+  const ROT_X = C.ancho - 16;
+  const LIDER_X = 530;
 
   // Redibuja lo que depende de la elevación sin pasar por React: se llama en
   // cada fotograma mientras la guía se mueve.
@@ -190,7 +194,7 @@ const Croquis = React.memo(() => {
     e.arco.setAttribute("d", g.arco);
     e.valor.textContent = `${Math.round(grados)}°`;
     e.peso.setAttribute("cx", w.x); e.peso.setAttribute("cy", w.y);
-    e.pesoLinea.setAttribute("d", `M${w.x + 5} ${w.y}H${PESO_X - 8}`);
+    e.pesoLinea.setAttribute("d", `M${w.x + 5} ${w.y}H${LIDER_X}`);
     e.pesoRot.setAttribute("y", w.y + 3.5);
   }, []);
 
@@ -365,16 +369,16 @@ const Croquis = React.memo(() => {
         {/* Rótulos */}
         <g className="cq-rot">
           <circle ref={setRef("peso")} className="cq-marca" cx={w0.x} cy={w0.y} r="4" />
-          <path ref={setRef("pesoLinea")} className="cq-lider" d={`M${w0.x + 5} ${w0.y}H${PESO_X - 8}`} />
-          <text ref={setRef("pesoRot")} className="cq-mono" x={PESO_X} y={w0.y + 3.5}>LÍNEA DE PESO</text>
+          <path ref={setRef("pesoLinea")} className="cq-lider" d={`M${w0.x + 5} ${w0.y}H${LIDER_X}`} />
+          <text ref={setRef("pesoRot")} className="cq-mono" x={ROT_X} y={w0.y + 3.5} textAnchor="end">LÍNEA DE PESO</text>
         </g>
         <g className="cq-rot">
-          <path className="cq-lider" d="M452 338L512 404H566" />
-          <text className="cq-mono" x={PESO_X} y="407.5">DEGRADADO</text>
+          <path className="cq-lider" d={`M452 338L500 404H${LIDER_X}`} />
+          <text className="cq-mono" x={ROT_X} y="407.5" textAnchor="end">DEGRADADO</text>
         </g>
         <g className="cq-rot">
-          <path className="cq-lider" d="M258 90L292 58H566" />
-          <text className="cq-mono" x={PESO_X} y="61.5">TEXTURA</text>
+          <path className="cq-lider" d={`M258 90L292 58H${LIDER_X}`} />
+          <text className="cq-mono" x={ROT_X} y="61.5" textAnchor="end">TEXTURA</text>
         </g>
 
         <text className="cq-mono cq-rot cq-tenue" x="54" y={C.alto - 26}>TERCIOS DEL ROSTRO</text>

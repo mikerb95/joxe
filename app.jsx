@@ -43,13 +43,14 @@ function App() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Reseñas y academia aparecen solo cuando hay contenido, así que el número
-  // de cada sección se calcula sobre las que de verdad se pintan. Si no, el
-  // home saltaba de "02" a "04" en cuanto faltaba una.
+  // Galería, reseñas y academia aparecen solo cuando hay contenido, así que
+  // el número de cada sección se calcula sobre las que de verdad se pintan.
+  // Si no, el home saltaba de "02" a "04" en cuanto faltaba una.
   const hasReviews = !!(reviews && reviews.count);
   const hasAcademy = !!academy?.enabled;
   const order = [
-    "servicios", "galeria",
+    "servicios",
+    ...(HAS_GALLERY ? ["galeria"] : []),
     ...(hasReviews ? ["resenas"] : []),
     ...(hasAcademy ? ["academia"] : []),
     "ubicacion",
