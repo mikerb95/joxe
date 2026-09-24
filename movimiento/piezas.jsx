@@ -47,8 +47,8 @@ const Odometro = ({ texto, style }) => {
     const tiras = Array.from(ref.current.querySelectorAll(".odo-t")).reverse();
     tiras.forEach((t, i) => {
       const desde = viejos[i] ? -(viejos[i].v / 20) * 100 : 0;
-      window.gsap.fromTo(t, { yPercent: desde },
-        { yPercent: Number(t.dataset.y), duration: 0.9, ease: "expo.out", delay: i * 0.035, overwrite: true });
+      window.gsap.fromTo(t, { y: 0, yPercent: desde },
+        { y: 0, yPercent: Number(t.dataset.y), duration: 0.9, ease: "expo.out", delay: i * 0.035, overwrite: true });
     });
   }, [texto]);
 
@@ -130,7 +130,8 @@ const FichaServicio = ({ servicios, activa, precio, dias, duracion, hoy }) => {
         <div className="ficha-dato" style={{ marginTop: 30 }}>
           <span className="ficha-rot">Precio</span>
         </div>
-        <div className="ficha-precio">
+        {/* "Según valoración" no cabe al tamaño de una cifra. */}
+        <div className={"ficha-precio" + (/[0-9]/.test(precio(s)) ? "" : " ficha-precio-texto")}>
           <Odometro texto={precio(s)} />
         </div>
         <div className="ficha-dias">

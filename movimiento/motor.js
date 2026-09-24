@@ -87,9 +87,11 @@
       });
     },
 
+    // La posición final viene en el style de React (translateY en %). GSAP la
+    // leería como píxeles y le sumaría su yPercent, así que y va a 0 siempre.
     odometro(el) {
       const tiras = el.querySelectorAll(".odo-t");
-      gsap.set(tiras, { yPercent: 0 });
+      gsap.set(tiras, { y: 0, yPercent: 0 });
       ST.create({
         trigger: el, start: "top 94%", once: true,
         onEnter: () => tiras.forEach((t, i) => gsap.to(t, {
@@ -191,7 +193,7 @@
     console.error("[motor]", err);
     gsap.set(".mv-li, .mv-trazo, .mv-rt, [data-mv=traza], [data-mv=grupo] > *, [data-mv=sube], [data-mv=mapa], [data-mv=estrellas] svg",
       { clearProps: "transform,opacity,clipPath" });
-    document.querySelectorAll(".odo-t").forEach(t => gsap.set(t, { yPercent: Number(t.dataset.y) }));
+    document.querySelectorAll(".odo-t").forEach(t => gsap.set(t, { y: 0, yPercent: Number(t.dataset.y) }));
   };
 
   let refrescar = null;
