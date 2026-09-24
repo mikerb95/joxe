@@ -35,13 +35,8 @@
 
   @keyframes marquee {
     from { transform: translateX(0); }
-    to { transform: translateX(-33.33%); }
+    to { transform: translateX(-33.3333%); }
   }
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .section { animation: fadeIn 0.8s ease; }
 
   .gallery-btn {
     width: 48px; height: 48px; background: transparent;
@@ -55,13 +50,160 @@
 
   input:focus { outline: 1px solid var(--bronze); outline-offset: 2px; }
 
+  /* ---------- Movimiento (movimiento/motor.js y movimiento/piezas.jsx) ----------
+     Todo lo de aquí describe el estado final. El motor solo anima hacia él. */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  /* Máscara de línea: el relleno compensa las tildes y la cursiva, que se
+     salen de la caja y quedarían recortadas. */
+  .mv-l { display: block; overflow: hidden; padding: .1em .16em .14em 0; margin: -.1em -.16em -.14em 0; }
+  .mv-li { display: block; }
+  .mv-trazo {
+    display: inline-block; width: 28px; height: 1px; background: currentColor;
+    margin-right: 12px; transform-origin: left center; flex-shrink: 0;
+  }
+
+  /* Odómetro: una columna por dígito con la tira 0-9 repetida dos veces. */
+  .odo { display: inline-block; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .odo-v { display: inline-flex; height: 1.15em; line-height: 1.15em; vertical-align: top; }
+  .odo-c { display: inline-block; height: 1.15em; overflow: hidden; }
+  .odo-t { display: block; white-space: pre; line-height: 1.15em; text-align: center; }
+  .odo-s { display: inline-block; white-space: pre; }
+
+  /* Cinta métrica */
+  .cinta { position: relative; overflow: hidden; }
+  .cinta-pista { display: flex; white-space: nowrap; width: max-content; animation: marquee 40s linear infinite; }
+  .cinta-item { display: flex; align-items: center; gap: 64px; padding-right: 64px; }
+  .mv-cinta-on { animation: none !important; will-change: transform; }
+  .cinta-regla {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 9px; pointer-events: none;
+    background-image:
+      repeating-linear-gradient(90deg, rgba(20,18,18,.28) 0 1px, transparent 1px 12px),
+      repeating-linear-gradient(90deg, rgba(194,158,102,.9) 0 1px, transparent 1px 60px);
+    background-size: 100% 4px, 100% 9px;
+    background-repeat: repeat-x;
+    background-position: 0 100%, 0 100%;
+  }
+
+  /* Filas de servicios */
+  .srv-fila { position: relative; }
+  .srv-regla { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: rgba(20,18,18,.1); }
+  .srv-fila h3 { transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  @media (min-width: 901px) {
+    .srv-fila::before {
+      content: ""; position: absolute; left: 0; top: 43px; width: 7px; height: 7px;
+      border-radius: 50%; background: var(--bronze);
+      transform: scale(0); transition: transform .35s cubic-bezier(.2,.8,.2,1);
+    }
+    .srv-fila.activa::before { transform: scale(1); }
+    .srv-fila.activa h3 { transform: translateX(20px); }
+  }
+
+  /* Ficha fija de servicios (solo escritorio) */
+  .ficha {
+    position: sticky; top: 112px; margin-top: 56px; max-width: 380px;
+    background: var(--noir); color: var(--ivory); padding: 28px 30px 30px;
+    box-shadow: 0 24px 60px -30px rgba(12,12,12,.55);
+  }
+  .ficha-cab, .ficha-rot, .ficha-horas, .ficha-dias {
+    font-family: 'JetBrains Mono', ui-monospace, monospace; text-transform: uppercase;
+  }
+  .ficha-cab {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 10px; letter-spacing: .18em; color: var(--bronze);
+  }
+  .ficha-hoy { display: inline-flex; align-items: center; gap: 7px; color: var(--ivory); }
+  .ficha-hoy i { width: 6px; height: 6px; border-radius: 50%; background: var(--bronze); display: inline-block; }
+  .ficha-nombre {
+    font-family: var(--display); font-size: 27px; line-height: 1.14; letter-spacing: -.01em;
+    margin: 16px 0 26px; min-height: 2.28em; text-wrap: balance;
+  }
+  .ficha-dato { display: flex; justify-content: space-between; align-items: baseline; }
+  .ficha-rot { font-size: 9px; letter-spacing: .2em; color: rgba(245,241,234,.5); }
+  .ficha-val { font-size: 13px; letter-spacing: .04em; }
+  .ficha-regla { position: relative; height: 10px; margin-top: 12px; border-bottom: 1px solid rgba(245,241,234,.25); }
+  .ficha-regla-fill {
+    position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: var(--bronze);
+    transform-origin: left center; transition: transform .7s cubic-bezier(.2,.8,.2,1);
+  }
+  .ficha-tick { position: absolute; bottom: 0; width: 1px; height: 8px; background: rgba(245,241,234,.35); }
+  .ficha-horas {
+    display: flex; justify-content: space-between; margin-top: 7px;
+    font-size: 9px; letter-spacing: .1em; color: rgba(245,241,234,.4);
+  }
+  .ficha-precio { font-size: 46px; letter-spacing: -.02em; line-height: 1.15; margin-top: 8px; }
+  .ficha-dias {
+    min-height: 16px; margin-top: 8px; display: flex; gap: 14px; flex-wrap: wrap;
+    font-size: 10px; letter-spacing: .16em; color: var(--bronze);
+  }
+  .ficha-cta {
+    display: flex; justify-content: center; margin-top: 26px; padding: 16px 20px;
+    background: var(--bronze); color: var(--noir); text-decoration: none; font-weight: 500;
+    font-size: 12px; letter-spacing: .2em; text-transform: uppercase;
+    transition: background .3s, color .3s;
+  }
+  .ficha-cta:hover { background: var(--ivory); }
+  .mv-iman-t { display: inline-block; }
+
+  /* Croquis del hero */
+  .croquis {
+    position: relative; height: 100%; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 92px 28px 30px;
+  }
+  .croquis svg { display: block; width: 100%; height: auto; max-height: calc(100vh - 150px); }
+  .cq-perfil, .cq-oreja { fill: none; stroke: var(--ivory); stroke-opacity: .62; stroke-width: 1.3; stroke-linejoin: round; }
+  .cq-tercio { fill: none; stroke: var(--ivory); stroke-opacity: .14; stroke-width: 1; }
+  .cq-cota { stroke-opacity: .32; }
+  .cq-esquina { fill: none; stroke: var(--bronze); stroke-width: 1.2; }
+  .cq-forma { fill: var(--bronze); fill-opacity: .1; }
+  .cq-hebras path { fill: none; stroke: var(--ivory); stroke-opacity: .3; stroke-width: 1; stroke-linecap: round; }
+  .cq-mechones { fill: none; stroke: var(--bronze); stroke-opacity: .6; stroke-width: 1; stroke-linecap: round; }
+  .cq-degradado { fill: none; stroke: var(--bronze); stroke-width: 1.2; stroke-dasharray: 4 5; }
+  .cq-borde { fill: none; stroke: var(--bronze); stroke-width: 1.5; }
+  .cq-ref { stroke: var(--ivory); stroke-opacity: .3; stroke-dasharray: 2 4; }
+  .cq-guia { stroke: var(--bronze); stroke-width: 1.3; }
+  .cq-arco { fill: none; stroke: var(--bronze); stroke-width: 1.2; }
+  .cq-pivote { fill: var(--bronze); }
+  .cq-marca { fill: var(--noir); stroke: var(--bronze); stroke-width: 1.2; }
+  .cq-lider { fill: none; stroke: var(--ivory); stroke-opacity: .28; stroke-width: 1; }
+  .cq-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: .16em; fill: var(--bronze); }
+  .cq-tenue { fill: var(--ivory); fill-opacity: .38; }
+  .cq-num { font-family: var(--display); font-size: 30px; fill: var(--ivory); }
+  .cq-pista {
+    margin: 12px 0 0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px;
+    letter-spacing: .16em; text-transform: uppercase; color: rgba(245,241,234,.38);
+    transition: opacity .6s;
+  }
+  .cq-tocado .cq-pista { opacity: 0; }
+  @media (hover: none) { .cq-pista { display: none; } }
+
+  /* Mapa: marcas de esquina y coordenadas, el mismo lenguaje del croquis */
+  .mapa-esq { position: absolute; width: 16px; height: 16px; pointer-events: none; }
+  .mapa-esq path { fill: none; stroke: var(--bronze); stroke-width: 1.5; }
+  .mapa-coord {
+    position: absolute; left: 20px; bottom: 20px; pointer-events: none;
+    background: var(--noir); color: var(--ivory); padding: 9px 14px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: .16em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cinta-pista { animation: none; }
+    .ficha-regla-fill, .srv-fila h3, .srv-fila::before { transition: none; }
+  }
+
   /* RESPONSIVE — mobile-first priority */
   @media (max-width: 900px) {
     .nav-links { display: none !important; }
     .nav-burger { display: block !important; }
     .hero-grid { grid-template-columns: 1fr !important; min-height: auto !important; }
     .hero-text { padding: 120px 24px 48px !important; }
-    .hero-image { aspect-ratio: 3/4; }
+    .hero-image { min-height: 0; }
+    .croquis { padding: 0 6px 44px; }
+    .croquis svg { max-height: none; }
+    .cq-mono { font-size: 15px; }
+    .cq-num { font-size: 42px; }
     .hero-scroll { display: none !important; }
     .services-grid, .gallery-grid, .philo-grid, .booking-grid, .footer-grid {
       grid-template-columns: 1fr !important; gap: 48px !important;
@@ -70,6 +212,9 @@
     .section { padding: 80px 24px !important; }
     .philo-stats { grid-template-columns: repeat(3, 1fr) !important; gap: 16px !important; }
     .footer-bottom { flex-direction: column; }
+    .ubi-cab { padding: 72px 24px 32px !important; }
+    .ac-ficha { padding: 28px 22px !important; }
+    .ac-ficha-cab { grid-template-columns: 1fr !important; gap: 10px !important; }
   }
   @media (max-width: 1100px) and (min-width: 901px) {
     .reviews-grid { grid-template-columns: repeat(2, 1fr) !important; }
@@ -86,6 +231,14 @@
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
+<!-- Movimiento: GSAP y ScrollTrigger (gratuitos desde la 3.13). Si no cargan,
+     la página se ve completa y quieta. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/gsap.min.js" integrity="sha384-XmJ9SoHtVOHoQUcKvFAzVXwdkKo1Ie3bhmSoIAkcdsHGaIrVJIkmozyq0FJeb/Ly" crossorigin="anonymous" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.15.0/ScrollTrigger.min.js" integrity="sha384-wl5TeDVvOWt30Pbf8aSo2ZrzsOjddu3avOBvHe+p+OhJt9gP6w9YXmDkN5DK2/dF" crossorigin="anonymous" defer></script>
+<script src="movimiento/logica.js" defer></script>
+<script src="movimiento/motor.js" defer></script>
+
+<script type="text/babel" src="movimiento/piezas.jsx"></script>
 <script type="text/babel" src="components.jsx"></script>
 <script type="text/babel" src="app.jsx"></script>
 <script src="temas/catalogo.js" defer></script>
