@@ -1661,7 +1661,7 @@ const AppointmentsView = () => {
                           </div>
                         )}
                         {a.computedStatus!=="pending" && a.phone && (
-                          <a href={`https://wa.me/57${a.phone.replace(/\D/g,"")}`}
+                          <a href={`https://wa.me/${waNumber(a.phone)}`}
                             target="_blank" rel="noopener"
                             style={{
                               padding:"7px 14px",background:"transparent",
@@ -2001,7 +2001,7 @@ const CrmView = () => {
                               <div style={{display:"flex",gap:8,marginTop:4}}>
                                 <Btn small variant="subtle" onClick={()=>startEdit(c)}>✎ Editar</Btn>
                                 {c.phone && (
-                                  <a href={`https://wa.me/57${(c.phone||"").replace(/\D/g,"")}`}
+                                  <a href={`https://wa.me/${waNumber(c.phone)}`}
                                     target="_blank" rel="noopener"
                                     style={{
                                       padding:"7px 14px",background:"transparent",
@@ -6388,7 +6388,7 @@ const EmpCalendarView = ({emp, onNav}) => {
                   <div style={{fontSize:13,color:C.text}}>{a.name}</div>
                   <div style={{fontSize:11,color:C.muted,marginTop:2}}>{a.service}</div>
                   {a.phone && (
-                    <a href={`https://wa.me/57${a.phone.replace(/\D/g,"")}`}
+                    <a href={`https://wa.me/${waNumber(a.phone)}`}
                       target="_blank" rel="noopener"
                       style={{fontSize:11,color:C.gold,textDecoration:"none",display:"inline-block",marginTop:6}}>
                       {a.phone} ↗
