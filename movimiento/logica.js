@@ -171,7 +171,7 @@
     const capas = 6 * k * suave(0.3, 0.55, u);
     // Textura: el borde de arriba no es liso, como un pelo texturizado.
     const textura = (1 - suave(0.4, 0.55, u)) * suave(0.03, 0.1, u) *
-      (2.2 * Math.sin(u * 97) + 1.4 * Math.sin(u * 211 + 1.3));
+      (1.1 * Math.sin(u * 83) + 0.9 * Math.sin(u * 197 + 1.3) + 0.6 * Math.sin(u * 331 + 0.4));
     const g = base + peso + capas + textura;
     // El degradado corta todo por debajo de su línea.
     return 1.2 + (g - 1.2) * (1 - suave(U_DEGRADADO - 0.075, U_DEGRADADO + 0.015, u));
