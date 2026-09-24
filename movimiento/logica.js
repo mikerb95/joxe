@@ -161,15 +161,42 @@
   // enseña con cualquier croquis de corte, simplificada para que se lea sola.
   const grosorPelo = (u, grados) => {
     const k = clamp(grados, 0, 90) / 90;
-    // Arriba: textura fija, un poco más larga hacia el frente.
-    const arriba = lerp(30, 40, suave(0, 0.14, u)) - 6 * suave(0.2, 0.42, u);
+    // Arriba: textura fija, un poco más larga hacia el frente. En la línea
+    // del pelo nace casi en cero para que el flequillo no termine en un
+    // corte recto de casco.
+    const arriba = lerp(4, 38, suave(0, 0.09, u)) - 8 * suave(0.16, 0.42, u);
     const base = lerp(arriba, 18, suave(0.38, 0.62, u));
-    const centro = lerp(U_DEGRADADO - 0.07, 0.48, k);
-    const peso = 24 * Math.pow(1 - k, 1.15) * gauss(u, centro, 0.075);
+    const centro = lerp(U_DEGRADADO - 0.08, 0.48, k);
+    const peso = 22 * Math.pow(1 - k, 1.15) * gauss(u, centro, 0.08);
     const capas = 6 * k * suave(0.3, 0.55, u);
-    const g = base + peso + capas;
+    // Textura: el borde de arriba no es liso, como un pelo texturizado.
+    const textura = (1 - suave(0.4, 0.55, u)) * suave(0.03, 0.1, u) *
+      (2.2 * Math.sin(u * 97) + 1.4 * Math.sin(u * 211 + 1.3));
+    const g = base + peso + capas + textura;
     // El degradado corta todo por debajo de su línea.
-    return 1.2 + (g - 1.2) * (1 - suave(U_DEGRADADO - 0.05, U_DEGRADADO + 0.012, u));
+    return 1.2 + (g - 1.2) * (1 - suave(U_DEGRADADO - 0.075, U_DEGRADADO + 0.015, u));
+  };
+
+  // Mechones sobre la franja del pelo que sobresale del cráneo: trazos
+  // cortos peinados hacia atrás, para que la franja se lea como pelo y no
+  // como un relleno liso.
+  const mechones = (grados, s = 11) => {
+    const rnd = semilla(s);
+    let d = "";
+    CUERO.forEach((p, i) => {
+      if (i % 2 || p.u < 0.04 || p.u > U_DEGRADADO - 0.02) return;
+      const g = grosorPelo(p.u, grados);
+      if (g < 6) return;
+      for (let k = 0; k < 2; k++) {
+        const f = 0.25 + rnd() * 0.6;
+        const x = p.x + p.nx * g * f, y = p.y + p.ny * g * f;
+        const largo = 5 + rnd() * 7;
+        // Casi a lo largo del cráneo, con una leve inclinación hacia fuera.
+        const dx = p.tx * 0.94 + p.nx * 0.34, dy = p.ty * 0.94 + p.ny * 0.34;
+        d += `M${r1(x)} ${r1(y)}l${r1(dx * largo)} ${r1(dy * largo)}`;
+      }
+    });
+    return d;
   };
 
   // Silueta del pelo: borde exterior (cráneo desplazado por el grosor) y
@@ -317,7 +344,7 @@
 
   window.JoxeMovimiento = {
     clamp, lerp, suave, semilla,
-    CROQUIS, CUERO, grosorPelo, siluetaPelo, puntoPeso, guia, anguloDesde, hebras, dentroDe, yDegradado,
+    CROQUIS, CUERO, grosorPelo, siluetaPelo, mechones, puntoPeso, guia, anguloDesde, hebras, dentroDe, yDegradado,
     partesOdometro, desplazamientoDigito,
     filaActiva, diaBogota,
   };
