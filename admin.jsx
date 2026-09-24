@@ -6418,6 +6418,9 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   const [admin]          = useAdmin();
   const [tab,setTab]     = React.useState(initTab);
   const [search,setSearch] = React.useState("");
+  // Citas confirmadas en esta pantalla. Siguen a la vista en "Confirmar" (si no,
+  // desaparecerían al instante) para tener a mano el botón de WhatsApp.
+  const [justConfirmed,setJustConfirmed] = React.useState([]);
 
   const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const myAppts  = allAppts.filter(a=>a.stylist===emp.name);
@@ -6425,7 +6428,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   const needsConfirm = empNeedsConfirm;
 
   const filtered = myAppts.filter(a=>{
-    if (tab==="confirmaciones") return needsConfirm(a);
+    if (tab==="confirmaciones") return needsConfirm(a) || justConfirmed.includes(a.id);
     if (tab==="hoy") return a.date===todayStr();
     if (search) return a.name?.toLowerCase().includes(search.toLowerCase())||a.service?.toLowerCase().includes(search.toLowerCase());
     return true;
@@ -6442,6 +6445,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
       appointments: confirmInList(s.appointments),
       active: confirmInList(s.active),
     }));
+    setJustConfirmed(ids=>[...ids, apptId]);
   };
 
   const rejectAppt = async (apptId) => {
@@ -6521,10 +6525,16 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
                 <div>
                   <div style={{fontSize:14}}>{a.name}</div>
                   <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
-                  {a.phone&&<div style={{fontSize:11,color:C.muted}}>{a.phone}</div>}
+                  {a.phone && (waNumber(a.phone) ? (
+                    <a href={`https://wa.me/${waNumber(a.phone)}`} target="_blank" rel="noopener"
+                      style={{fontSize:11,color:C.gold,textDecoration:"none"}}>
+                      {a.phone} ↗
+                    </a>
+                  ) : <div style={{fontSize:11,color:C.muted}}>{a.phone}</div>)}
                 </div>
                 <Badge status={a.computedStatus}/>
-                <div style={{display:"flex",gap:8,justifyContent:"flex-end"}}>
+                <div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center",flexWrap:"wrap"}}>
+                  {justConfirmed.includes(a.id) && <WaClientBtn phone={a.phone}/>}
                   {needsConfirm(a) && (
                     <>
                       <button onClick={()=>confirmAppt(a.id, ["pending","expired"].includes(a.computedStatus))} style={{
