@@ -6525,12 +6525,12 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
                 <div>
                   <div style={{fontSize:14}}>{a.name}</div>
                   <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
-                  {a.phone && (waNumber(a.phone) ? (
+                  {a.phone && (
                     <a href={`https://wa.me/${waNumber(a.phone)}`} target="_blank" rel="noopener"
                       style={{fontSize:11,color:C.gold,textDecoration:"none"}}>
                       {a.phone} ↗
                     </a>
-                  ) : <div style={{fontSize:11,color:C.muted}}>{a.phone}</div>)}
+                  )}
                 </div>
                 <Badge status={a.computedStatus}/>
                 <div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center",flexWrap:"wrap"}}>
