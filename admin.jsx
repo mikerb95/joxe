@@ -5879,6 +5879,12 @@ const EmpAgendaView = ({emp, onNav}) => {
 
   const [activeDay,  setActiveDay]  = React.useState(0);
   const [expandedId, setExpandedId] = React.useState(null);
+  // Al desplegarse, la tarjeta puede quedar bajo el borde del listado (que
+  // tiene su propio scroll) y el botón de WhatsApp no se vería. Ref estable:
+  // solo se ejecuta al abrirse, no en cada sondeo.
+  const revealRef = React.useCallback(el => {
+    if (el) el.scrollIntoView({block:"nearest",behavior:"smooth"});
+  }, []);
   // De quién es la agenda que se ve: el propio empleado (por defecto), "all"
   // para todo el equipo, o el id de otro empleado. Las citas ajenas son de solo
   // lectura: sin confirmar, cancelar ni teléfono.
@@ -6153,7 +6159,7 @@ const EmpAgendaView = ({emp, onNav}) => {
                         </div>
                         {/* Expandable phone */}
                         {isExpanded && canExpand && (
-                          <div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.bdr}`}}>
+                          <div ref={revealRef} style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${C.bdr}`}}>
                             <WaClientBtn phone={a.phone} compact>WhatsApp · {a.phone} ↗</WaClientBtn>
                           </div>
                         )}
