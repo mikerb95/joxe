@@ -1089,8 +1089,11 @@ const Footer = ({ hasAcademy }) => (
     }} className="footer-bottom">
       <span>© 2026 JOXE Asesores de Imagen</span>
       <a href="https://codebymike.net" target="_blank" rel="noopener noreferrer" style={{
-        color: "var(--ivory)", textDecoration: "none", opacity: 0.5,
-      }}>Diseño · codebymike.net</a>
+        color: "var(--ivory)", textDecoration: "none", opacity: 0.5, display: "flex", alignItems: "center", gap: 6,
+      }}>
+        <span>Diseño:</span>
+        <img src="/assets/codebymike-logo.svg" alt="codebymike" style={{ height: 14, width: "auto" }} />
+      </a>
     </div>
   </footer>
 );
