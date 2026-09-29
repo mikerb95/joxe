@@ -1089,7 +1089,9 @@ const Footer = ({ hasAcademy }) => (
       fontFamily: "var(--sans)", fontSize: 12, opacity: 0.5, flexWrap: "wrap", gap: 12,
     }} className="footer-bottom">
       <span>© 2026 JOXE Asesores de Imagen</span>
-      <span>Diseño · in situ</span>
+      <a href="https://codebymike.net" target="_blank" rel="noopener noreferrer" style={{
+        color: "var(--ivory)", textDecoration: "none", opacity: 0.5,
+      }}>Diseño · codebymike.net</a>
     </div>
   </footer>
 );
