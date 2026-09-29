@@ -5730,7 +5730,7 @@ const empNeedsConfirm = (a) =>
 // Abre el chat del cliente en WhatsApp. Aparece al confirmar una cita para que
 // el empleado le escriba sin tener que buscar el número. Sin celular no pinta
 // nada. Frena el clic para no plegar la tarjeta que lo contiene.
-const WaClientBtn = ({phone, compact, children}) => {
+const WaClientBtn = ({phone, compact, children, style}) => {
   const num = waNumber(phone);
   if (!num) return null;
   return (
@@ -5743,6 +5743,7 @@ const WaClientBtn = ({phone, compact, children}) => {
         color:"#25D366",textDecoration:"none",whiteSpace:"nowrap",
         fontFamily:"'JetBrains Mono',monospace",fontSize:compact?10:9,
         letterSpacing:"0.08em",textTransform:"uppercase",
+        ...style,
       }}>
       {children || "WhatsApp ↗"}
     </a>
@@ -6426,6 +6427,7 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
   const [admin]          = useAdmin();
   const [tab,setTab]     = React.useState(initTab);
   const [search,setSearch] = React.useState("");
+  const isMobile         = useIsMobile();
   // Citas confirmadas en esta pantalla. Siguen a la vista en "Confirmar" (si no,
   // desaparecerían al instante) para tener a mano el botón de WhatsApp.
   const [justConfirmed,setJustConfirmed] = React.useState([]);
@@ -6484,10 +6486,72 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
     {id:"confirmaciones",label:`Confirmar${pendingCount>0?" · "+pendingCount:""}`},
   ];
 
+  // En móvil los botones ocupan todo el ancho de su fila y crecen a un
+  // tamaño cómodo para el dedo; en escritorio conservan su tamaño natural.
+  const fill = isMobile ? {flex:"1 1 auto",justifyContent:"center",minHeight:40} : null;
+  const btnBase = {
+    cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
+    fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",whiteSpace:"nowrap",
+    ...fill,
+  };
+
+  const clientInfo = (a) => (
+    <div style={{minWidth:0}}>
+      <div style={{fontSize:14,overflowWrap:"anywhere"}}>{a.name}</div>
+      <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
+      {a.phone && (
+        <a href={`https://wa.me/${waNumber(a.phone)}`} target="_blank" rel="noopener"
+          style={{fontSize:11,color:C.gold,textDecoration:"none",whiteSpace:"nowrap"}}>
+          {fmtPhone(a.phone)} ↗
+        </a>
+      )}
+    </div>
+  );
+
+  const confirmedMark = (a) => a.confirmedBy && (
+    <Mono style={{fontSize:9,color:C.green,whiteSpace:"nowrap"}}>✓ Confirmada</Mono>
+  );
+
+  const actions = (a) => (
+    <>
+      {justConfirmed.includes(a.id) && <WaClientBtn phone={a.phone} style={fill}/>}
+      {needsConfirm(a) && (
+        <>
+          <button onClick={()=>confirmAppt(a.id, ["pending","expired"].includes(a.computedStatus))} style={{
+            ...btnBase,
+            padding:"7px 16px",
+            background:a.computedStatus==="expired"?"rgba(194,158,102,0.1)":"rgba(102,196,153,0.1)",
+            border:`1px solid ${a.computedStatus==="expired"?C.gold:C.green}40`,
+            color:a.computedStatus==="expired"?C.gold:C.green,
+          }}>{a.computedStatus==="expired"?"↺ Reactivar":"✓ Confirmar"}</button>
+          <button onClick={()=>rejectAppt(a.id)} aria-label="Rechazar cita" style={{
+            ...btnBase,
+            padding:"7px 12px",background:"transparent",
+            border:`1px solid ${C.red}30`,color:C.red,
+            ...(isMobile && {flex:"0 0 48px"}),
+          }}>✕</button>
+        </>
+      )}
+      {!isMobile && confirmedMark(a)}
+      {!needsConfirm(a) && !["cancelled","completed","no-show"].includes(a.computedStatus) && (
+        <button onClick={()=>cancelAppt(a.id)} style={{
+          ...btnBase,
+          padding:"7px 12px",background:"transparent",
+          border:`1px solid ${C.red}30`,color:C.red,
+        }}>✕ Cancelar cita</button>
+      )}
+    </>
+  );
+
+  // Hay acciones visibles? Evita pintar una fila vacía en móvil.
+  const hasActions = (a) =>
+    (justConfirmed.includes(a.id) && waNumber(a.phone)) || needsConfirm(a) ||
+    !["cancelled","completed","no-show"].includes(a.computedStatus);
+
   return (
     <div>
       <PageHeader title="Mis Citas" subtitle="Historial · Confirmaciones"/>
-      <div style={{padding:"16px 32px",borderBottom:`1px solid ${C.bdr}`}}>
+      <div className="adm-section-pad" style={{padding:"16px 32px",borderBottom:`1px solid ${C.bdr}`}}>
         <div style={{display:"flex",gap:4,flexWrap:"wrap",alignItems:"center"}}>
           {TABS.map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)} style={{
@@ -6499,12 +6563,13 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
           ))}
           {tab!=="confirmaciones"&&(
             <FieldInput placeholder="Buscar cliente o servicio…" value={search}
-              onChange={e=>setSearch(e.target.value)} style={{minWidth:220,marginLeft:"auto"}} />
+              onChange={e=>setSearch(e.target.value)}
+              style={isMobile ? {width:"100%",marginTop:8} : {minWidth:220,marginLeft:"auto"}} />
           )}
         </div>
       </div>
 
-      <div style={{padding:"16px 32px"}}>
+      <div className="adm-section-pad" style={{padding:"16px 32px"}}>
         {tab==="confirmaciones"&&filtered.length===0 && (
           <div style={{textAlign:"center",padding:"48px",color:C.muted}}>
             <div style={{fontSize:32,marginBottom:8}}>✓</div>
@@ -6524,56 +6589,45 @@ const EmpAppointmentsView = ({emp, tab: initTab="todas"}) => {
               border:`1px solid ${tab==="confirmaciones"?C.gold+"40":C.bdr}`,
               background:C.s1,
             }}>
-              <div style={{
-                display:"grid",gridTemplateColumns:"50px 60px 1fr 120px auto",
-                gap:12,padding:"14px 18px",alignItems:"center",
-              }}>
-                <Mono style={{color:C.gold,fontSize:11}}>{a.time ? formatTime12h(a.time) : "—"}</Mono>
-                <Mono style={{color:C.muted,fontSize:9}}>{fmtDateShort(a.date)}</Mono>
-                <div>
-                  <div style={{fontSize:14}}>{a.name}</div>
-                  <div style={{fontSize:11,color:C.muted}}>{a.service}</div>
-                  {a.phone && (
-                    <a href={`https://wa.me/${waNumber(a.phone)}`} target="_blank" rel="noopener"
-                      style={{fontSize:11,color:C.gold,textDecoration:"none"}}>
-                      {fmtPhone(a.phone)} ↗
-                    </a>
+              {isMobile ? (
+                // Móvil: tarjeta apilada. Hora y estado arriba, cliente en el
+                // medio y acciones a todo el ancho abajo, para que nada se
+                // salga del margen en pantallas de ~360 a 430 px.
+                <div style={{padding:"14px 14px 12px",display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                    <div style={{display:"flex",alignItems:"baseline",gap:8,flexWrap:"wrap",minWidth:0}}>
+                      <Mono style={{color:C.gold,fontSize:12}}>{a.time ? formatTime12h(a.time) : "-"}</Mono>
+                      <Mono style={{color:C.muted,fontSize:9}}>{fmtDateShort(a.date)}</Mono>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:5,flexShrink:0}}>
+                      <Badge status={a.computedStatus}/>
+                      {confirmedMark(a)}
+                    </div>
+                  </div>
+                  {clientInfo(a)}
+                  {hasActions(a) && (
+                    <div style={{
+                      display:"flex",gap:8,flexWrap:"wrap",
+                      paddingTop:10,borderTop:`1px solid ${C.bdr}`,
+                    }}>
+                      {actions(a)}
+                    </div>
                   )}
                 </div>
-                <Badge status={a.computedStatus}/>
-                <div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center",flexWrap:"wrap"}}>
-                  {justConfirmed.includes(a.id) && <WaClientBtn phone={a.phone}/>}
-                  {needsConfirm(a) && (
-                    <>
-                      <button onClick={()=>confirmAppt(a.id, ["pending","expired"].includes(a.computedStatus))} style={{
-                        padding:"7px 16px",
-                        background:a.computedStatus==="expired"?"rgba(194,158,102,0.1)":"rgba(102,196,153,0.1)",
-                        border:`1px solid ${a.computedStatus==="expired"?C.gold:C.green}40`,
-                        color:a.computedStatus==="expired"?C.gold:C.green,
-                        cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
-                        fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",
-                      }}>{a.computedStatus==="expired"?"↺ Reactivar":"✓ Confirmar"}</button>
-                      <button onClick={()=>rejectAppt(a.id)} style={{
-                        padding:"7px 12px",background:"transparent",
-                        border:`1px solid ${C.red}30`,color:C.red,
-                        cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
-                        fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",
-                      }}>✕</button>
-                    </>
-                  )}
-                  {a.confirmedBy && (
-                    <Mono style={{fontSize:9,color:C.green}}>✓ Confirmada</Mono>
-                  )}
-                  {!needsConfirm(a) && !["cancelled","completed","no-show"].includes(a.computedStatus) && (
-                    <button onClick={()=>cancelAppt(a.id)} style={{
-                      padding:"7px 12px",background:"transparent",
-                      border:`1px solid ${C.red}30`,color:C.red,
-                      cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",
-                      fontSize:9,letterSpacing:"0.08em",textTransform:"uppercase",
-                    }}>✕ Cancelar cita</button>
-                  )}
+              ) : (
+                <div style={{
+                  display:"grid",gridTemplateColumns:"50px 60px 1fr 120px auto",
+                  gap:12,padding:"14px 18px",alignItems:"center",
+                }}>
+                  <Mono style={{color:C.gold,fontSize:11}}>{a.time ? formatTime12h(a.time) : "-"}</Mono>
+                  <Mono style={{color:C.muted,fontSize:9}}>{fmtDateShort(a.date)}</Mono>
+                  {clientInfo(a)}
+                  <Badge status={a.computedStatus}/>
+                  <div style={{display:"flex",gap:8,justifyContent:"flex-end",alignItems:"center",flexWrap:"wrap"}}>
+                    {actions(a)}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           ))}
         </div>
