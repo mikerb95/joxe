@@ -1092,7 +1092,7 @@ const Footer = ({ hasAcademy }) => (
         color: "var(--ivory)", textDecoration: "none", opacity: 0.5, display: "flex", alignItems: "center", gap: 6,
       }}>
         <span>Diseño:</span>
-        <img src="/assets/codebymike-logo.svg" alt="codebymike" style={{ height: 14, width: "auto" }} />
+        <img src="/assets/codebymike-logo.svg" alt="codebymike" style={{ height: 18, width: "auto", filter: "brightness(1.8)" }} />
       </a>
     </div>
   </footer>
