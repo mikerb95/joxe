@@ -469,173 +469,83 @@ const Services = ({ num = "01" }) => {
 };
 
 // ——————————————————————————————————————————————
-// ANTES / DESPUÉS
+// GALERÍA
 // ——————————————————————————————————————————————
-// Recibe las URLs de las dos fotos del caso. Sin ellas muestra los
-// marcadores, pero la galería no se pinta mientras no haya casos reales.
-const BeforeAfter = ({ before, after }) => {
-  const [pos, setPos] = React.useState(50);
-  const foto = (src, alt) => (
-    <img src={src} alt={alt} loading="lazy" draggable="false" style={{
-      width: "100%", height: "100%", objectFit: "cover", display: "block",
-    }} />
-  );
+// Trabajos reales del salón. Los rostros de los clientes van difuminados y
+// los cortes no llevan nombre de servicio porque nadie los ha confirmado.
+// Las fotos tienen dos anchos (600 y 1200 px) y los videos van sin audio.
+// Si las dos listas quedan vacías la galería no se pinta y el menú, el hero
+// y el footer no la enlazan.
+const GALLERY_VIDEOS = [
+  { src: "/assets/trabajos/corte.mp4", poster: "/assets/trabajos/corte.webp",
+    alt: "Joxe haciendo un corte de principio a fin" },
+  { src: "/assets/trabajos/diseno.mp4", poster: "/assets/trabajos/diseno.webp",
+    alt: "Diseño con navaja en la nuca, sobre pelo rizado" },
+];
+const GALLERY_PHOTOS = [
+  { name: "trabajo-1", alt: "Corte terminado visto desde atrás, con degradado en la nuca" },
+  { name: "trabajo-2", alt: "Corte terminado visto de perfil, con degradado alto" },
+  { name: "trabajo-3", alt: "Pelo rizado con degradado, visto de perfil" },
+  { name: "trabajo-4", alt: "Corte con volumen arriba y degradado en la nuca" },
+];
+const HAS_GALLERY = GALLERY_VIDEOS.length + GALLERY_PHOTOS.length > 0;
+
+// Se reproduce solo mientras está en pantalla. Con movimiento reducido no
+// arranca solo: muestra el póster y los controles.
+const GalleryVideo = ({ src, poster, alt, className = "" }) => {
+  const ref = React.useRef(null);
+  const quieto = React.useMemo(
+    () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches, []);
+  React.useEffect(() => {
+    const v = ref.current;
+    if (!v || quieto || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) v.play().catch(() => {});
+      else v.pause();
+    }, { threshold: 0.25 });
+    io.observe(v);
+    return () => io.disconnect();
+  }, [quieto]);
   return (
-    <div style={{
-      position: "relative", aspectRatio: "4/5", overflow: "hidden",
-      userSelect: "none", cursor: "ew-resize", background: "var(--noir)",
-    }}
-    onMouseMove={(e) => {
-      if (e.buttons !== 1) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const p = ((e.clientX - rect.left) / rect.width) * 100;
-      setPos(Math.max(0, Math.min(100, p)));
-    }}
-    onTouchMove={(e) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const p = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
-      setPos(Math.max(0, Math.min(100, p)));
-    }}
-    >
-      <div style={{ position: "absolute", inset: 0 }}>
-        {after ? foto(after, "Después") : <Placeholder label={"DESPUÉS\nFoto final del cliente"} ratio="auto" tone="noir" />}
-      </div>
-      <div style={{
-        position: "absolute", inset: 0, clipPath: `inset(0 ${100 - pos}% 0 0)`,
-      }}>
-        {before ? foto(before, "Antes") : <Placeholder label={"ANTES\nFoto inicial del cliente"} ratio="auto" tone="ivory" />}
-      </div>
-      <div style={{
-        position: "absolute", top: 0, bottom: 0, left: `${pos}%`,
-        width: 1, background: "var(--bronze)",
-      }}>
-        <div style={{
-          position: "absolute", top: "50%", left: "50%",
-          transform: "translate(-50%, -50%)",
-          width: 44, height: 44, borderRadius: "50%",
-          background: "var(--bronze)", display: "flex",
-          alignItems: "center", justifyContent: "center",
-          color: "var(--noir)", fontSize: 14,
-        }}>
-          ⇄
-        </div>
-      </div>
-      <div style={{
-        position: "absolute", top: 16, left: 16,
-        padding: "4px 10px", background: "rgba(12,12,12,0.7)",
-      }}>
-        <Mono style={{ color: "var(--ivory)", fontSize: 9 }}>Antes</Mono>
-      </div>
-      <div style={{
-        position: "absolute", top: 16, right: 16,
-        padding: "4px 10px", background: "rgba(194,158,102,0.9)",
-      }}>
-        <Mono style={{ color: "var(--noir)", fontSize: 9 }}>Después</Mono>
-      </div>
+    <div className={`trab-celda trab-video ${className}`}>
+      <video ref={ref} src={src} poster={poster} aria-label={alt}
+        muted loop playsInline preload="none" controls={quieto} />
     </div>
   );
 };
 
-// ——————————————————————————————————————————————
-// GALERÍA
-// ——————————————————————————————————————————————
-// Casos reales del salón, con permiso del cliente. Cada uno:
-//   { title, meta, stylist, before: "/galeria/x-antes.webp", after: "/galeria/x-despues.webp" }
-// Mientras la lista esté vacía la galería no se pinta y el menú, el hero y
-// el footer no la enlazan: la sección se llama "Trabajos reales" y no puede
-// mostrar marcadores ni casos de ejemplo.
-const GALLERY_CASES = [];
-const HAS_GALLERY = GALLERY_CASES.length > 0;
-
 const Gallery = ({ num = "02" }) => {
-  const [idx, setIdx] = React.useState(0);
-  const cases = GALLERY_CASES;
-  if (!cases.length) return null;
+  if (!HAS_GALLERY) return null;
+  const [v1, v2] = GALLERY_VIDEOS;
   return (
     <section id="galeria" style={{
       background: "var(--noir)", color: "var(--ivory)",
       padding: "120px 64px",
     }} className="section">
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-        <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "flex-end",
-          marginBottom: 64, flexWrap: "wrap", gap: 24,
-        }}>
-          <div>
-            <Mono style={{ color: "var(--bronze)" }}>{num} · Trabajos reales</Mono>
-            <h2 style={{
-              fontFamily: "var(--display)", fontWeight: 400,
-              fontSize: "clamp(40px, 4.5vw, 64px)", lineHeight: 1.05,
-              margin: "24px 0 0", letterSpacing: "-0.01em",
-            }}>
-              El resultado habla.<br />
-              <em style={{ color: "var(--bronze)" }}>Arrastra para ver.</em>
-            </h2>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={() => setIdx((idx - 1 + cases.length) % cases.length)}
-              className="gallery-btn">←</button>
-            <button onClick={() => setIdx((idx + 1) % cases.length)}
-              className="gallery-btn">→</button>
-          </div>
+        <div style={{ marginBottom: 64 }}>
+          <Mono style={{ color: "var(--bronze)" }}>{num} · Trabajos reales</Mono>
+          <h2 data-mv="lineas" style={{
+            fontFamily: "var(--display)", fontWeight: 400,
+            fontSize: "clamp(40px, 4.5vw, 64px)", lineHeight: 1.05,
+            margin: "24px 0 0", letterSpacing: "-0.01em",
+          }}>
+            El resultado habla.<br />
+            <em style={{ color: "var(--bronze)" }}>Hecho aquí, en la silla.</em>
+          </h2>
         </div>
 
-        <div style={{
-          display: "grid", gridTemplateColumns: "1.3fr 1fr", gap: 48,
-          alignItems: "center",
-        }} className="gallery-grid">
-          <BeforeAfter key={idx} before={cases[idx].before} after={cases[idx].after} />
-          <div>
-            <Mono style={{ color: "var(--bronze)", fontSize: 10 }}>
-              Caso {String(idx + 1).padStart(2, "0")} / {String(cases.length).padStart(2, "0")}
-            </Mono>
-            <h3 style={{
-              fontFamily: "var(--display)", fontWeight: 400,
-              fontSize: "clamp(28px, 3vw, 40px)", lineHeight: 1.15,
-              margin: "20px 0", letterSpacing: "-0.005em",
-            }}>{cases[idx].title}</h3>
-            <p style={{
-              fontFamily: "var(--sans)", fontSize: 15, lineHeight: 1.6,
-              opacity: 0.7, margin: "0 0 32px", maxWidth: 420,
-            }}>
-              Cada trabajo parte de un diagnóstico honesto del cabello.
-              Nunca prometemos lo que no podemos sostener.
-            </p>
-            <div style={{
-              display: "flex", gap: 40, paddingTop: 24,
-              borderTop: "1px solid rgba(245,241,234,0.15)",
-            }}>
-              <div>
-                <Mono style={{ color: "var(--bronze)", fontSize: 9, display: "block", marginBottom: 6 }}>
-                  Servicio
-                </Mono>
-                <div style={{ fontFamily: "var(--sans)", fontSize: 14 }}>
-                  {cases[idx].meta}
-                </div>
-              </div>
-              <div>
-                <Mono style={{ color: "var(--bronze)", fontSize: 9, display: "block", marginBottom: 6 }}>
-                  Estilista
-                </Mono>
-                <div style={{ fontFamily: "var(--sans)", fontSize: 14 }}>
-                  {cases[idx].stylist}
-                </div>
-              </div>
+        <div className="trab-grid" data-mv="grupo">
+          {v1 && <GalleryVideo {...v1} className="trab-v1" />}
+          {GALLERY_PHOTOS.map(p => (
+            <div key={p.name} className="trab-celda">
+              <img src={`/assets/trabajos/${p.name}-600.webp`}
+                srcSet={`/assets/trabajos/${p.name}-600.webp 600w, /assets/trabajos/${p.name}-1200.webp 1200w`}
+                sizes="(max-width: 900px) 50vw, 25vw"
+                alt={p.alt} loading="lazy" decoding="async" />
             </div>
-          </div>
-        </div>
-
-        <div style={{
-          display: "flex", gap: 8, marginTop: 48, justifyContent: "center",
-        }}>
-          {cases.map((_, i) => (
-            <button key={i} onClick={() => setIdx(i)} style={{
-              width: i === idx ? 32 : 8, height: 2,
-              background: i === idx ? "var(--bronze)" : "rgba(245,241,234,0.25)",
-              border: "none", cursor: "pointer", transition: "all 0.3s",
-              padding: 0,
-            }} />
           ))}
+          {v2 && <GalleryVideo {...v2} className="trab-v2" />}
         </div>
       </div>
     </section>

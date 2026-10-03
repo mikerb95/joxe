@@ -38,15 +38,21 @@
     to { transform: translateX(-33.3333%); }
   }
 
-  .gallery-btn {
-    width: 48px; height: 48px; background: transparent;
-    border: 1px solid rgba(245,241,234,0.3); color: var(--ivory);
-    cursor: pointer; font-size: 16px; transition: all 0.25s;
-    font-family: var(--sans);
+  /* Galería: dos videos verticales a los lados y las fotos en medio */
+  .trab-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, auto); gap: 12px;
   }
-  .gallery-btn:hover {
-    background: var(--bronze); color: var(--noir); border-color: var(--bronze);
+  .trab-celda { position: relative; overflow: hidden; background: #1a1a1a; }
+  .trab-celda img, .trab-celda video {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block;
   }
+  .trab-celda img { transition: transform .8s cubic-bezier(.2,.7,.2,1); }
+  .trab-celda:hover img { transform: scale(1.04); }
+  .trab-video { aspect-ratio: 9 / 16; grid-row: 1 / span 2; }
+  .trab-v1 { grid-column: 1; }
+  .trab-v2 { grid-column: 4; }
 
   input:focus { outline: 1px solid var(--bronze); outline-offset: 2px; }
 
@@ -193,7 +199,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .cinta-pista { animation: none; }
-    .ficha-regla-fill, .srv-fila h3, .srv-fila::before { transition: none; }
+    .ficha-regla-fill, .srv-fila h3, .srv-fila::before, .trab-celda img { transition: none; }
   }
 
   /* RESPONSIVE — mobile-first priority */
@@ -209,10 +215,14 @@
     .cq-mono { font-size: 12.5px; letter-spacing: .12em; }
     .cq-num { font-size: 42px; }
     .hero-scroll { display: none !important; }
-    .services-grid, .gallery-grid, .philo-grid, .booking-grid, .footer-grid {
+    .services-grid, .philo-grid, .booking-grid, .footer-grid {
       grid-template-columns: 1fr !important; gap: 48px !important;
     }
     .reviews-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+    .trab-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: none; gap: 8px; }
+    .trab-video { grid-row: 1; }
+    .trab-v2 { grid-column: 2; }
+    .trab-celda:not(.trab-video) { aspect-ratio: 3 / 4; }
     .section { padding: 80px 24px !important; }
     .philo-stats { grid-template-columns: repeat(3, 1fr) !important; gap: 16px !important; }
     .footer-bottom { flex-direction: column; }
