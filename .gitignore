@@ -8,3 +8,6 @@ joxe-cache-*.json
 joxe-backup-*.json
 .env.local
 .env.*.local
+
+# Fotos y videos originales (pesados, con rostros sin difuminar)
+_originales/
