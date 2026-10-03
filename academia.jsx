@@ -391,6 +391,33 @@ const AcEnroll = React.forwardRef(({ content, courseId, onCourseChange }, ref) =
   );
 });
 
+// ------------------------------------------------
+// MODELOS: franja para quien llegó sin intención de estudiar
+// ------------------------------------------------
+const AcModelsBand = () => (
+  <section style={{
+    background: "var(--bronze)", color: "var(--noir)", padding: "56px 64px",
+  }} className="section">
+    <div style={{
+      maxWidth: 1400, margin: "0 auto", display: "flex", gap: 32,
+      justifyContent: "space-between", alignItems: "center", flexWrap: "wrap",
+    }}>
+      <div>
+        <Mono style={{ color: "rgba(12,12,12,0.55)" }}>¿No vienes a estudiar?</Mono>
+        <div style={{
+          fontFamily: "var(--display)", fontSize: "clamp(26px, 3vw, 36px)",
+          marginTop: 12, letterSpacing: "-0.01em", lineHeight: 1.15,
+        }}>Ven como modelo: corte gratis, supervisado.</div>
+      </div>
+      <a href="/modelos" style={{
+        background: "var(--noir)", color: "var(--ivory)", textDecoration: "none",
+        padding: "16px 28px", fontFamily: "var(--sans)", fontSize: 12,
+        letterSpacing: "0.2em", textTransform: "uppercase", whiteSpace: "nowrap",
+      }}>Quiero ser modelo →</a>
+    </div>
+  </section>
+);
+
 // ——————————————————————————————————————————————
 // PREGUNTAS FRECUENTES
 // ——————————————————————————————————————————————
@@ -510,8 +537,9 @@ function AcademiaPortal() {
       <AcCourses courses={content.courses} onEnroll={goToEnroll} />
       <AcEnroll ref={formRef} content={content} courseId={courseId}
         onCourseChange={setCourseId} />
+      {academy.models && <AcModelsBand />}
       <AcFaq items={content.faq} />
-      <Footer hasAcademy />
+      <Footer hasAcademy hasModels={!!academy.models} />
       <WhatsAppBlob />
     </div>
   );

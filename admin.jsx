@@ -8541,6 +8541,7 @@ const ReviewsView = () => {
 const AC_EMPTY_CONTENT = () => ({
   enabled:false, kicker:"", headline:"", intro:"", nextStart:"", location:"",
   includes:[], courses:[], faq:[], whatsappMsg:"",
+  models:{enabled:false, sessions:[]},
 });
 
 const AC_LEAD_META = {
@@ -8548,6 +8549,187 @@ const AC_LEAD_META = {
   contacted: {label:"Contactada",color:C.gold},
   enrolled:  {label:"Inscrita",  color:C.green},
   discarded: {label:"Descartada",color:C.muted},
+};
+
+// Los modelos usan los mismos estados, pero "inscrita" para ellos es tener
+// fecha de corte.
+const AC_MODEL_META = {
+  new:       {label:"Nuevo",      color:C.blue},
+  contacted: {label:"Contactado", color:C.gold},
+  enrolled:  {label:"Agendado",   color:C.green},
+  discarded: {label:"Descartado", color:C.muted},
+};
+
+const leadKind = (l) => l.kind || "student";
+
+const fmtSessionDay = (iso) => iso
+  ? new Date(`${iso}T12:00:00`).toLocaleDateString("es-CO",{weekday:"short",day:"numeric",month:"short"})
+  : "";
+
+// Bandeja de solicitudes. Sirve para las de clases y para las de modelos; solo
+// cambian las etiquetas, el mensaje de WhatsApp y los datos que se muestran.
+const AcLeadList = ({leads,isModel,onOp}) => {
+  const [filter,setFilter] = React.useState("open");
+  const META = isModel ? AC_MODEL_META : AC_LEAD_META;
+  const newCount = leads.filter(l=>l.status==="new").length;
+  const shown = leads.filter(l =>
+    filter==="all" ? true :
+    filter==="open" ? (l.status==="new"||l.status==="contacted") :
+    l.status===filter);
+
+  const waLead = (l) => {
+    const num = waNumber(l.phone);
+    const first = String(l.name||"").trim().split(/\s+/)[0]||"";
+    const msg = isModel
+      ? `Hola ${first}, soy de JOXE. Recibimos tu solicitud para ser modelo en las prácticas de la academia. ¿Te cuento cuándo es la próxima sesión?`
+      : `Hola ${first}, soy de JOXE. Recibimos tu solicitud${l.courseName ? ` sobre ${l.courseName}` : ""}. ¿Te cuento los detalles?`;
+    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  };
+
+  return (
+    <div>
+      <div style={{padding:"24px 32px",display:"grid",
+        gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14}}>
+        <StatCard label="Sin atender" small color={newCount?C.blue:C.muted}
+          value={String(newCount).padStart(2,"0")}
+          sub={newCount?"Esperan respuesta":"Todo al día"} />
+        <StatCard label={isModel?"Agendados":"Inscritas"} small color={C.green}
+          value={String(leads.filter(l=>l.status==="enrolled").length).padStart(2,"0")}
+          sub={isModel?"Con fecha de corte":"Confirmadas"} />
+        {isModel ? (
+          <StatCard label="Con permiso de fotos" small color={C.gold}
+            value={String(leads.filter(l=>l.photoConsent).length).padStart(2,"0")}
+            sub="Para la galería y redes" />
+        ) : (
+          <StatCard label="Total recibidas" small
+            value={String(leads.length).padStart(2,"0")} sub="Histórico" />
+        )}
+      </div>
+
+      <div style={{display:"flex",gap:6,padding:"0 32px 16px",flexWrap:"wrap"}}>
+        {[["open","Abiertas"],["new",META.new.label+"s"],["contacted",META.contacted.label+"s"],
+          ["enrolled",META.enrolled.label+"s"],["discarded",META.discarded.label+"s"],["all","Todas"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setFilter(id)} style={{
+            background:filter===id?"rgba(194,158,102,0.12)":"transparent",
+            border:`1px solid ${filter===id?C.gold:C.bdr}`,
+            color:filter===id?C.gold:C.muted,padding:"7px 14px",cursor:"pointer",
+            fontFamily:"'JetBrains Mono',monospace",fontSize:10,letterSpacing:"0.1em",
+            textTransform:"uppercase",
+          }}>{label}</button>
+        ))}
+      </div>
+
+      <div style={{padding:"0 32px 40px",display:"flex",flexDirection:"column",gap:10}}>
+        {shown.length===0 && (
+          <Card><div style={{color:C.muted,fontSize:13}}>No hay solicitudes en este filtro.</div></Card>
+        )}
+        {shown.map(l=>{
+          const meta = META[l.status]||META.new;
+          const tags = isModel
+            ? [l.sessionDate ? `Sesión ${fmtSessionDay(l.sessionDate)}${l.sessionTime?` · ${l.sessionTime}`:""}` : "Cualquier fecha",
+               l.photoConsent ? "Autoriza fotos" : "Sin fotos"]
+            : (l.courseName ? [l.courseName] : []);
+          return (
+            <div key={l.id} style={{border:`1px solid ${C.bdr}`,background:C.s1,padding:"18px 20px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
+                <div style={{minWidth:220}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <span style={{width:7,height:7,borderRadius:999,background:meta.color}} />
+                    <span style={{fontSize:16,fontFamily:"'Marcellus',serif"}}>{l.name}</span>
+                    <Mono style={{color:meta.color,fontSize:9}}>{meta.label}</Mono>
+                  </div>
+                  <div style={{fontSize:13,color:C.muted,marginTop:8,display:"flex",gap:14,flexWrap:"wrap"}}>
+                    <span>{fmtPhone(l.phone)}</span>
+                    {l.email && <span>{l.email}</span>}
+                    <span>{new Date(l.createdAt).toLocaleDateString("es-CO",{day:"2-digit",month:"short",year:"numeric"})}</span>
+                  </div>
+                  {tags.length>0 && (
+                    <Mono style={{color:C.gold,fontSize:9,display:"block",marginTop:8}}>{tags.join(" · ")}</Mono>
+                  )}
+                  {l.message && (
+                    <p style={{fontSize:13,color:C.text,opacity:0.8,lineHeight:1.6,margin:"12px 0 0",maxWidth:560}}>
+                      “{l.message}”
+                    </p>
+                  )}
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"flex-start",flexWrap:"wrap"}}>
+                  <a href={waLead(l)} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none"}}>
+                    <Btn small>WhatsApp</Btn>
+                  </a>
+                  {l.status!=="contacted" && (
+                    <Btn variant="ghost" small onClick={()=>onOp(l.id,"contacted")}>{META.contacted.label}</Btn>
+                  )}
+                  {l.status!=="enrolled" && (
+                    <Btn variant="ghost" small onClick={()=>onOp(l.id,"enrolled")}>{META.enrolled.label}</Btn>
+                  )}
+                  {l.status!=="discarded" && (
+                    <Btn variant="ghost" small onClick={()=>onOp(l.id,"discarded")}>Descartar</Btn>
+                  )}
+                  <Btn variant="danger" small onClick={()=>onOp(l.id,"delete")}>Eliminar</Btn>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Convocatoria de modelos: interruptor y fechas de práctica. Las fechas que ya
+// pasaron se esconden solas en la página pública.
+const AcModelsEditor = ({models,onChange}) => {
+  const sessions = models.sessions||[];
+  const setSession = (i,patch) => onChange({...models,sessions:sessions.map((s,j)=>j===i?{...s,...patch}:s)});
+  return (
+    <Card>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+        <div>
+          <div style={{fontSize:15,fontFamily:"'Marcellus',serif"}}>Convocatoria de modelos</div>
+          <div style={{fontSize:12,color:C.muted,marginTop:6,maxWidth:560,lineHeight:1.6}}>
+            Abre /modelos para conseguir personas que se dejen cortar en las prácticas
+            (gratis, solo corte, mayores de edad, supervisa el administrador). Mientras
+            esté cerrada, el enlace no aparece en el home, en /academia ni en el footer.
+          </div>
+        </div>
+        <Btn variant={models.enabled?"primary":"ghost"}
+          onClick={()=>onChange({...models,enabled:!models.enabled})}>
+          {models.enabled?"Abierta":"Cerrada"}
+        </Btn>
+      </div>
+
+      <div style={{marginTop:20,display:"flex",flexDirection:"column",gap:10}}>
+        <Mono style={{color:C.muted,fontSize:9}}>Próximas sesiones de práctica</Mono>
+        {sessions.length===0 && (
+          <div style={{color:C.muted,fontSize:13,lineHeight:1.6}}>
+            Sin fechas, la página dice que las fechas cambian y que les escriben por WhatsApp.
+          </div>
+        )}
+        {sessions.map((s,i)=>(
+          <div key={s.id||i} style={{display:"grid",gridTemplateColumns:"160px 1fr 110px auto",gap:8,alignItems:"end"}}>
+            <FieldInput label="Fecha" type="date" value={s.date}
+              onChange={e=>setSession(i,{date:e.target.value})} />
+            <FieldInput label="Hora" value={s.time} placeholder="2 a 6 pm"
+              onChange={e=>setSession(i,{time:e.target.value})} />
+            <FieldInput label="Cupos (0 = ocultar)" type="number" min={0} value={s.seats}
+              onChange={e=>setSession(i,{seats:e.target.value})} />
+            <Btn variant="danger" small
+              onClick={()=>onChange({...models,sessions:sessions.filter((_,j)=>j!==i)})}>×</Btn>
+          </div>
+        ))}
+        <Btn variant="ghost" small style={{alignSelf:"flex-start"}}
+          onClick={()=>onChange({...models,sessions:[...sessions,{id:genId(),date:"",time:"",seats:0}]})}>
+          + Agregar fecha
+        </Btn>
+        {models.enabled && (
+          <a href="/modelos" target="_blank" rel="noopener noreferrer"
+            style={{color:C.gold,fontSize:12,textDecoration:"none",letterSpacing:"0.08em",marginTop:6}}>
+            Ver /modelos ↗ (publica los cambios primero)
+          </a>
+        )}
+      </div>
+    </Card>
+  );
 };
 
 const FieldArea = ({label,value,onChange,placeholder,rows=3,style}) => (
@@ -8625,7 +8807,6 @@ const AcademyView = () => {
   const [dirty,setDirty]     = React.useState(false);
   const [msg,setMsg]         = React.useState("");
   const [err,setErr]         = React.useState("");
-  const [leadFilter,setLeadFilter] = React.useState("open");
 
   const load = React.useCallback(async () => {
     try {
@@ -8653,6 +8834,10 @@ const AcademyView = () => {
         courses: (content.courses||[]).map(c=>({
           ...c, price:Number(c.price)||0, seats:Number(c.seats)||0,
         })),
+        models: {
+          ...content.models,
+          sessions: (content.models?.sessions||[]).map(s=>({...s, seats:Number(s.seats)||0})),
+        },
       };
       const res = await fetch("/api/academy?action=content", {
         method:"POST", headers: adminHeaders(), body: JSON.stringify(payload),
@@ -8684,19 +8869,10 @@ const AcademyView = () => {
 
   const addFaq = () => edit({faq:[...(content.faq||[]),{q:"",a:""}]});
 
-  const newCount = leads.filter(l=>l.status==="new").length;
-  const shownLeads = leads.filter(l =>
-    leadFilter==="all" ? true :
-    leadFilter==="open" ? (l.status==="new"||l.status==="contacted") :
-    l.status===leadFilter);
-
-  const waLead = (l) => {
-    const num = waNumber(l.phone);
-    const first = String(l.name||"").trim().split(/\s+/)[0]||"";
-    const curso = l.courseName ? ` sobre ${l.courseName}` : "";
-    const msg = `Hola ${first}, soy de JOXE. Recibimos tu solicitud${curso}. ¿Te cuento los detalles?`;
-    return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
-  };
+  const studentLeads = leads.filter(l=>leadKind(l)==="student");
+  const modelLeads   = leads.filter(l=>leadKind(l)==="model");
+  const newCount      = studentLeads.filter(l=>l.status==="new").length;
+  const newModelCount = modelLeads.filter(l=>l.status==="new").length;
 
   if (loading) return (
     <div>
@@ -8726,7 +8902,9 @@ const AcademyView = () => {
       )}
 
       <div style={{display:"flex",gap:4,padding:"18px 32px 0"}}>
-        {[["contenido","Contenido de la página"],["solicitudes",`Solicitudes${newCount?` · ${newCount}`:""}`]].map(([id,label])=>(
+        {[["contenido","Contenido de la página"],
+          ["solicitudes",`Solicitudes${newCount?` · ${newCount}`:""}`],
+          ["modelos",`Modelos${newModelCount?` · ${newModelCount}`:""}`]].map(([id,label])=>(
           <button key={id} onClick={()=>setTab(id)} style={{
             background:tab===id?C.s2:"transparent",border:`1px solid ${tab===id?C.bdr2:C.bdr}`,
             color:tab===id?C.text:C.muted,padding:"10px 18px",cursor:"pointer",
@@ -8752,6 +8930,9 @@ const AcademyView = () => {
               </Btn>
             </div>
           </Card>
+
+          <AcModelsEditor models={content.models||AC_EMPTY_CONTENT().models}
+            onChange={models=>edit({models})} />
 
           <Card>
             <Mono style={{color:C.gold,fontSize:9,display:"block",marginBottom:16}}>Portada</Mono>
@@ -8835,82 +9016,8 @@ const AcademyView = () => {
           </div>
         </div>
       ) : (
-        <div>
-          <div style={{padding:"24px 32px",display:"grid",
-            gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14}}>
-            <StatCard label="Sin atender" small color={newCount?C.blue:C.muted}
-              value={String(newCount).padStart(2,"0")}
-              sub={newCount?"Esperan respuesta":"Todo al día"} />
-            <StatCard label="Inscritas" small color={C.green}
-              value={String(leads.filter(l=>l.status==="enrolled").length).padStart(2,"0")}
-              sub="Confirmadas" />
-            <StatCard label="Total recibidas" small
-              value={String(leads.length).padStart(2,"0")} sub="Histórico" />
-          </div>
-
-          <div style={{display:"flex",gap:6,padding:"0 32px 16px",flexWrap:"wrap"}}>
-            {[["open","Abiertas"],["new","Nuevas"],["contacted","Contactadas"],
-              ["enrolled","Inscritas"],["discarded","Descartadas"],["all","Todas"]].map(([id,label])=>(
-              <button key={id} onClick={()=>setLeadFilter(id)} style={{
-                background:leadFilter===id?"rgba(194,158,102,0.12)":"transparent",
-                border:`1px solid ${leadFilter===id?C.gold:C.bdr}`,
-                color:leadFilter===id?C.gold:C.muted,padding:"7px 14px",cursor:"pointer",
-                fontFamily:"'JetBrains Mono',monospace",fontSize:10,letterSpacing:"0.1em",
-                textTransform:"uppercase",
-              }}>{label}</button>
-            ))}
-          </div>
-
-          <div style={{padding:"0 32px 40px",display:"flex",flexDirection:"column",gap:10}}>
-            {shownLeads.length===0 && (
-              <Card><div style={{color:C.muted,fontSize:13}}>No hay solicitudes en este filtro.</div></Card>
-            )}
-            {shownLeads.map(l=>{
-              const meta = AC_LEAD_META[l.status]||AC_LEAD_META.new;
-              return (
-                <div key={l.id} style={{border:`1px solid ${C.bdr}`,background:C.s1,padding:"18px 20px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
-                    <div style={{minWidth:220}}>
-                      <div style={{display:"flex",alignItems:"center",gap:10}}>
-                        <span style={{width:7,height:7,borderRadius:999,background:meta.color}} />
-                        <span style={{fontSize:16,fontFamily:"'Marcellus',serif"}}>{l.name}</span>
-                        <Mono style={{color:meta.color,fontSize:9}}>{meta.label}</Mono>
-                      </div>
-                      <div style={{fontSize:13,color:C.muted,marginTop:8,display:"flex",gap:14,flexWrap:"wrap"}}>
-                        <span>{fmtPhone(l.phone)}</span>
-                        {l.email && <span>{l.email}</span>}
-                        <span>{new Date(l.createdAt).toLocaleDateString("es-CO",{day:"2-digit",month:"short",year:"numeric"})}</span>
-                      </div>
-                      {l.courseName && (
-                        <Mono style={{color:C.gold,fontSize:9,display:"block",marginTop:8}}>{l.courseName}</Mono>
-                      )}
-                      {l.message && (
-                        <p style={{fontSize:13,color:C.text,opacity:0.8,lineHeight:1.6,margin:"12px 0 0",maxWidth:560}}>
-                          “{l.message}”
-                        </p>
-                      )}
-                    </div>
-                    <div style={{display:"flex",gap:8,alignItems:"flex-start",flexWrap:"wrap"}}>
-                      <a href={waLead(l)} target="_blank" rel="noopener noreferrer" style={{textDecoration:"none"}}>
-                        <Btn small>WhatsApp</Btn>
-                      </a>
-                      {l.status!=="contacted" && (
-                        <Btn variant="ghost" small onClick={()=>leadOp(l.id,"contacted")}>Contactada</Btn>
-                      )}
-                      {l.status!=="enrolled" && (
-                        <Btn variant="ghost" small onClick={()=>leadOp(l.id,"enrolled")}>Inscrita</Btn>
-                      )}
-                      {l.status!=="discarded" && (
-                        <Btn variant="ghost" small onClick={()=>leadOp(l.id,"discarded")}>Descartar</Btn>
-                      )}
-                      <Btn variant="danger" small onClick={()=>leadOp(l.id,"delete")}>Eliminar</Btn>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <AcLeadList key={tab} leads={tab==="modelos"?modelLeads:studentLeads}
+          isModel={tab==="modelos"} onOp={leadOp} />
       )}
     </div>
   );

@@ -950,6 +950,36 @@ const AcademyTeaser = ({ data, num = "04" }) => {
               Incluye: {includes.join(" · ")}
             </div>
           )}
+
+          {/* La convocatoria de modelos va en segundo plano: sin fondo propio,
+              solo un trazo sobre el bronce, para que no compita con los cursos
+              pero quien no viene a estudiar encuentre su lugar. */}
+          {data.models && (
+            <a href="/modelos" className="ac-modelos" data-mv="sube" style={{
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+              gap: 20, flexWrap: "wrap", textDecoration: "none", color: "var(--noir)",
+              border: "1px solid rgba(12,12,12,0.3)", padding: "22px 26px", marginTop: 8,
+              transition: "background 0.25s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(12,12,12,0.06)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <div>
+                <div style={{
+                  fontFamily: "var(--sans)", fontSize: 11, letterSpacing: "0.18em",
+                  textTransform: "uppercase", color: "rgba(12,12,12,0.55)",
+                }}>¿No vienes a estudiar?</div>
+                <div style={{
+                  fontFamily: "var(--display)", fontSize: 22, marginTop: 8,
+                  letterSpacing: "-0.01em",
+                }}>Sé modelo: corte gratis, supervisado.</div>
+              </div>
+              <span style={{
+                fontFamily: "var(--sans)", fontSize: 12, letterSpacing: "0.18em",
+                textTransform: "uppercase", whiteSpace: "nowrap",
+              }}>Quiero ser modelo →</span>
+            </a>
+          )}
         </div>
       </div>
     </section>
@@ -1021,7 +1051,7 @@ const LocationMap = ({ num = "05" }) => (
 // ——————————————————————————————————————————————
 // FOOTER
 // ——————————————————————————————————————————————
-const Footer = ({ hasAcademy }) => (
+const Footer = ({ hasAcademy, hasModels }) => (
   <footer style={{
     background: "var(--noir)", color: "var(--ivory)",
     padding: "80px 64px 32px", borderTop: "1px solid rgba(245,241,234,0.1)",
@@ -1049,6 +1079,7 @@ const Footer = ({ hasAcademy }) => (
           {[["Servicios", "/#servicios"],
             ...(HAS_GALLERY ? [["Galería", "/#galeria"]] : []),
             ...(hasAcademy ? [["Academia", "/academia"]] : []),
+            ...(hasModels ? [["Sé modelo", "/modelos"]] : []),
             ["Mi cuenta", "Cuenta.html"]].map(([l, h]) => (
             <a key={h} href={h} style={{
               color: "var(--ivory)", textDecoration: "none",

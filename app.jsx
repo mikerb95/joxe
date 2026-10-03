@@ -86,7 +86,7 @@ function App() {
       <Reviews data={reviews} num={num("resenas")} />
       <AcademyTeaser data={academy} num={num("academia")} />
       <LocationMap num={num("ubicacion")} />
-      <Footer hasAcademy={hasAcademy} />
+      <Footer hasAcademy={hasAcademy} hasModels={!!academy?.models} />
       <WhatsAppBlob />
       <ReviewInviteBlob />
 

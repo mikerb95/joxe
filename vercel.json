@@ -77,6 +77,10 @@
       "destination": "/Showcase.html"
     },
     {
+      "source": "/modelos",
+      "destination": "/Modelos.html"
+    },
+    {
       "source": "/academia",
       "destination": "/Academia.html"
     },

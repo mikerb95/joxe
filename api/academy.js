@@ -25,6 +25,7 @@ const DEFAULT = () => ({
     courses: [],
     faq: [],
     whatsappMsg: "",
+    models: { enabled: false, sessions: [] },
   },
   leads: [],
 });
@@ -32,6 +33,13 @@ const DEFAULT = () => ({
 const MAX_LEADS = 500;
 const CAS_RETRIES = 4;
 const LEAD_STATUSES = ["new", "contacted", "enrolled", "discarded"];
+const MAX_SESSIONS = 20;
+
+// Hoy en Colombia como "YYYY-MM-DD", para esconder las sesiones que ya pasaron
+// sin que el salón tenga que borrarlas a mano.
+const todayBogota = () => new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Bogota", year: "numeric", month: "2-digit", day: "2-digit",
+}).format(new Date());
 
 // Mismo patrón de escritura que las reseñas: compare-and-swap con reintentos,
 // para que dos solicitudes simultáneas no se pisen.
@@ -82,6 +90,34 @@ function cleanCourse(c) {
   };
 }
 
+// Modelos para las prácticas. Las condiciones (gratis, solo corte, mayores de
+// edad, supervisa el administrador) las fijó el salón y van en la página; aquí
+// solo vive lo que cambia: si la convocatoria está abierta y las fechas.
+function cleanSession(s) {
+  const seats = Number(s?.seats);
+  return {
+    id: str(s?.id, 40) || `s_${randomUUID().slice(0, 8)}`,
+    date: /^\d{4}-\d{2}-\d{2}$/.test(String(s?.date || "")) ? s.date : "",
+    time: str(s?.time, 60),
+    seats: Number.isFinite(seats) ? Math.max(0, Math.trunc(seats)) : 0,
+  };
+}
+
+function cleanModels(m) {
+  return {
+    enabled: !!m?.enabled,
+    sessions: Array.isArray(m?.sessions)
+      ? dedupeById(m.sessions.map(cleanSession).filter(s => s.date))
+          .sort((a, b) => a.date.localeCompare(b.date)).slice(0, MAX_SESSIONS)
+      : [],
+  };
+}
+
+const upcomingSessions = (models) => {
+  const today = todayBogota();
+  return (models?.sessions || []).filter(s => s.date >= today);
+};
+
 function dedupeById(courses) {
   const seen = new Set();
   return courses.map(c => {
@@ -109,12 +145,13 @@ function cleanContent(body) {
       ? body.faq.map(f => ({ q: str(f?.q, 200), a: str(f?.a, 800) })).filter(f => f.q && f.a).slice(0, 20)
       : [],
     whatsappMsg: str(body?.whatsappMsg, 240),
+    models: cleanModels(body?.models),
   };
 }
 
 // Vista pública: solo los cursos activos y sin el campo `active`.
 function publicContent(content) {
-  const { courses, ...rest } = content;
+  const { courses, models, ...rest } = content;
   return {
     ...rest,
     courses: (courses || []).filter(c => c.active !== false).map(({ active, ...c }) => c),
@@ -144,9 +181,13 @@ export default async function handler(req, res) {
       // de vez en cuando, así que va por el cache corto.
       const store = readStore(await kvGetCached(KEY, 60000));
       res.setHeader("Cache-Control", "no-store");
+      // La convocatoria de modelos va aparte de los cursos: puede estar
+      // abierta aunque la página de clases siga apagada.
+      const models = store.content.models;
       return res.status(200).json({
         enabled: !!store.content.enabled,
         content: store.content.enabled ? publicContent(store.content) : null,
+        models: models?.enabled ? { sessions: upcomingSessions(models) } : null,
       });
     }
 
@@ -188,7 +229,9 @@ export default async function handler(req, res) {
     }
 
     const store = readStore(await kvGet(KEY));
-    if (!store.content.enabled) return res.status(404).json({ error: "not_found" });
+    const isModel = req.body?.kind === "model";
+    const open = isModel ? !!store.content.models?.enabled : store.content.enabled;
+    if (!open) return res.status(404).json({ error: "not_found" });
 
     const { name: rawName, phone: rawPhone, email: rawEmail, courseId, message: rawMsg } = req.body ?? {};
 
@@ -206,9 +249,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "El correo no parece válido" });
     }
 
-    const course = store.content.courses.find(c => c.id === courseId && c.active !== false) || null;
+    // Solo se aceptan modelos mayores de edad: sin la casilla marcada no entra.
+    if (isModel && req.body?.adult !== true) {
+      return res.status(400).json({ error: "Las prácticas son solo para mayores de edad" });
+    }
+
+    const course = isModel ? null
+      : store.content.courses.find(c => c.id === courseId && c.active !== false) || null;
+    const session = isModel
+      ? upcomingSessions(store.content.models).find(s => s.id === req.body?.sessionId) || null
+      : null;
     const lead = {
       id: `ac_${randomUUID().replace(/-/g, "").slice(0, 16)}`,
+      kind: isModel ? "model" : "student",
       name,
       phone,
       email,
@@ -217,6 +270,12 @@ export default async function handler(req, res) {
       message: str(rawMsg, 600),
       status: "new",
       createdAt: Date.now(),
+      ...(isModel ? {
+        sessionId: session?.id || "",
+        sessionDate: session?.date || "",
+        sessionTime: session?.time || "",
+        photoConsent: req.body?.photoConsent === true,
+      } : {}),
     };
 
     const result = await mutate(current => {
@@ -224,7 +283,8 @@ export default async function handler(req, res) {
       // para el mismo celular y curso.
       const hourAgo = Date.now() - 60 * 60 * 1000;
       if (current.leads.some(l =>
-        l.phone === lead.phone && l.courseId === lead.courseId && l.createdAt > hourAgo)) {
+        l.phone === lead.phone && (l.kind || "student") === lead.kind &&
+        l.courseId === lead.courseId && l.createdAt > hourAgo)) {
         return { next: null, result: { ok: true, already: true } };
       }
       // Tope de solicitudes guardadas: se descartan las más viejas ya cerradas.
@@ -242,14 +302,16 @@ export default async function handler(req, res) {
     // Nadie ve la solicitud si no entra al panel: se avisa igual que con las
     // reseñas, y se espera el envío porque la función se congela al responder.
     if (!result.already) {
+      const title = isModel ? "Nuevo modelo para la academia" : "Nueva solicitud de clases";
       await notifyStaff({
         toAdmin: true,
-        title: "Nueva solicitud de clases",
-        ntfyTitle: "Nueva solicitud de clases",
-        tags: "mortar_board",
+        title,
+        ntfyTitle: title,
+        tags: isModel ? "scissors" : "mortar_board",
         body: [
           `${lead.name} · ${lead.phone}`,
           lead.courseName || null,
+          isModel && lead.sessionDate ? `Sesión ${lead.sessionDate}${lead.sessionTime ? " " + lead.sessionTime : ""}` : null,
           lead.message ? `"${lead.message.slice(0, 140)}${lead.message.length > 140 ? "…" : ""}"` : null,
         ].filter(Boolean).join(" · "),
       });
