@@ -9,5 +9,5 @@ joxe-backup-*.json
 .env.local
 .env.*.local
 
-# Fotos y videos originales (pesados, con rostros sin difuminar)
+# Fotos y videos originales (pesados, en la web van optimizados)
 _originales/
