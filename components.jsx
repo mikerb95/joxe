@@ -489,31 +489,42 @@ const GALLERY_PHOTOS = [
   { name: "trabajo-3", alt: "Pelo rizado con degradado, visto de perfil" },
   { name: "trabajo-4", alt: "Corte con volumen arriba y degradado en la nuca" },
 ];
-// Fotos que Joxe mandó por WhatsApp. El nombre de cada corte lo escribió él.
+// Fotos y videos que Joxe mandó por WhatsApp. El nombre de cada corte lo
+// escribió él. Los que tienen `video` se pintan con GalleryVideo.
+const gv = (video, label, cat, alt) => ({
+  name: video, video: `/assets/trabajos/${video}.mp4`,
+  poster: `/assets/trabajos/${video}.webp`, label, cat, alt,
+});
 const GALLERY_MORE = [
   { name: "trabajo-5", label: "Balayage rubio", cat: "color", alt: "Pelo largo con balayage rubio, visto desde atrás" },
   { name: "trabajo-6", label: "Dragón fade", cat: "barberia", alt: "Dragón fade visto de perfil, sobre pelo negro" },
-  { name: "trabajo-7", label: "Corte bob", cat: "cortes", alt: "Corte bob castaño visto desde atrás" },
+  gv("mechas-violetas", "Mechas violetas", "color", "Pelo largo con mechas violetas, de espaldas y luego de frente"),
   { name: "trabajo-8", label: "Taper fade con diseño", cat: "barberia", alt: "Taper fade con un diseño de líneas en la nuca" },
-  { name: "trabajo-9", label: "Wolf cut", cat: "cortes", alt: "Wolf cut en pelo negro, visto de espaldas" },
+  { name: "trabajo-7", label: "Corte bob", cat: "cortes", alt: "Corte bob castaño visto desde atrás" },
   { name: "trabajo-10", label: "Taper fade clásico", cat: "barberia", alt: "Taper fade clásico visto de perfil" },
-  { name: "trabajo-11", label: "Color global difuminado", cat: "color", alt: "Color global difuminado en tonos claros, con gafas oscuras" },
+  gv("wolf-cut", "Wolf cut", "cortes", "Clienta mostrando su wolf cut, sentada en la silla"),
   { name: "trabajo-12", label: "Dragón fade doble V", cat: "barberia", alt: "Dragón fade con doble V en la nuca" },
-  { name: "trabajo-13", label: "Bob long", cat: "cortes", alt: "Bob long liso a la altura del cuello, de perfil" },
+  { name: "trabajo-11", label: "Color global difuminado", cat: "color", alt: "Color global difuminado en tonos claros, con gafas oscuras" },
+  gv("bob-long", "Bob long", "cortes", "Bob long liso a la altura del cuello, visto de perfil"),
   { name: "trabajo-14", label: "High taper fade", cat: "barberia", alt: "High taper fade visto de perfil" },
-  { name: "trabajo-15", label: "Color y keratina", cat: "color", alt: "Pelo largo castaño claro después de color y keratina" },
+  gv("keratina", "Color y keratina, antes y después", "color", "Pelo largo con canas antes del color, y el resultado con color y keratina"),
   { name: "trabajo-16", label: "Mohicano texturizado", cat: "barberia", alt: "Mohicano texturizado con degradado, de perfil" },
-  { name: "trabajo-17", label: "Corte bob", cat: "cortes", alt: "Corte bob castaño visto de perfil" },
+  { name: "trabajo-9", label: "Wolf cut", cat: "cortes", alt: "Wolf cut en pelo negro, visto de espaldas" },
+  gv("ondulado", "Ondulado permanente", "color", "Pelo rizado con ondulado permanente y degradado, visto desde varios ángulos"),
   { name: "trabajo-18", label: "Taper fade con diseño", cat: "barberia", alt: "Taper fade con diseño en la nuca" },
+  { name: "trabajo-13", label: "Bob long", cat: "cortes", alt: "Bob long liso a la altura del cuello, de perfil" },
   { name: "trabajo-19", label: "Corte mullet", cat: "cortes", alt: "Corte mullet en pelo negro, de perfil" },
+  gv("mullet-diseno", "Long mullet con diseño", "cortes", "Long mullet con un diseño de navaja al costado, de perfil"),
   { name: "trabajo-20", label: "Low dragón fade", cat: "barberia", alt: "Low dragón fade visto de perfil" },
+  { name: "trabajo-17", label: "Corte bob", cat: "cortes", alt: "Corte bob castaño visto de perfil" },
   { name: "trabajo-21", label: "Taper fade texturizado", cat: "barberia", alt: "Taper fade con el pelo texturizado arriba" },
   { name: "trabajo-22", label: "Low fade moderno", cat: "barberia", alt: "Low fade moderno visto de perfil" },
+  { name: "trabajo-15", label: "Color y keratina", cat: "color", alt: "Pelo largo castaño claro después de color y keratina" },
   { name: "trabajo-23", label: "Taper fade con diseño", cat: "barberia", alt: "Taper fade con diseño de rayas en la nuca" },
   { name: "trabajo-24", label: "Low fade", cat: "barberia", alt: "Low fade visto de perfil" },
 ];
 const GALLERY_CATS = [
-  ["todos", "Todos"], ["barberia", "Barbería"], ["cortes", "Cortes"], ["color", "Color"],
+  ["todos", "Todos"], ["barberia", "Barbería"], ["cortes", "Cortes"], ["color", "Color y tratamientos"],
 ];
 const GALLERY_MORE_INICIAL = 8;
 const HAS_GALLERY = GALLERY_VIDEOS.length + GALLERY_PHOTOS.length + GALLERY_MORE.length > 0;
@@ -609,12 +620,16 @@ const GalleryMore = () => {
       <div className="trab-mas">
         {visibles.map(p => (
           <figure key={p.name} style={{ margin: 0 }}>
-            <div className="trab-celda" style={{ aspectRatio: "3 / 4" }}>
-              <img src={`/assets/trabajos/${p.name}-600.webp`}
-                srcSet={`/assets/trabajos/${p.name}-600.webp 600w, /assets/trabajos/${p.name}-1200.webp 1200w`}
-                sizes="(max-width: 900px) 50vw, 25vw"
-                alt={p.alt} loading="lazy" decoding="async" />
-            </div>
+            {p.video ? (
+              <GalleryVideo src={p.video} poster={p.poster} alt={p.alt} />
+            ) : (
+              <div className="trab-celda" style={{ aspectRatio: "3 / 4" }}>
+                <img src={`/assets/trabajos/${p.name}-600.webp`}
+                  srcSet={`/assets/trabajos/${p.name}-600.webp 600w, /assets/trabajos/${p.name}-1200.webp 1200w`}
+                  sizes="(max-width: 900px) 50vw, 25vw"
+                  alt={p.alt} loading="lazy" decoding="async" />
+              </div>
+            )}
             <figcaption className="trab-nombre">{p.label}</figcaption>
           </figure>
         ))}
