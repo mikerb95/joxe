@@ -1,5 +1,5 @@
 // JOXE: horario del salón a partir del catálogo (/api/catalog).
-// Lo usan la página del QR (/turno) y el aviso para imprimir (Aviso.html).
+// Lo usan la página del QR (/cita) y el aviso para imprimir (Aviso.html).
 // No hay un horario fijo del salón: sale de los workHours de cada empleado.
 // El salón está abierto un día si al menos uno trabaja, desde la primera
 // entrada hasta la última salida.

@@ -6,7 +6,7 @@
 <title>Aviso con QR · JOXE</title>
 <meta name="robots" content="noindex">
 <!-- Aviso para imprimir y pegar afuera del salón. Tamaño A5 (media carta
-     aprox.). El QR lleva a /turno. Para otro dominio: Aviso.html?url=https://... -->
+     aprox.). El QR lleva a /cita. Para otro dominio: Aviso.html?url=https://... -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -145,7 +145,7 @@
 <script src="/horario.js"></script>
 <script>
 (() => {
-  const destino = new URLSearchParams(location.search).get("url") || "https://joxe.app/turno";
+  const destino = new URLSearchParams(location.search).get("url") || "https://joxe.app/cita";
   document.getElementById("url").textContent = destino.replace(/^https?:\/\//, "");
 
   // Corrección de errores "Q" (25 %): aguanta mejor el sol, la lluvia y los rayones.
