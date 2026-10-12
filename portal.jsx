@@ -187,7 +187,7 @@ const PMono = ({ children, style }) => (
   }}>{children}</span>
 );
 
-const PortalShell = ({ children, tone = "noir", header }) => (
+const PortalShell = ({ children, tone = "noir", header, whatsapp = true }) => (
   <div style={{
     minHeight: "100vh",
     background: tone === "noir" ? "#0C0C0C" : "#F5F1EA",
@@ -197,7 +197,7 @@ const PortalShell = ({ children, tone = "noir", header }) => (
   }}>
     {header}
     {children}
-    <WABlob />
+    {whatsapp && <WABlob />}
   </div>
 );
 
@@ -847,7 +847,8 @@ const BookingPortal = () => {
   const homeHref = hasRole ? "Portal.html" : "Asesores de Imagen.html";
 
   return (
-    <PortalShell tone="ivory" header={
+    // Sin blob de WhatsApp: en mobile tapaba el "Continuar" fijo de abajo.
+    <PortalShell tone="ivory" whatsapp={false} header={
       <PortalHeader
         tone="ivory"
         subtitle="Portal · Paso"
@@ -1393,8 +1394,10 @@ const BookingPortal = () => {
           </div>
         )}
 
+        {/* Con algo elegido, la barra se pega al fondo de la pantalla para que
+            no haya que bajar hasta el final a buscar "Continuar". */}
         {step < 5 && (
-          <div>
+          <div className={`booking-nav${canNext ? " is-ready" : ""}`}>
             {bookError && (
               <div role="alert" style={{
                 marginTop: 24, padding: "12px 16px",
@@ -1403,7 +1406,7 @@ const BookingPortal = () => {
                 letterSpacing: "0.02em",
               }}>{bookError}</div>
             )}
-            <div data-wa-avoid style={{
+            <div style={{
               display: "flex", justifyContent: "space-between", marginTop: 48,
             }}>
               <button onClick={() => { if (step > 1) { setBookError(""); setStep(step - 1); } }} style={{
