@@ -145,7 +145,7 @@
 <script src="/horario.js"></script>
 <script>
 (() => {
-  const destino = new URLSearchParams(location.search).get("url") || "https://joxe.vercel.app/turno";
+  const destino = new URLSearchParams(location.search).get("url") || "https://joxe.app/turno";
   document.getElementById("url").textContent = destino.replace(/^https?:\/\//, "");
 
   // Corrección de errores "Q" (25 %): aguanta mejor el sol, la lluvia y los rayones.
