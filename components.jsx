@@ -489,7 +489,34 @@ const GALLERY_PHOTOS = [
   { name: "trabajo-3", alt: "Pelo rizado con degradado, visto de perfil" },
   { name: "trabajo-4", alt: "Corte con volumen arriba y degradado en la nuca" },
 ];
-const HAS_GALLERY = GALLERY_VIDEOS.length + GALLERY_PHOTOS.length > 0;
+// Fotos que Joxe mandó por WhatsApp. El nombre de cada corte lo escribió él.
+const GALLERY_MORE = [
+  { name: "trabajo-5", label: "Balayage rubio", cat: "color", alt: "Pelo largo con balayage rubio, visto desde atrás" },
+  { name: "trabajo-6", label: "Dragón fade", cat: "barberia", alt: "Dragón fade visto de perfil, sobre pelo negro" },
+  { name: "trabajo-7", label: "Corte bob", cat: "cortes", alt: "Corte bob castaño visto desde atrás" },
+  { name: "trabajo-8", label: "Taper fade con diseño", cat: "barberia", alt: "Taper fade con un diseño de líneas en la nuca" },
+  { name: "trabajo-9", label: "Wolf cut", cat: "cortes", alt: "Wolf cut en pelo negro, visto de espaldas" },
+  { name: "trabajo-10", label: "Taper fade clásico", cat: "barberia", alt: "Taper fade clásico visto de perfil" },
+  { name: "trabajo-11", label: "Color global difuminado", cat: "color", alt: "Color global difuminado en tonos claros, con gafas oscuras" },
+  { name: "trabajo-12", label: "Dragón fade doble V", cat: "barberia", alt: "Dragón fade con doble V en la nuca" },
+  { name: "trabajo-13", label: "Bob long", cat: "cortes", alt: "Bob long liso a la altura del cuello, de perfil" },
+  { name: "trabajo-14", label: "High taper fade", cat: "barberia", alt: "High taper fade visto de perfil" },
+  { name: "trabajo-15", label: "Color y keratina", cat: "color", alt: "Pelo largo castaño claro después de color y keratina" },
+  { name: "trabajo-16", label: "Mohicano texturizado", cat: "barberia", alt: "Mohicano texturizado con degradado, de perfil" },
+  { name: "trabajo-17", label: "Corte bob", cat: "cortes", alt: "Corte bob castaño visto de perfil" },
+  { name: "trabajo-18", label: "Taper fade con diseño", cat: "barberia", alt: "Taper fade con diseño en la nuca" },
+  { name: "trabajo-19", label: "Corte mullet", cat: "cortes", alt: "Corte mullet en pelo negro, de perfil" },
+  { name: "trabajo-20", label: "Low dragón fade", cat: "barberia", alt: "Low dragón fade visto de perfil" },
+  { name: "trabajo-21", label: "Taper fade texturizado", cat: "barberia", alt: "Taper fade con el pelo texturizado arriba" },
+  { name: "trabajo-22", label: "Low fade moderno", cat: "barberia", alt: "Low fade moderno visto de perfil" },
+  { name: "trabajo-23", label: "Taper fade con diseño", cat: "barberia", alt: "Taper fade con diseño de rayas en la nuca" },
+  { name: "trabajo-24", label: "Low fade", cat: "barberia", alt: "Low fade visto de perfil" },
+];
+const GALLERY_CATS = [
+  ["todos", "Todos"], ["barberia", "Barbería"], ["cortes", "Cortes"], ["color", "Color"],
+];
+const GALLERY_MORE_INICIAL = 8;
+const HAS_GALLERY = GALLERY_VIDEOS.length + GALLERY_PHOTOS.length + GALLERY_MORE.length > 0;
 
 // Se reproduce solo mientras está en pantalla. Con movimiento reducido no
 // arranca solo: muestra el póster y los controles.
@@ -548,8 +575,57 @@ const Gallery = ({ num = "02" }) => {
           ))}
           {v2 && <GalleryVideo {...v2} className="trab-v2" />}
         </div>
+
+        {GALLERY_MORE.length > 0 && <GalleryMore />}
       </div>
     </section>
+  );
+};
+
+// Muro con el resto de los trabajos, filtrable por tipo. Arranca con unas
+// pocas fotos para no alargar el home; el botón muestra las demás.
+const GalleryMore = () => {
+  const [cat, setCat] = React.useState("todos");
+  const [todas, setTodas] = React.useState(false);
+  const lista = cat === "todos" ? GALLERY_MORE : GALLERY_MORE.filter(p => p.cat === cat);
+  const visibles = todas ? lista : lista.slice(0, GALLERY_MORE_INICIAL);
+  const cats = GALLERY_CATS.filter(([id]) => id === "todos" || GALLERY_MORE.some(p => p.cat === id));
+  const elegir = (id) => { setCat(id); setTodas(false); };
+  return (
+    <div style={{ marginTop: 96 }}>
+      <div className="trab-mas-cab">
+        <h3 style={{
+          fontFamily: "var(--display)", fontWeight: 400, fontSize: 32,
+          margin: 0, letterSpacing: "-0.01em",
+        }}>Más trabajos</h3>
+        <div role="group" aria-label="Filtrar por tipo" style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {cats.map(([id, label]) => (
+            <button key={id} onClick={() => elegir(id)} aria-pressed={cat === id}
+              className={`trab-filtro${cat === id ? " activo" : ""}`}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div className="trab-mas">
+        {visibles.map(p => (
+          <figure key={p.name} style={{ margin: 0 }}>
+            <div className="trab-celda" style={{ aspectRatio: "3 / 4" }}>
+              <img src={`/assets/trabajos/${p.name}-600.webp`}
+                srcSet={`/assets/trabajos/${p.name}-600.webp 600w, /assets/trabajos/${p.name}-1200.webp 1200w`}
+                sizes="(max-width: 900px) 50vw, 25vw"
+                alt={p.alt} loading="lazy" decoding="async" />
+            </div>
+            <figcaption className="trab-nombre">{p.label}</figcaption>
+          </figure>
+        ))}
+      </div>
+
+      {lista.length > GALLERY_MORE_INICIAL && (
+        <button onClick={() => setTodas(!todas)} className="trab-ver">
+          {todas ? "Ver menos" : `Ver los ${lista.length} trabajos`}
+        </button>
+      )}
+    </div>
   );
 };
 
