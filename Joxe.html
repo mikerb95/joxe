@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Conoce a Joxe · JOXE Asesores de Imagen</title>
+<meta name="description" content="Joxe es el estilista detrás de JOXE Asesores de Imagen, en San Mateo, Soacha: cortes, diseños con navaja, color y asesoría de imagen.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --noir: #0C0C0C;
+    --ivory: #F5F1EA;
+    --bronze: #C29E66;
+    --display: 'Marcellus', serif;
+    --sans: 'Outfit', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--ivory);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body { font-family: var(--sans); color: var(--noir); overflow-x: hidden; }
+  ::selection { background: var(--bronze); color: var(--noir); }
+  a { color: inherit; }
+  button { font-family: var(--sans); }
+  button:focus-visible, a:focus-visible { outline: 1px solid var(--bronze); outline-offset: 2px; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .section { animation: fadeIn 0.8s ease; }
+
+  .jx-foto { position: relative; overflow: hidden; background: #1a1a1a; }
+  .jx-foto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .jx-trabajo img { transition: transform 0.8s ease; }
+  .jx-trabajo:hover img { transform: scale(1.04); }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none !important; }
+    .nav-burger { display: block !important; }
+    .jx-hero { grid-template-columns: 1fr !important; padding: 120px 24px 64px !important; gap: 48px !important; }
+    .jx-hero-foto { max-width: 420px; }
+    .jx-historia, .jx-metodo, .jx-cta-grid, .footer-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+    .jx-trabajos { grid-template-columns: 1fr 1fr !important; }
+    .section { padding: 72px 24px !important; }
+    .footer-bottom { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="joxe.jsx"></script>
+</body>
+</html>

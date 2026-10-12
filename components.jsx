@@ -85,6 +85,7 @@ const useAcademy = () => {
 const Nav = ({ onReserveClick, scrolled, hasReviews, hasAcademy, hrefPrefix = "" }) => {
   const [open, setOpen] = React.useState(false);
   const links = [
+    ["Joxe", "/joxe"],
     ["Servicios", `${hrefPrefix}#servicios`],
     ...(HAS_GALLERY ? [["Galería", `${hrefPrefix}#galeria`]] : []),
     ...(hasReviews ? [["Reseñas", `${hrefPrefix}#resenas`]] : []),
@@ -986,7 +987,8 @@ const Footer = ({ hasAcademy, hasModels }) => (
       <div>
         <Mono style={{ color: "var(--bronze)", display: "block", marginBottom: 18 }}>Navegación</Mono>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {[["Servicios", "/#servicios"],
+          {[["Conoce a Joxe", "/joxe"],
+            ["Servicios", "/#servicios"],
             ...(HAS_GALLERY ? [["Galería", "/#galeria"]] : []),
             ...(hasAcademy ? [["Academia", "/academia"]] : []),
             ...(hasModels ? [["Sé modelo", "/modelos"]] : []),

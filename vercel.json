@@ -81,6 +81,10 @@
       "destination": "/Modelos.html"
     },
     {
+      "source": "/joxe",
+      "destination": "/Joxe.html"
+    },
+    {
       "source": "/academia",
       "destination": "/Academia.html"
     },
