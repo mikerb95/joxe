@@ -472,8 +472,8 @@ const Services = ({ num = "01" }) => {
 // ——————————————————————————————————————————————
 // GALERÍA
 // ——————————————————————————————————————————————
-// Trabajos reales del salón. Los cortes no llevan nombre de servicio
-// porque nadie los ha confirmado.
+// Trabajos reales del salón. Las fotos del bloque de arriba no llevan nombre
+// de servicio porque nadie lo ha confirmado; las de GALLERY_MORE sí.
 // Las fotos tienen dos anchos (600 y 1200 px) y los videos van sin audio.
 // Si las dos listas quedan vacías la galería no se pinta y el menú, el hero
 // y el footer no la enlazan.
