@@ -85,6 +85,10 @@
       "destination": "/Joxe.html"
     },
     {
+      "source": "/turno",
+      "destination": "/Turno.html"
+    },
+    {
       "source": "/academia",
       "destination": "/Academia.html"
     },

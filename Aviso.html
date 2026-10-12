@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aviso con QR · JOXE</title>
+<meta name="robots" content="noindex">
+<!-- Aviso para imprimir y pegar afuera del salón. Tamaño A5 (media carta
+     aprox.). El QR lleva a /turno. Para otro dominio: Aviso.html?url=https://... -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --noir: #0C0C0C;
+    --bronze: #A8834A;
+    --display: 'Marcellus', serif;
+    --sans: 'Outfit', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  @page { size: A5 portrait; margin: 0; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #d9d4cb; font-family: var(--sans); color: var(--noir);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  .barra {
+    max-width: 148mm; margin: 24px auto 0; padding: 0 4px;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    font-size: 13px; color: #555;
+  }
+  .barra button {
+    font-family: var(--sans); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: var(--noir); color: #fff; border: 0; padding: 12px 20px; cursor: pointer;
+  }
+
+  .hoja {
+    width: 148mm; height: 210mm; margin: 16px auto 40px;
+    background: #fff; position: relative; overflow: hidden;
+    padding: 14mm 13mm 17mm;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.18);
+  }
+  /* Marcas de esquina: el mismo lenguaje del croquis y del mapa del home. */
+  .esq { position: absolute; width: 9mm; height: 9mm; stroke: var(--bronze); stroke-width: 1.2; fill: none; }
+
+  .marca {
+    font-family: var(--display); font-size: 40px; letter-spacing: 0.32em;
+    margin-right: -0.32em; line-height: 1;
+  }
+  .sub {
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.24em; text-transform: uppercase;
+    color: var(--bronze); margin-top: 3mm;
+  }
+
+  h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: 34px; line-height: 1.05; letter-spacing: -0.01em;
+    margin: 9mm 0 0;
+  }
+  h1 em { color: var(--bronze); }
+  .bajada { font-size: 13.5px; line-height: 1.5; color: #444; margin: 3mm 0 0; }
+
+  .qr {
+    margin-top: 7mm; padding: 7mm; background: #fff;
+    border: 1px solid #e3ddd2; border-radius: 3mm;
+  }
+  .qr svg { display: block; width: 58mm; height: 58mm; }
+
+  .escanea {
+    display: flex; align-items: center; gap: 2.5mm; margin-top: 5mm;
+    font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  }
+  .escanea svg { width: 5mm; height: 5mm; }
+  .url { font-size: 13px; color: #555; margin-top: 1.5mm; }
+
+  .pie {
+    margin-top: auto; width: 100%;
+    border-top: 1px solid #e3ddd2; padding-top: 4mm;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 6mm;
+    text-align: left; font-size: 10.5px; line-height: 1.55; color: #333;
+  }
+  .pie .t {
+    font-family: var(--mono); font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--bronze); margin-bottom: 1.2mm;
+  }
+  .pie .der { text-align: right; }
+
+  @media print {
+    body { background: #fff; }
+    .barra { display: none; }
+    .hoja { margin: 0; box-shadow: none; }
+  }
+  @media screen and (max-width: 600px) {
+    .hoja { transform: scale(calc(100vw / 160mm)); transform-origin: top center; margin-bottom: calc(210mm * (100vw / 160mm) - 210mm); }
+  }
+</style>
+</head>
+<body>
+<div class="barra">
+  <span>Hoja A5. Imprime al 100 %, sin ajustar a la página.</span>
+  <button onclick="window.print()">Imprimir</button>
+</div>
+
+<div class="hoja">
+  <svg class="esq" style="top:6mm;left:6mm" viewBox="0 0 16 16"><path d="M1 15V1H15"/></svg>
+  <svg class="esq" style="top:6mm;right:6mm" viewBox="0 0 16 16"><path d="M1 1H15V15"/></svg>
+  <svg class="esq" style="bottom:6mm;left:6mm" viewBox="0 0 16 16"><path d="M1 1V15H15"/></svg>
+  <svg class="esq" style="bottom:6mm;right:6mm" viewBox="0 0 16 16"><path d="M1 15H15V1"/></svg>
+
+  <div class="marca">JOXE</div>
+  <div class="sub">Asesores de imagen</div>
+
+  <h1>¿Estamos cerrados?<br><em>Agenda tu cita aquí.</em></h1>
+  <p class="bajada">Escoge servicio, día y hora desde tu celular.</p>
+
+  <div class="qr" id="qr"></div>
+
+  <div class="escanea">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M10.5 18.5h3"/>
+    </svg>
+    Escanea con la cámara
+  </div>
+  <div class="url" id="url"></div>
+
+  <div class="pie">
+    <div>
+      <div class="t">Horario</div>
+      <div id="horario">Cargando…</div>
+    </div>
+    <div class="der">
+      <div class="t">WhatsApp</div>
+      +57 312 449 9862<br>
+      San Mateo, Soacha
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="/horario.js"></script>
+<script>
+(() => {
+  const destino = new URLSearchParams(location.search).get("url") || "https://joxe.vercel.app/turno";
+  document.getElementById("url").textContent = destino.replace(/^https?:\/\//, "");
+
+  // Corrección de errores "Q" (25 %): aguanta mejor el sol, la lluvia y los rayones.
+  const qr = window.qrcode(0, "Q");
+  qr.addData(destino);
+  qr.make();
+  const n = qr.getModuleCount(), q = 0; // la zona de silencio la da el padding de .qr
+  let d = "";
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++)
+      if (qr.isDark(r, c)) d += `M${c + q} ${r + q}h1v1h-1z`;
+  document.getElementById("qr").innerHTML =
+    `<svg viewBox="0 0 ${n + 2 * q} ${n + 2 * q}" shape-rendering="crispEdges" role="img" aria-label="Código QR hacia ${destino}">` +
+    `<rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#0C0C0C"/></svg>`;
+
+  // El horario sale del catálogo, así que el aviso queda al día cada vez que se imprime.
+  const H = window.JoxeHorario;
+  fetch("/api/catalog")
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(cat => {
+      const g = H.grupos(H.horarioSalon(cat.employees));
+      document.getElementById("horario").innerHTML =
+        g.map(x => `${x.dias}: ${x.horas}`).join("<br>");
+    })
+    .catch(() => { document.getElementById("horario").textContent = "No se pudo cargar el horario."; });
+})();
+</script>
+</body>
+</html>

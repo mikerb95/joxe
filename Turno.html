@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Agenda tu cita · JOXE Asesores de Imagen</title>
+<meta name="description" content="Agenda tu cita en JOXE Asesores de Imagen, San Mateo, Soacha.">
+<meta name="theme-color" content="#0C0C0C">
+<!-- Página a la que llega quien escanea el QR del aviso de la puerta.
+     Va sin React ni Babel a propósito: se abre en la calle, muchas veces con
+     datos móviles, y tiene que cargar al instante. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --noir: #0C0C0C;
+    --ivory: #F5F1EA;
+    --bronze: #C29E66;
+    --linea: rgba(245,241,234,0.12);
+    --display: 'Marcellus', serif;
+    --sans: 'Outfit', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--noir); color: var(--ivory);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  body { font-family: var(--sans); }
+  ::selection { background: var(--bronze); color: var(--noir); }
+  a { color: inherit; }
+  a:focus-visible { outline: 1px solid var(--bronze); outline-offset: 3px; }
+
+  main {
+    max-width: 480px; margin: 0 auto;
+    padding: calc(28px + env(safe-area-inset-top, 0px)) 20px calc(40px + env(safe-area-inset-bottom, 0px));
+  }
+  .mono {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+  }
+
+  .marca { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .marca b { font-family: var(--display); font-weight: 400; font-size: 26px; letter-spacing: 0.3em; }
+  .marca span { color: var(--bronze); opacity: 0.9; }
+
+  .estado {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin-top: 44px; padding: 9px 14px 9px 12px;
+    background: rgba(245,241,234,0.06); border-radius: 999px;
+    font-size: 13px; color: rgba(245,241,234,0.85);
+  }
+  .estado[hidden] { display: none; }
+  .estado i {
+    width: 8px; height: 8px; border-radius: 50%; background: #8a8378; flex-shrink: 0;
+  }
+  .estado.abierto i { background: #6FCF8A; box-shadow: 0 0 0 4px rgba(111,207,138,0.18); }
+
+  h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(42px, 13vw, 60px); line-height: 1; letter-spacing: -0.02em;
+    margin: 22px 0 0;
+  }
+  h1 em { color: var(--bronze); }
+  .intro { font-size: 16px; line-height: 1.65; opacity: 0.72; margin: 20px 0 0; }
+
+  .cta {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 34px; padding: 22px 24px;
+    background: var(--bronze); color: var(--noir); text-decoration: none;
+    font-size: 13px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .cta:hover { background: #d1b07b; }
+  .cta:active { transform: scale(0.985); }
+  .cta svg { width: 22px; height: 22px; }
+  .nota { font-size: 13px; opacity: 0.5; margin: 12px 0 0; text-align: center; }
+
+  section { margin-top: 48px; }
+  section[hidden] { display: none; }
+  .cab { display: flex; align-items: center; gap: 10px; color: var(--bronze); }
+  .cab::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--bronze);
+  }
+  h2 {
+    font-family: var(--display); font-weight: 400; font-size: 28px; line-height: 1.1;
+    margin: 14px 0 0; letter-spacing: -0.01em;
+  }
+  h2 em { color: var(--bronze); }
+
+  .lista { list-style: none; padding: 0; margin: 18px 0 0; }
+  .lista li {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+    padding: 14px 0; border-bottom: 1px solid var(--linea); font-size: 15px;
+  }
+  .lista li:first-child { border-top: 1px solid var(--linea); }
+  .lista .nombre { opacity: 0.85; }
+  .lista .valor { white-space: nowrap; text-align: right; }
+  .lista s { opacity: 0.4; font-size: 13px; margin-right: 8px; }
+  .lista .nuevo { color: var(--bronze); font-family: var(--display); font-size: 19px; }
+  .lista .hoy { color: var(--ivory); }
+  .lista .hoy .nombre { opacity: 1; }
+  .lista .hoy .nombre::after {
+    content: "Hoy"; margin-left: 10px; padding: 2px 8px; border-radius: 999px;
+    background: rgba(194,158,102,0.18); color: var(--bronze);
+    font-family: var(--mono); font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+    vertical-align: 2px;
+  }
+  .lista .cerrado .valor { opacity: 0.45; }
+
+  .botones { display: grid; gap: 10px; margin-top: 48px; }
+  .botones a {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 17px 20px; text-decoration: none;
+    border: 1px solid rgba(245,241,234,0.22);
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    transition: background 0.2s;
+  }
+  .botones a:hover { background: rgba(245,241,234,0.06); }
+  .botones svg { width: 18px; height: 18px; }
+
+  footer {
+    margin-top: 56px; padding-top: 22px; border-top: 1px solid var(--linea);
+    font-size: 12px; opacity: 0.45; line-height: 1.7;
+  }
+
+  @keyframes subir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  main > * { animation: subir 0.6s ease both; }
+  main > *:nth-child(2) { animation-delay: 0.05s; }
+  main > *:nth-child(3) { animation-delay: 0.1s; }
+  main > *:nth-child(4) { animation-delay: 0.15s; }
+  main > *:nth-child(5) { animation-delay: 0.2s; }
+  @media (prefers-reduced-motion: reduce) { main > * { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="marca">
+    <b>JOXE</b>
+    <span class="mono">San Mateo · Soacha</span>
+  </div>
+
+  <div class="estado" id="estado" hidden><i></i><span></span></div>
+
+  <h1>Agenda tu cita <em>desde aquí.</em></h1>
+  <p class="intro">
+    Elige el servicio, el día y la hora que te sirvan. Puedes hacerlo
+    ahora mismo, aunque el salón esté cerrado.
+  </p>
+
+  <div>
+    <a class="cta" href="/booking">
+      Agendar mi cita
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+        <path d="M4 12h15M13 6l6 6-6 6" />
+      </svg>
+    </a>
+  </div>
+
+  <section id="martes" hidden>
+    <div class="cab mono">Precio de martes</div>
+    <h2 id="martes-titulo">Los martes, <em>tu corte cuesta menos.</em></h2>
+    <ul class="lista" id="martes-lista"></ul>
+  </section>
+
+  <section id="horario" hidden>
+    <div class="cab mono">Horario</div>
+    <h2>Cuándo <em>atendemos.</em></h2>
+    <ul class="lista" id="horario-lista"></ul>
+  </section>
+
+  <div class="botones">
+    <a id="wa" href="https://wa.me/573124499862" target="_blank" rel="noopener noreferrer">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Escribir por WhatsApp
+    </a>
+    <a href="/">Ver servicios y trabajos</a>
+  </div>
+
+  <footer>
+    JOXE Asesores de Imagen · San Mateo, Soacha<br>
+    +57 312 449 9862
+  </footer>
+</main>
+
+<script src="/horario.js"></script>
+<script>
+(() => {
+  const H = window.JoxeHorario;
+  const $ = (id) => document.getElementById(id);
+  const precio = (n) => "$" + Number(n).toLocaleString("es-CO");
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  // El mismo número que configura el panel, si este navegador lo tiene guardado.
+  try {
+    const n = JSON.parse(localStorage.getItem("joxe_admin_v1") || "{}").whatsappNumber;
+    if (n) $("wa").href = "https://wa.me/" + String(n).replace(/\D/g, "");
+  } catch {}
+
+  fetch("/api/catalog")
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(cat => {
+      const hoy = H.ahoraBogota().dia;
+      const horario = H.horarioSalon(cat.employees);
+
+      const est = H.estado(horario);
+      if (est) {
+        $("estado").classList.toggle("abierto", est.abierto);
+        $("estado").querySelector("span").textContent = est.texto;
+        $("estado").hidden = false;
+      }
+
+      const grupos = H.grupos(horario);
+      if (grupos.some(g => !g.cerrado)) {
+        $("horario-lista").innerHTML = grupos.map(g => `
+          <li class="${g.claves.includes(hoy) ? "hoy" : ""} ${g.cerrado ? "cerrado" : ""}">
+            <span class="nombre">${esc(g.dias)}</span>
+            <span class="valor">${esc(g.horas)}</span>
+          </li>`).join("");
+        $("horario").hidden = false;
+      }
+
+      // Precios especiales de martes que el salón carga en el panel (dayPrices.mar).
+      const martes = (cat.services || []).filter(s => Number(s.dayPrices?.mar) > 0);
+      if (martes.length && horario.mar) {
+        if (hoy === "mar") $("martes-titulo").innerHTML = "Hoy es martes: <em>tu corte cuesta menos.</em>";
+        $("martes-lista").innerHTML = martes.map(s => `
+          <li>
+            <span class="nombre">${esc(s.name)}</span>
+            <span class="valor">${s.price > s.dayPrices.mar ? `<s>${precio(s.price)}</s>` : ""}<span class="nuevo">${precio(s.dayPrices.mar)}</span></span>
+          </li>`).join("");
+        $("martes").hidden = false;
+      }
+    })
+    .catch(() => {});
+})();
+</script>
+</body>
+</html>
