@@ -1223,7 +1223,7 @@ const AgendaView = () => {
           {dates.map(date=>{
             const isToday  = date===todayD;
             const dayAppts = allAppts.filter(a=>a.date===date);
-            const blocked  = (appts.blockedSlots||[]).filter(b=>b.date===date);
+            const blocked  = normalizeBlocks(appts).filter(b=>date>=b.dateStart && date<=(b.dateEnd||b.dateStart));
 
             // Group appointments by time slot
             const byTime = {};
@@ -1260,7 +1260,7 @@ const AgendaView = () => {
                 }}>
                 {slots.map(time=>{
                   const slotAppts  = byTime[time]||[];
-                  const isBlocked  = blocked.some(b=>b.time===time);
+                  const isBlocked  = blocked.some(b=>blockCoversSlot(b,date,time));
                   const [h,m]      = time.split(":").map(Number);
                   const slotMin    = h*60+(m||0);
                   const nowMin     = nowCOT().getHours()*60+nowCOT().getMinutes();
@@ -7276,7 +7276,8 @@ const EmpBookingView = ({emp, onNav}) => {
 
   const allAppts = getAllAppts(appts, admin.cancelledIds||[], admin.noShowIds||[]);
   const dayAppts = allAppts.filter(a=> a.stylist===emp.name && a.date===form.date && !["cancelled","no-show"].includes(a.computedStatus));
-  const blocked  = (appts.blockedSlots||[]).filter(b=>b.date===form.date);
+  // Bloqueos y ausencias que aplican a este empleado (rangos nuevos y legacy).
+  const blocked  = normalizeBlocks(appts).filter(b=>blockAppliesToEmp(b,emp.id));
 
   const nowMin = nowCOT().getHours()*60 + nowCOT().getMinutes();
   const isPastSlot = (time) => form.date===todayD && timeToMin(time) < nowMin;
@@ -7287,7 +7288,7 @@ const EmpBookingView = ({emp, onNav}) => {
     if (e > closesAtMin(form.date)) return true;                                    // no cierra a tiempo
     if (myEmp && !empWorksOnSlot(myEmp, form.date, startTime, dur)) return true;    // fuera de su horario
     if (dayAppts.some(a=>{ const as=timeToMin(a.time), ae=as+(a.serviceDur||60); return as<e && s<ae; })) return true;
-    if (blocked.some(b=>{ const bs=timeToMin(b.time); return bs>=s && bs<e; })) return true;
+    if (blocked.some(b=>blockCoversSlot(b,form.date,startTime,dur))) return true;
     return false;
   };
 
@@ -7295,7 +7296,7 @@ const EmpBookingView = ({emp, onNav}) => {
   const selStart = form.time ? timeToMin(form.time) : null;
   const selEnd   = selStart!=null ? selStart+dur : null;
   const apptAt   = (time)=>{ const cs=timeToMin(time), ce=cs+60; return dayAppts.find(a=>{ const as=timeToMin(a.time), ae=as+(a.serviceDur||60); return as<ce && cs<ae; }); };
-  const isBlockedSlot = (time)=> blocked.some(b=>b.time===time);
+  const isBlockedSlot = (time)=> blocked.some(b=>blockCoversSlot(b,form.date,time));
 
   const phoneErr = phoneError(form.phone);
   const phoneOk  = normPhone(form.phone).startsWith("+") && !phoneErr;

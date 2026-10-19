@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Página no encontrada · JOXE Asesores de Imagen</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0C0C0C">
+<!-- Vercel sirve este archivo (con status 404) en cualquier ruta que no exista.
+     Puede mostrarse en rutas anidadas como /algo/otra, así que todos los
+     enlaces van con ruta absoluta. Sin React ni Babel: tiene que cargar al instante. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Marcellus&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --noir: #0C0C0C;
+    --ivory: #F5F1EA;
+    --bronze: #C29E66;
+    --linea: rgba(245,241,234,0.12);
+    --display: 'Marcellus', serif;
+    --sans: 'Outfit', sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; background: var(--noir); color: var(--ivory);
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+  body { font-family: var(--sans); min-height: 100vh; min-height: 100dvh; display: flex; }
+  ::selection { background: var(--bronze); color: var(--noir); }
+  a { color: inherit; }
+  a:focus-visible { outline: 1px solid var(--bronze); outline-offset: 3px; }
+
+  main {
+    width: 100%; max-width: 480px; margin: 0 auto;
+    display: flex; flex-direction: column;
+    padding: calc(28px + env(safe-area-inset-top, 0px)) 20px calc(40px + env(safe-area-inset-bottom, 0px));
+  }
+  .mono {
+    font-family: var(--mono); font-size: 11px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+  }
+
+  .marca { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; text-decoration: none; }
+  .marca b { font-family: var(--display); font-weight: 400; font-size: 26px; letter-spacing: 0.3em; }
+  .marca span { color: var(--bronze); opacity: 0.9; }
+
+  .cuerpo { margin: auto 0; padding: 56px 0 24px; }
+
+  .codigo {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(110px, 38vw, 168px); line-height: 0.85; letter-spacing: -0.04em;
+    color: transparent; -webkit-text-stroke: 1px rgba(194,158,102,0.55);
+    user-select: none;
+  }
+  .cab { display: flex; align-items: center; gap: 10px; color: var(--bronze); margin-top: 28px; }
+  .cab::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--bronze);
+  }
+  h1 {
+    font-family: var(--display); font-weight: 400;
+    font-size: clamp(36px, 11vw, 50px); line-height: 1.02; letter-spacing: -0.02em;
+    margin: 16px 0 0;
+  }
+  h1 em { color: var(--bronze); }
+  .intro { font-size: 16px; line-height: 1.65; opacity: 0.72; margin: 18px 0 0; }
+  .ruta {
+    display: inline-block; max-width: 100%; margin-top: 18px; padding: 6px 12px;
+    background: rgba(245,241,234,0.06); border-radius: 999px;
+    font-family: var(--mono); font-size: 12px; color: rgba(245,241,234,0.6);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top;
+  }
+  .ruta:empty { display: none; }
+
+  .cta {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 34px; padding: 22px 24px;
+    background: var(--bronze); color: var(--noir); text-decoration: none;
+    font-size: 13px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .cta:hover { background: #d1b07b; }
+  .cta:active { transform: scale(0.985); }
+  .cta svg { width: 22px; height: 22px; }
+
+  .botones { display: grid; gap: 10px; margin-top: 10px; }
+  .botones a {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 17px 20px; text-decoration: none;
+    border: 1px solid rgba(245,241,234,0.22);
+    font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+    transition: background 0.2s;
+  }
+  .botones a:hover { background: rgba(245,241,234,0.06); }
+  .botones svg { width: 18px; height: 18px; }
+
+  footer {
+    margin-top: 40px; padding-top: 22px; border-top: 1px solid var(--linea);
+    font-size: 12px; opacity: 0.45; line-height: 1.7;
+  }
+
+  @keyframes subir { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .cuerpo > * { animation: subir 0.6s ease both; }
+  .cuerpo > *:nth-child(2) { animation-delay: 0.05s; }
+  .cuerpo > *:nth-child(3) { animation-delay: 0.1s; }
+  .cuerpo > *:nth-child(4) { animation-delay: 0.15s; }
+  .cuerpo > *:nth-child(5) { animation-delay: 0.2s; }
+  .cuerpo > *:nth-child(n+6) { animation-delay: 0.25s; }
+  @media (prefers-reduced-motion: reduce) { .cuerpo > * { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <a class="marca" href="/" aria-label="JOXE, ir al inicio">
+    <b>JOXE</b>
+    <span class="mono">San Mateo · Soacha</span>
+  </a>
+
+  <div class="cuerpo">
+    <div class="codigo" aria-hidden="true">404</div>
+    <div class="cab mono">Página no encontrada</div>
+    <h1>Este enlace <em>no lleva a ningún lado.</em></h1>
+    <p class="intro">
+      Puede que la dirección esté mal escrita o que la página ya no exista.
+      Desde aquí puedes volver al inicio o agendar tu cita.
+    </p>
+    <div><span class="ruta" id="ruta"></span></div>
+
+    <a class="cta" href="/booking">
+      Agendar mi cita
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+        <path d="M4 12h15M13 6l6 6-6 6" />
+      </svg>
+    </a>
+    <div class="botones">
+      <a href="/">Volver al inicio</a>
+      <a href="https://wa.me/573124499862" target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Escribir por WhatsApp
+      </a>
+    </div>
+  </div>
+
+  <footer>
+    JOXE Asesores de Imagen · San Mateo, Soacha<br>
+    +57 312 449 9862
+  </footer>
+</main>
+
+<script>
+  // Muestra la ruta que no existe, para que se vea qué se escribió mal.
+  try { document.getElementById("ruta").textContent = decodeURIComponent(location.pathname); } catch (e) {}
+</script>
+</body>
+</html>
