@@ -899,18 +899,23 @@ const BookingPortal = () => {
   // Días llenos: el salón trabaja ese día (alguien atiende al menos un turno
   // que aún no pasó) y aun así todos esos turnos están tomados. Un día en que
   // nadie trabaja no está "lleno", está cerrado: ahí no se ofrece la lista.
-  const fullDates = React.useMemo(() => {
-    if (step !== 3) return [];
+  // workingDates son los días que se pueden pedir en la lista de espera.
+  const { workingDates, fullDates } = React.useMemo(() => {
+    if (step !== 3) return { workingDates: [], fullDates: [] };
     const emp = employees.find(e => e.name === form.stylist);
     const someoneWorks = (date, t) => form.stylist === "Sin preferencia"
       ? eligibleEmployees.some(e => empWorksOnSlot(e, date, t, selectedDur))
       : (!emp || empWorksOnSlot(emp, date, t, selectedDur));
-    return availableDates.filter(date => {
+    const workingDates = [], fullDates = [];
+    for (const date of availableDates) {
       const working = slotsForDate(date).filter(t =>
         !isTimePast(date, t) && timeToMin(t) + selectedDur <= closesAtMin(date) && someoneWorks(date, t)
       );
-      return working.length > 0 && working.every(t => isSlotTaken(date, t, form.stylist));
-    });
+      if (!working.length) continue;
+      workingDates.push(date);
+      if (working.every(t => isSlotTaken(date, t, form.stylist))) fullDates.push(date);
+    }
+    return { workingDates, fullDates };
   }, [step, store, form.stylist, selectedDur, availableDates, employees, eligibleEmployees]);
 
   const submit = async () => {
@@ -1285,15 +1290,15 @@ const BookingPortal = () => {
               </div>
             )}
 
-            <WaitlistBox
-              dates={availableDates}
+            {workingDates.length > 0 && <WaitlistBox
+              dates={workingDates}
               fullDates={fullDates}
-              defaultDate={form.date && fullDates.includes(form.date) ? form.date : (fullDates[0] || form.date)}
+              defaultDate={form.date && fullDates.includes(form.date) ? form.date : (fullDates[0] || workingDates[0])}
               service={form.service}
               stylist={form.stylist}
               initialName={form.name}
               initialPhone={form.phone}
-            />
+            />}
           </>
         )}
 
