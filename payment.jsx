@@ -164,8 +164,8 @@ const LoginScreen = ({ onLogin }) => {
         body: JSON.stringify({ password: pw }),
       });
       const data = await res.json();
-      if (data.ok) { doLogin(pw); onLogin(); }
-      else { setErr("Contraseña incorrecta."); }
+      if (data.ok && data.token) { doLogin(data.token); onLogin(); }
+      else { setErr(data.error || "Contraseña incorrecta."); }
     } catch {
       setErr("Error de conexión. Intenta de nuevo.");
     }

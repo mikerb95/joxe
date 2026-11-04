@@ -3001,8 +3001,8 @@ const PortalLoginGate = ({ onAuth }) => {
         body: JSON.stringify({ password: pw }),
       });
       const data = await res.json();
-      if (!res.ok || !data.ok) { setErr("Contraseña incorrecta."); setPw(""); setLoading(false); return; }
-      sessionStorage.setItem(PORTAL_SES_ADMIN, pw);
+      if (!res.ok || !data.ok || !data.token) { setErr(data.error || "Contraseña incorrecta."); setPw(""); setLoading(false); return; }
+      sessionStorage.setItem(PORTAL_SES_ADMIN, data.token);
       onAuth();
     } catch { setErr("Error de conexión."); }
     setLoading(false);

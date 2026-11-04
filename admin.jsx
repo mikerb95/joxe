@@ -16,7 +16,7 @@ const cleanName = (v, max = 120) => String(v ?? "")
 // ==================== STORES (Turso via API + localStorage cache) ====================
 const ADMIN_KEY = "joxe_admin_v1";
 const APPT_KEY  = "joxe_turnos_v1";
-const SES_KEY   = "joxe_admin_session"; // stores the password as session token
+const SES_KEY   = "joxe_admin_session"; // token de sesión firmado que entrega el login (ya no la contraseña)
 
 const EMP_SES_KEY   = "joxe_emp_session"; // { id, name, role } for employee sessions
 const EMP_TOKEN_KEY = "joxe_emp_token";   // signed JWT for authenticated API reads
@@ -111,13 +111,27 @@ const DEFAULT_ADMIN = () => ({
   chairAssignments: {},
 });
 
+// La contraseña no tiene por qué estar en el navegador. Versiones anteriores
+// la dejaban en este cache (texto plano en localStorage) tras cambiarla.
+const withoutPassword = (o) => {
+  if (!o || typeof o !== "object" || !("password" in o)) return o;
+  const { password: _pw, ...rest } = o;
+  return rest;
+};
+
 const loadAdminCache = () => {
   try {
-    const s = JSON.parse(localStorage.getItem(ADMIN_KEY));
+    const s = withoutPassword(JSON.parse(localStorage.getItem(ADMIN_KEY)));
     const d = DEFAULT_ADMIN();
     return s ? { ...d, ...s, services: s.services || d.services, employees: s.employees || d.employees } : d;
   } catch { return DEFAULT_ADMIN(); }
 };
+
+// Limpieza única: si el cache viejo traía la contraseña, se reescribe sin ella.
+try {
+  const raw = JSON.parse(localStorage.getItem(ADMIN_KEY));
+  if (raw && "password" in raw) localStorage.setItem(ADMIN_KEY, JSON.stringify(withoutPassword(raw)));
+} catch {}
 
 const useAdmin = () => {
   const [a, setA] = React.useState(loadAdminCache);
@@ -148,7 +162,7 @@ const useAdmin = () => {
   const setAdmin = React.useCallback(async (fn) => {
     // Use in-memory ref (fresh state) instead of stale localStorage
     const current = stateRef.current ?? loadAdminCache();
-    const next = typeof fn === "function" ? fn(current) : fn;
+    const next = withoutPassword(typeof fn === "function" ? fn(current) : fn);
     setAWithRef(next);
     localStorage.setItem(ADMIN_KEY, JSON.stringify(next));
     try {
@@ -886,8 +900,8 @@ const LoginView = ({onAdminSuccess, onEmpSuccess}) => {
       const res  = await fetch("/api/admin?action=auth", { method:"POST",
         headers:{"Content-Type":"application/json"}, body:JSON.stringify({password:pw}) });
       const data = await res.json();
-      if (data.ok) { doLogin(pw); onAdminSuccess(); }
-      else { setErr("Contraseña incorrecta. Intenta de nuevo."); setLoading(false); }
+      if (data.ok && data.token) { doLogin(data.token); onAdminSuccess(); }
+      else { setErr(data.error || "Contraseña incorrecta. Intenta de nuevo."); setLoading(false); }
     } catch { setErr("Error de conexión."); setLoading(false); }
   };
 
@@ -4948,21 +4962,21 @@ const SettingsView = ({ onNav }) => {
       setPwMsg({type:"error", text:"Las contraseñas no coinciden."});
       return;
     }
-    // Verify current password via API
+    // El servidor comprueba la actual, guarda la nueva como hash (fuera de
+    // admin_store) y devuelve un token nuevo: las otras sesiones se cierran.
     try {
-      const res  = await fetch("/api/admin?action=auth", {
+      const res  = await fetch("/api/admin?action=password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pwForm.current }),
+        headers: adminHeaders(),
+        body: JSON.stringify({ current: pwForm.current, next: pwForm.newPw }),
       });
-      const data = await res.json();
-      if (!data.ok) { setPwMsg({type:"error", text:"Contraseña actual incorrecta."}); return; }
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401) { setPwMsg({type:"error", text:"La sesión venció. Vuelve a entrar."}); return; }
+      if (!data.ok || !data.token) { setPwMsg({type:"error", text:data.error || "No se pudo cambiar la contraseña."}); return; }
+      doLogin(data.token);
     } catch {
-      setPwMsg({type:"error", text:"Error de conexión al verificar contraseña."}); return;
+      setPwMsg({type:"error", text:"Error de conexión al cambiar la contraseña."}); return;
     }
-    // Save new password and update session token so future API calls still work
-    await setAdmin(a => ({ ...a, password: pwForm.newPw }));
-    doLogin(pwForm.newPw);
     setPwForm({current:"", newPw:"", confirm:""});
     setPwMsg({type:"success", text:"Contraseña actualizada. Sesión renovada."});
     setTimeout(() => setPwMsg(null), 4000);
