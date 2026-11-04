@@ -21,6 +21,7 @@ const HANDLERS = {
   push: () => import("../lib/handlers/push.js"),
   reminders: () => import("../lib/handlers/reminders.js"),
   "work-hours": () => import("../lib/handlers/work-hours.js"),
+  waitlist: () => import("../lib/handlers/waitlist.js"),
 };
 
 export default async function handler(req, res) {

@@ -4,6 +4,7 @@ import {
   makeReviewEligibility, apptDoneMs,
 } from "../lib/db.js";
 import { notifyStaff } from "../lib/notify.js";
+import { waitingFor } from "../lib/waitlist.js";
 
 const COT_OFFSET = "-05:00"; // Colombia = UTC-5 fijo (sin horario de verano)
 
@@ -181,6 +182,12 @@ export default async function handler(req, res) {
 
       const cancelledIds = [...new Set([...(adminData.cancelledIds || []), id])];
       await kvSet("admin_store", { ...adminData, cancelledIds });
+      // Si alguien está en lista de espera para ese día, el aviso lo dice:
+      // el hueco recién liberado tiene a quién ofrecérsele (Panel > Lista de
+      // espera). Un fallo aquí no puede frenar la cancelación.
+      const esperando = appt.date
+        ? await waitingFor(appt.date, appt.stylist).catch(() => [])
+        : [];
       // Una cancelación libera un hueco de agenda y el equipo tiene que verlo
       // hoy, no cuando abra el panel: por eso va con prioridad alta. Se espera
       // el envío porque la función se congela al responder.
@@ -195,6 +202,9 @@ export default async function handler(req, res) {
           appt.service || null,
           appt.stylist ? `con ${appt.stylist}` : null,
           [appt.date, appt.time].filter(Boolean).join(" ") || null,
+          esperando.length
+            ? `${esperando.length} en lista de espera para ese día`
+            : null,
         ].filter(Boolean).join(" · "),
       });
       return res.status(200).json({ ok: true });

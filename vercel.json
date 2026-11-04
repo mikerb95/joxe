@@ -29,6 +29,10 @@
       "destination": "/api/ops?_ep=work-hours"
     },
     {
+      "source": "/api/waitlist",
+      "destination": "/api/ops?_ep=waitlist"
+    },
+    {
       "source": "/admin/payment",
       "destination": "/Payment.html"
     },
