@@ -1,4 +1,16 @@
-import { initTables, kvGet, kvSet, signEmpToken } from "../lib/db.js";
+import {
+  initTables, kvGet, kvGetWithMeta, kvCas, signEmpToken, safeEqual,
+  clientIp, failureGate, recordFailure,
+} from "../lib/db.js";
+
+// Límite de PINs fallidos. Un PIN de 4 dígitos son 10.000 combinaciones y los
+// ids de empleado son públicos (/api/catalog): sin esto se adivina en minutos.
+// Por IP, y por empleado para frenar a quien reparta los intentos entre IPs.
+// Solo cuentan los fallos: quien escribe bien su PIN nunca se topa con esto.
+const pinLimits = (req, empId) => [
+  { key: `pin:${clientIp(req)}`, max: 10, windowMs: 15 * 60 * 1000 },
+  { key: `pin-emp:${String(empId).slice(0, 40)}`, max: 20, windowMs: 15 * 60 * 1000 },
+];
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -19,11 +31,19 @@ export default async function handler(req, res) {
 
     if (!empId || !pin) return res.status(400).json({ error: "empId y pin requeridos" });
 
+    const limits = pinLimits(req, empId);
+    const gate = await failureGate(limits);
+    if (!gate.ok) {
+      res.setHeader("Retry-After", String(gate.retryAfter));
+      return res.status(429).json({ error: "Demasiados intentos. Espera unos minutos e intenta de nuevo." });
+    }
+
     const admin = await kvGet("admin_store");
     const employees = admin?.employees || [];
     const emp = employees.find(e => e.id === empId && e.active !== false);
 
-    if (!emp || emp.pin !== String(pin)) {
+    if (!emp || !safeEqual(String(emp.pin ?? ""), String(pin))) {
+      await recordFailure(limits);
       return res.status(401).json({ error: "PIN incorrecto" });
     }
 
@@ -31,26 +51,34 @@ export default async function handler(req, res) {
       return res.status(200).json({
         ok: true,
         employee: { id: emp.id, name: emp.name, role: emp.role },
-        token: signEmpToken(emp.id),
+        token: signEmpToken(emp),
       });
     }
 
     if (action === "confirm") {
       if (!apptId) return res.status(400).json({ error: "apptId requerido" });
-      const store = await kvGet("turno_store");
-      if (!store) return res.status(404).json({ error: "Store no encontrado" });
+      // Compare-and-swap con reintentos: antes se escribía el store entero con
+      // kvSet, y una reserva que entrara justo en ese momento se perdía.
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const rec = await kvGetWithMeta("turno_store");
+        const store = rec?.value;
+        if (!store) return res.status(404).json({ error: "Store no encontrado" });
 
-      const appt = (store.appointments || []).find(a => a.id === apptId);
-      if (!appt) return res.status(404).json({ error: "Cita no encontrada" });
-      if (appt.stylist !== emp.name) return res.status(403).json({ error: "Esta cita no te pertenece" });
+        const appt = (store.appointments || []).find(a => a.id === apptId);
+        if (!appt) return res.status(404).json({ error: "Cita no encontrada" });
+        if (appt.stylist !== emp.name) return res.status(403).json({ error: "Esta cita no te pertenece" });
 
-      store.appointments = store.appointments.map(a =>
-        a.id === apptId
-          ? { ...a, status: "scheduled", confirmedAt: Date.now(), confirmedBy: emp.name }
-          : a
-      );
-      await kvSet("turno_store", store);
-      return res.status(200).json({ ok: true });
+        const next = {
+          ...store,
+          appointments: store.appointments.map(a =>
+            a.id === apptId
+              ? { ...a, status: "scheduled", confirmedAt: Date.now(), confirmedBy: emp.name }
+              : a
+          ),
+        };
+        if (await kvCas("turno_store", next, rec.updatedAt)) return res.status(200).json({ ok: true });
+      }
+      return res.status(409).json({ error: "Alta concurrencia, reintenta" });
     }
 
     if (action === "summary") {
@@ -101,6 +129,6 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Acción desconocida" });
   } catch (err) {
     console.error("[agenda]", err.message);
-    return res.status(500).json({ error: err.message });
+    return res.status(err.status || 500).json({ error: err.status ? err.message : "Internal error" });
   }
 }
