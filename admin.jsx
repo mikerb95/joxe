@@ -9025,6 +9025,176 @@ const AcademyView = () => {
 };
 
 // ==================== ROOT ====================
+// ==================== LISTA DE ESPERA ====================
+// Clientes que no encontraron turno en /booking y dejaron su WhatsApp. Cuando
+// se libera un hueco, el equipo les escribe desde aquí. El aviso de
+// cancelación de un cliente ya dice cuántos esperan ese día.
+const WL_META = {
+  waiting:   {label:"Esperando",  color:C.blue},
+  contacted: {label:"Contactado", color:C.gold},
+  booked:    {label:"Agendado",   color:C.green},
+  discarded: {label:"Descartado", color:C.muted},
+};
+
+const wlDay = (d) => {
+  try {
+    return new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
+  } catch { return d; }
+};
+
+const WaitlistView = () => {
+  const [entries,setEntries] = React.useState([]);
+  const [today,setToday]     = React.useState(todayStr());
+  const [loading,setLoading] = React.useState(true);
+  const [err,setErr]         = React.useState("");
+  const [filter,setFilter]   = React.useState("open");
+  const dlg = useConfirm ? null : null; // (sin diálogo propio: borrar pide confirmación nativa abajo)
+
+  const load = React.useCallback(async () => {
+    try {
+      const res = await fetch("/api/waitlist?action=all", { headers: adminHeaders() });
+      if (res.status === 401) { doLogout(); return; }
+      if (!res.ok) throw new Error("No se pudo cargar la lista de espera");
+      const data = await res.json();
+      setEntries(data.entries||[]);
+      if (data.today) setToday(data.today);
+      setErr("");
+    } catch (e) { setErr(e.message); }
+    finally { setLoading(false); }
+  }, []);
+  usePolling(load, 60000);
+
+  const op = async (id, o) => {
+    setErr("");
+    try {
+      const res = await fetch("/api/waitlist?action=op", {
+        method:"POST", headers: adminHeaders(), body: JSON.stringify({id, op:o}),
+      });
+      const data = await res.json().catch(()=>({}));
+      if (!res.ok) throw new Error(data.error||"No se pudo guardar");
+      await load();
+    } catch (e) { setErr(e.message); }
+  };
+
+  const upcoming = entries.filter(e => e.date >= today);
+  const waiting = upcoming.filter(e => e.status==="waiting");
+  const soon = waiting.filter(e => e.date <= addDaysStr(today,1));
+  const shown = entries
+    .filter(e =>
+      filter==="open" ? (e.date>=today && (e.status==="waiting"||e.status==="contacted")) :
+      filter==="past" ? e.date<today :
+      filter==="all"  ? true : e.status===filter)
+    .sort((a,b) => a.date.localeCompare(b.date) || a.createdAt-b.createdAt);
+
+  const byDay = [];
+  for (const e of shown) {
+    const last = byDay[byDay.length-1];
+    if (last && last.date===e.date) last.items.push(e);
+    else byDay.push({date:e.date, items:[e]});
+  }
+
+  const waLink = (e) => {
+    const first = String(e.name||"").trim().split(/\s+/)[0]||"";
+    const when = e.date===today ? "hoy" : e.date===addDaysStr(today,1) ? "mañana" : `el ${wlDay(e.date)}`;
+    const msg = `Hola ${first}, te escribimos de JOXE. Se liberó un turno ${when}`
+      + `${e.service ? ` para ${e.service}` : ""}. ¿Te sirve? Respóndenos y te lo apartamos.`;
+    return `https://wa.me/${waNumber(e.phone)}?text=${encodeURIComponent(msg)}`;
+  };
+
+  return (
+    <div style={{animation:"fadeIn 0.3s ease"}}>
+      <PageHeader title="Lista de espera"
+        subtitle="Clientes que no encontraron turno. Cuando se libere uno, escríbeles." />
+
+      <div style={{padding:"24px 32px",display:"grid",
+        gridTemplateColumns:"repeat(auto-fit,minmax(180px,1fr))",gap:14}}>
+        <StatCard label="Esperando" small color={waiting.length?C.blue:C.muted}
+          value={String(waiting.length).padStart(2,"0")}
+          sub={waiting.length?"Sin contactar":"Nadie en espera"} />
+        <StatCard label="Hoy y mañana" small color={soon.length?C.gold:C.muted}
+          value={String(soon.length).padStart(2,"0")}
+          sub="Los más urgentes" />
+        <StatCard label="Agendados" small color={C.green}
+          value={String(entries.filter(e=>e.status==="booked").length).padStart(2,"0")}
+          sub="Turnos recuperados" />
+      </div>
+
+      <div style={{display:"flex",gap:6,padding:"0 32px 16px",flexWrap:"wrap"}}>
+        {[["open","Abiertos"],["waiting","Esperando"],["contacted","Contactados"],
+          ["booked","Agendados"],["discarded","Descartados"],["past","Días pasados"],["all","Todos"]].map(([id,label])=>(
+          <button key={id} onClick={()=>setFilter(id)} style={{
+            background:filter===id?"rgba(194,158,102,0.12)":"transparent",
+            border:`1px solid ${filter===id?C.gold:C.bdr}`,
+            color:filter===id?C.gold:C.muted,padding:"7px 14px",cursor:"pointer",
+            fontFamily:"'JetBrains Mono',monospace",fontSize:10,letterSpacing:"0.1em",
+            textTransform:"uppercase",
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {err && (
+        <div style={{margin:"0 32px 16px",padding:"10px 14px",fontSize:13,
+          border:`1px solid ${C.red}55`,background:"rgba(196,102,102,0.08)",color:C.red}}>{err}</div>
+      )}
+
+      <div style={{padding:"0 32px 40px",display:"flex",flexDirection:"column",gap:22}}>
+        {loading && <Card><div style={{color:C.muted,fontSize:13}}>Cargando…</div></Card>}
+        {!loading && byDay.length===0 && (
+          <Card><div style={{color:C.muted,fontSize:13}}>No hay nadie en este filtro.</div></Card>
+        )}
+        {byDay.map(g=>(
+          <div key={g.date}>
+            <Mono style={{color:g.date===today?C.gold:C.muted,fontSize:10,display:"block",marginBottom:10}}>
+              {g.date===today?"Hoy · ":g.date===addDaysStr(today,1)?"Mañana · ":""}{wlDay(g.date)} · {g.items.length}
+            </Mono>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {g.items.map(e=>{
+                const meta = WL_META[e.status]||WL_META.waiting;
+                return (
+                  <div key={e.id} style={{border:`1px solid ${C.bdr}`,background:C.s1,padding:"16px 20px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",gap:16,flexWrap:"wrap"}}>
+                      <div style={{minWidth:220}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{width:7,height:7,borderRadius:999,background:meta.color}} />
+                          <span style={{fontSize:16,fontFamily:"'Marcellus',serif"}}>{e.name}</span>
+                          <Mono style={{color:meta.color,fontSize:9}}>{meta.label}</Mono>
+                        </div>
+                        <div style={{fontSize:13,color:C.muted,marginTop:8,display:"flex",gap:14,flexWrap:"wrap"}}>
+                          <span>{fmtPhone(e.phone)}</span>
+                          <span>{e.stylist}</span>
+                          {e.service && <span>{e.service}</span>}
+                          <span>Anotado {new Date(e.createdAt).toLocaleDateString("es-CO",{day:"2-digit",month:"short"})}</span>
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"flex-start",flexWrap:"wrap"}}>
+                        <a href={waLink(e)} target="_blank" rel="noopener noreferrer"
+                          onClick={()=>{ if (e.status==="waiting") op(e.id,"contacted"); }}
+                          style={{textDecoration:"none"}}>
+                          <Btn small>WhatsApp</Btn>
+                        </a>
+                        {e.status!=="booked" && (
+                          <Btn variant="ghost" small onClick={()=>op(e.id,"booked")}>Agendado</Btn>
+                        )}
+                        {e.status!=="discarded" && (
+                          <Btn variant="ghost" small onClick={()=>op(e.id,"discarded")}>Descartar</Btn>
+                        )}
+                        {e.status!=="waiting" && (
+                          <Btn variant="ghost" small onClick={()=>op(e.id,"waiting")}>Volver a esperar</Btn>
+                        )}
+                        <Btn variant="danger" small onClick={()=>op(e.id,"delete")}>Eliminar</Btn>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const AdminPortal = () => {
   const [authed,setAuthed]     = React.useState(isAuthed);
   const [empSes,setEmpSes]     = React.useState(getEmpSession);
