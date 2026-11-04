@@ -513,7 +513,29 @@ const pseudoQR = (text) => {
   return grid;
 };
 
-// Real QR code using the qrcode library (loaded via CDN in Admin.html)
+// QR como SVG en data URL, armado en el navegador con qrcode-generator (el
+// mismo de Booking, CheckIn y Aviso; se carga en Admin.html y Staff.html).
+// Antes se usaba el paquete "qrcode" 1.5.3 desde jsDelivr, pero esa versión
+// ya no trae build/qrcode.min.js: la URL daba 404 y el QR nunca aparecía.
+// El SVG se ve nítido en pantalla y al imprimir, sin importar el tamaño.
+const qrSvgDataUrl = (text, { dark = "#0C0C0C", light = "#F5F1EA", margin = 2 } = {}) => {
+  const lib = window.qrcode;
+  if (!lib) return null;
+  // Corrección "Q" (25 %): aguanta rayones y reflejos del papel pegado en la silla.
+  const qr = lib(0, "Q");
+  qr.addData(text);
+  qr.make();
+  const n = qr.getModuleCount();
+  let d = "";
+  for (let r = 0; r < n; r++)
+    for (let c = 0; c < n; c++)
+      if (qr.isDark(r, c)) d += `M${c + margin} ${r + margin}h1v1h-1z`;
+  const box = n + margin * 2;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}" shape-rendering="crispEdges">`
+    + `<rect width="100%" height="100%" fill="${light}"/><path d="${d}" fill="${dark}"/></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
 // value = full URL to encode; empName = label shown al imprimir
 const ChairQRCode = ({ empId, empName, chairNum, size = 200 }) => {
   const url = chairNum
@@ -531,21 +553,19 @@ const ChairQRCode = ({ empId, empName, chairNum, size = 200 }) => {
   };
 
   React.useEffect(() => {
-    let cancelled = false;
+    // La librería suele estar lista antes que React; si no, se reintenta un
+    // rato y se deja de intentar (antes el intervalo podía quedar vivo para
+    // siempre si el script no cargaba).
     const generate = () => {
-      const lib = window.QRCode;
-      if (!lib) return false;
-      lib.toDataURL(url, { width: size, margin: 2, color: { dark: "#0C0C0C", light: "#F5F1EA" } })
-        .then(d => { if (!cancelled) setDataUrl(d); })
-        .catch(() => {});
-      return true;
+      const d = qrSvgDataUrl(url);
+      if (d) setDataUrl(d);
+      return !!d;
     };
-    if (!generate()) {
-      const i = setInterval(() => { if (generate()) clearInterval(i); }, 200);
-      return () => { cancelled = true; clearInterval(i); };
-    }
-    return () => { cancelled = true; };
-  }, [url, size]);
+    if (generate()) return;
+    let tries = 0;
+    const i = setInterval(() => { if (generate() || ++tries > 50) clearInterval(i); }, 200);
+    return () => clearInterval(i);
+  }, [url]);
 
   const printQR = () => {
     if (!dataUrl) return;
