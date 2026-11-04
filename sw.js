@@ -3,8 +3,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title ?? "Nuevo turno", {
       body: data.body ?? "",
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      icon: "/assets/marca/icon-192.png",
+      badge: "/assets/marca/icon-192.png",
       tag: "new-booking",
       renotify: true,
     })

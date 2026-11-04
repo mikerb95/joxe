@@ -41,7 +41,10 @@
       const servicios = (cat.services || []).map((s) => ({
         "@type": "Offer",
         itemOffered: { "@type": "Service", name: s.name },
-        ...(s.price > 0 ? { price: s.price, priceCurrency: "COP" } : {}),
+        // "desde" es un precio mínimo, no el precio: se declara como tal.
+        ...(s.price > 0 && s.note === "desde"
+          ? { priceSpecification: { "@type": "PriceSpecification", minPrice: s.price, priceCurrency: "COP" } }
+          : s.price > 0 ? { price: s.price, priceCurrency: "COP" } : {}),
       }));
       if (servicios.length) {
         ld.hasOfferCatalog = {

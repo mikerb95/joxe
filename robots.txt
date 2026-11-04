@@ -1,0 +1,7 @@
+# Las páginas internas (panel, staff, sala, escáner, Mi Cuenta) llevan
+# <meta name="robots" content="noindex">. No se bloquean aquí porque Google
+# tiene que poder entrar para leer ese noindex.
+User-agent: *
+Disallow: /api/
+
+Sitemap: https://joxe.app/sitemap.xml
