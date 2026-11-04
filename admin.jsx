@@ -703,6 +703,7 @@ const VIEWS = [
   {id:"dashboard",   label:"Dashboard",       icon:"◈", tooltip:"Resumen general del negocio"},
   {id:"agenda",      label:"Agenda",           icon:"▦", tooltip:"Vista semanal de citas por estilista"},
   {id:"appointments",label:"Citas",            icon:"≡", tooltip:"Listado y gestión de todas las citas"},
+  {id:"waitlist",    label:"Lista de espera",  icon:"◔", tooltip:"Clientes esperando que se libere un turno"},
   {id:"clients",     label:"CRM · Clientes",   icon:"◯", tooltip:"Perfiles, historial y fidelización de clientes"},
   {id:"reviews",     label:"Reseñas",          icon:"★", tooltip:"Modera las opiniones que aparecen en la web"},
   {id:"blockslots",  label:"Bloquear horas",   icon:"⊘", tooltip:"Bloquear horarios para evitar reservas"},
@@ -9036,6 +9037,12 @@ const WL_META = {
   discarded: {label:"Descartado", color:C.muted},
 };
 
+const addDaysStr = (d, n) => {
+  const dt = new Date(d+"T12:00");
+  dt.setDate(dt.getDate()+n);
+  return ymd(dt);
+};
+
 const wlDay = (d) => {
   try {
     return new Date(d+"T12:00").toLocaleDateString("es-CO",{weekday:"long",day:"numeric",month:"long"});
@@ -9244,6 +9251,7 @@ const AdminPortal = () => {
     dashboard:           DashboardView,
     agenda:              AgendaView,
     appointments:        AppointmentsView,
+    waitlist:            WaitlistView,
     clients:             CrmView,
     reviews:             ReviewsView,
     blockslots:          BlockSlotsView,
