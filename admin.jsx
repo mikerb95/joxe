@@ -58,6 +58,11 @@ const staffHeaders = () => ({
 // seguían golpeando la base de datos cada pocos segundos sin que nadie mirara,
 // que fue lo que agotó la cuota de lecturas de Turso. Al volver al primer plano
 // se hace un pull inmediato, así que la vista sigue estando al día.
+// Cada cuánto se refresca solo: 5 minutos, para no gastar CPU de Vercel con
+// pestañas abiertas todo el día. Al volver a la pestaña se refresca en el acto,
+// y lo que guarda uno mismo se ve al instante.
+const POLL_MS = 5 * 60 * 1000;
+
 const usePolling = (fn, ms) => {
   React.useEffect(() => {
     if (!ms) return;
@@ -157,7 +162,7 @@ const useAdmin = () => {
   }, [setAWithRef]);
 
   // Configuración del salón: cambia muy rara vez, no necesita sondeo rápido.
-  usePolling(pull, 60000);
+  usePolling(pull, POLL_MS);
 
   const setAdmin = React.useCallback(async (fn) => {
     // Use in-memory ref (fresh state) instead of stale localStorage
@@ -205,7 +210,7 @@ const useCrm = () => {
   }, []);
 
   // Fichas de clientes: sólo cambian cuando alguien las edita desde el panel.
-  usePolling(pull, 60000);
+  usePolling(pull, POLL_MS);
 
   const setCrmData = React.useCallback(async (fn) => {
     const current = loadCrmCache();
@@ -257,7 +262,7 @@ const useAppts = () => {
   // Turnos: es el dato vivo, pero el BroadcastChannel de abajo ya propaga al
   // instante los cambios hechos en este mismo dispositivo. El sondeo sólo cubre
   // cambios hechos desde otro equipo, y para eso 30 s alcanza.
-  usePolling(pull, 30000);
+  usePolling(pull, POLL_MS);
 
   React.useEffect(() => {
     let bc;
@@ -9109,7 +9114,7 @@ const WaitlistView = () => {
     } catch (e) { setErr(e.message); }
     finally { setLoading(false); }
   }, []);
-  usePolling(load, 60000);
+  usePolling(load, POLL_MS);
 
   const op = async (id, o) => {
     setErr("");

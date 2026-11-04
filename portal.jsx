@@ -36,6 +36,11 @@ const broadcastUpdate = () => {
 // leyendo la base de datos cada pocos segundos aunque nadie las estuviera
 // mirando, que fue lo que agotó la cuota de lecturas de Turso. Al volver al
 // primer plano se hace una lectura inmediata, así que no se ve nada desfasado.
+// Cada cuánto se refresca solo: 5 minutos, para no gastar CPU de Vercel con
+// pestañas abiertas todo el día. Al volver a la pestaña se refresca en el acto,
+// y lo que guarda uno mismo se ve al instante.
+const POLL_MS = 5 * 60 * 1000;
+
 const usePolling = (fn, ms) => {
   React.useEffect(() => {
     if (!ms) return;
@@ -74,7 +79,7 @@ const useStore = () => {
 
   // Los cambios hechos en este mismo dispositivo llegan al instante por
   // BroadcastChannel; el sondeo sólo cubre cambios hechos desde otro equipo.
-  usePolling(pull, 30000);
+  usePolling(pull, POLL_MS);
 
   React.useEffect(() => {
     let bc;
@@ -2294,7 +2299,7 @@ const CuentaPortal = () => {
     if (!cedula) return;
     fetchData(cedula, true);
   }, [cedula, fetchData]);
-  usePolling(pollAccount, 60000);
+  usePolling(pollAccount, POLL_MS);
 
   const login = async () => {
     const clean = input.replace(/\D/g, "");
@@ -4188,7 +4193,7 @@ const AgendaPortal = () => {
     if (view !== "resumen" || !session || !pin) return;
     fetchSummary();
   }, [view, session, pin, fetchSummary]);
-  usePolling(pollSummary, 60000);
+  usePolling(pollSummary, POLL_MS);
 
   const fmtDate = (d) => {
     if (!d) return "—";
