@@ -9048,7 +9048,6 @@ const WaitlistView = () => {
   const [loading,setLoading] = React.useState(true);
   const [err,setErr]         = React.useState("");
   const [filter,setFilter]   = React.useState("open");
-  const dlg = useConfirm ? null : null; // (sin diálogo propio: borrar pide confirmación nativa abajo)
 
   const load = React.useCallback(async () => {
     try {
