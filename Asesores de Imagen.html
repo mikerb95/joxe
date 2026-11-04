@@ -284,6 +284,41 @@
     .philo-stats { grid-template-columns: 1fr !important; }
   }
 </style>
+
+<!-- Ficha del salón para Google (schema.org). Aquí va lo fijo; seo.js le suma
+     el horario, el rango de precios y los servicios desde /api/catalog, así
+     que esos datos se actualizan solos cuando cambian en el panel. Sin calle:
+     solo barrio y coordenadas del mapa. Sin aggregateRating: Google no
+     muestra estrellas de reseñas propias de un negocio local. -->
+<script type="application/ld+json" id="ld-salon">
+{
+  "@context": "https://schema.org",
+  "@type": "HairSalon",
+  "@id": "https://joxe.app/#salon",
+  "name": "JOXE Asesores de Imagen",
+  "url": "https://joxe.app/",
+  "image": [
+    "https://joxe.app/assets/marca/compartir.jpg",
+    "https://joxe.app/assets/joxe/joxe-trabajando-1200.webp"
+  ],
+  "logo": "https://joxe.app/assets/marca/icon-512.png",
+  "telephone": "+573124499862",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Soacha",
+    "addressRegion": "Cundinamarca",
+    "addressCountry": "CO"
+  },
+  "areaServed": { "@type": "Place", "name": "San Mateo, Soacha" },
+  "geo": { "@type": "GeoCoordinates", "latitude": 4.5808563, "longitude": -74.2037333 },
+  "hasMap": "https://www.google.com/maps/place/Joxe+Asesores+De+Imagen/@4.5808563,-74.2037333,17.61z/",
+  "currenciesAccepted": "COP",
+  "potentialAction": {
+    "@type": "ReserveAction",
+    "target": { "@type": "EntryPoint", "urlTemplate": "https://joxe.app/booking" }
+  }
+}
+</script>
 </head>
 <body>
 <div id="root"></div>
@@ -304,5 +339,7 @@
 <script type="text/babel" src="app.jsx"></script>
 <script src="temas/catalogo.js" defer></script>
 <script src="temas/cargador.js" defer></script>
+<script src="horario.js" defer></script>
+<script src="seo.js" defer></script>
 </body>
 </html>
