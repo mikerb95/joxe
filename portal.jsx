@@ -608,6 +608,158 @@ const loadBookingAdmin = () => {
   try { return JSON.parse(localStorage.getItem(ADMIN_KEY_BOOKING)) || {}; } catch { return {}; }
 };
 
+// ---- Lista de espera ----
+// Para quien no encuentra turno el día que quiere: deja nombre y WhatsApp, y
+// si alguien cancela, el equipo le escribe (Panel > Lista de espera). No se
+// promete un aviso automático porque no lo hay: lo hace una persona.
+const WL_FIELD = {
+  width: "100%", padding: "14px 16px",
+  border: "1px solid rgba(12,12,12,0.2)", background: "#FFF",
+  fontFamily: "'Outfit', sans-serif", fontSize: 15, color: "#0C0C0C",
+};
+
+const WaitlistBox = ({ dates, fullDates, defaultDate, service, stylist, initialName, initialPhone }) => {
+  const [open, setOpen] = React.useState(false);
+  const [date, setDate] = React.useState(defaultDate || dates[0] || "");
+  const [name, setName] = React.useState(initialName || "");
+  const [phone, setPhone] = React.useState(initialPhone || "");
+  const [sending, setSending] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [done, setDone] = React.useState(null);
+
+  // Si el cliente cambia de día en la grilla, el formulario lo sigue.
+  React.useEffect(() => { if (defaultDate && !done) setDate(defaultDate); }, [defaultDate]);
+
+  const full = new Set(fullDates);
+  const nameOk = nameLetters(name.trim()) >= 3;
+  const phoneErr = phone ? phoneError(phone) : "";
+  const ready = !!date && nameOk && normPhone(phone).startsWith("+") && !phoneErr;
+
+  const send = async () => {
+    if (!ready || sending) return;
+    setSending(true); setError("");
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), phone: normPhone(phone), date, service, stylist }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "No se pudo guardar. Intenta de nuevo.");
+      setDone({ first: name.trim().split(/\s+/)[0], date });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const wrap = {
+    marginTop: 28, padding: "22px 24px",
+    background: "rgba(194,158,102,0.08)", border: "1px solid rgba(194,158,102,0.35)",
+    fontFamily: "'Outfit', sans-serif",
+  };
+  const dot = <span aria-hidden="true" style={{
+    width: 8, height: 8, borderRadius: 999, background: "#C29E66", flex: "none", marginTop: 7,
+  }} />;
+
+  if (done) return (
+    <div style={wrap} role="status">
+      <div style={{ display: "flex", gap: 12 }}>
+        {dot}
+        <div>
+          <div style={{ fontFamily: "'Marcellus', serif", fontSize: 20 }}>Listo, {done.first}.</div>
+          <p style={{ margin: "6px 0 0", fontSize: 14, color: "rgba(12,12,12,0.65)", lineHeight: 1.55 }}>
+            Quedaste en la lista de espera para el {fmtDateSub(done.date)}. Si se libera un turno,
+            te escribimos al WhatsApp.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={wrap}>
+      <div style={{ display: "flex", gap: 12, justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, flex: "1 1 260px" }}>
+          {dot}
+          <div>
+            <div style={{ fontFamily: "'Marcellus', serif", fontSize: 20 }}>
+              {fullDates.length ? "¿El día que querías está lleno?" : "¿No ves un horario que te sirva?"}
+            </div>
+            <p style={{ margin: "6px 0 0", fontSize: 14, color: "rgba(12,12,12,0.65)", lineHeight: 1.55 }}>
+              Anótate en la lista de espera. Si alguien cancela, te escribimos por WhatsApp.
+            </p>
+          </div>
+        </div>
+        {!open && (
+          <button onClick={() => setOpen(true)} style={{
+            background: "#0C0C0C", color: "#F5F1EA", border: "none", padding: "12px 20px",
+            cursor: "pointer", fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+            fontFamily: "'Outfit', sans-serif",
+          }}>Anotarme</button>
+        )}
+      </div>
+
+      {open && (
+        <div style={{ display: "grid", gap: 16, marginTop: 20, maxWidth: 520 }}>
+          <div>
+            <label htmlFor="wl-date">
+              <PMono style={{ display: "block", marginBottom: 8, fontSize: 10 }}>Día</PMono>
+            </label>
+            <select id="wl-date" value={date} onChange={e => setDate(e.target.value)} style={WL_FIELD}>
+              {dates.map(d => (
+                <option key={d} value={d}>
+                  {fmtDateLabel(d) === fmtDateSub(d) ? fmtDateSub(d) : `${fmtDateLabel(d)} · ${fmtDateSub(d)}`}
+                  {full.has(d) ? " · lleno" : ""}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="wl-name">
+              <PMono style={{ display: "block", marginBottom: 8, fontSize: 10 }}>Nombre</PMono>
+            </label>
+            <input id="wl-name" autoComplete="name" value={name}
+              onChange={e => setName(cleanName(e.target.value))}
+              placeholder="María Pérez" style={WL_FIELD} />
+          </div>
+          <div>
+            <label htmlFor="wl-phone">
+              <PMono style={{ display: "block", marginBottom: 8, fontSize: 10 }}>WhatsApp</PMono>
+            </label>
+            <PhoneField id="wl-phone" theme="light" value={phone} onChange={setPhone}
+              invalid={!!phoneErr} describedBy={phoneErr ? "wl-phone-err" : undefined}
+              fieldStyle={{ ...WL_FIELD, borderColor: phoneErr ? "#C46666" : "rgba(12,12,12,0.2)" }} />
+            {phoneErr && (
+              <div id="wl-phone-err" role="alert" style={{ marginTop: 6, fontSize: 12, color: "#C46666" }}>{phoneErr}</div>
+            )}
+          </div>
+          <p style={{ margin: 0, fontSize: 12, color: "rgba(12,12,12,0.55)", lineHeight: 1.55 }}>
+            Usamos tu nombre y tu WhatsApp solo para avisarte de un turno libre ese día.
+            Una semana después de la fecha se borran de la lista.
+          </p>
+          {error && (
+            <div role="alert" style={{
+              padding: "10px 14px", background: "rgba(180,30,30,0.08)",
+              border: "1px solid rgba(180,30,30,0.35)", color: "#8A1A1A", fontSize: 13,
+            }}>{error}</div>
+          )}
+          <div>
+            <button onClick={send} disabled={!ready || sending} style={{
+              background: ready && !sending ? "#0C0C0C" : "rgba(12,12,12,0.2)",
+              color: "#F5F1EA", border: "none", padding: "14px 26px",
+              cursor: ready && !sending ? "pointer" : "not-allowed",
+              fontSize: 11, letterSpacing: "0.18em", textTransform: "uppercase",
+              fontFamily: "'Outfit', sans-serif",
+            }}>{sending ? "Guardando…" : "Avísenme si se libera"}</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BookingPortal = () => {
   const [store, setStore] = useStore();
   const catalog = useCatalog();
@@ -743,6 +895,23 @@ const BookingPortal = () => {
     if (blockedForEmp(emp ? emp.id : null)) return true;
     return conflictsFor(stylistName);
   };
+
+  // Días llenos: el salón trabaja ese día (alguien atiende al menos un turno
+  // que aún no pasó) y aun así todos esos turnos están tomados. Un día en que
+  // nadie trabaja no está "lleno", está cerrado: ahí no se ofrece la lista.
+  const fullDates = React.useMemo(() => {
+    if (step !== 3) return [];
+    const emp = employees.find(e => e.name === form.stylist);
+    const someoneWorks = (date, t) => form.stylist === "Sin preferencia"
+      ? eligibleEmployees.some(e => empWorksOnSlot(e, date, t, selectedDur))
+      : (!emp || empWorksOnSlot(emp, date, t, selectedDur));
+    return availableDates.filter(date => {
+      const working = slotsForDate(date).filter(t =>
+        !isTimePast(date, t) && timeToMin(t) + selectedDur <= closesAtMin(date) && someoneWorks(date, t)
+      );
+      return working.length > 0 && working.every(t => isSlotTaken(date, t, form.stylist));
+    });
+  }, [step, store, form.stylist, selectedDur, availableDates, employees, eligibleEmployees]);
 
   const submit = async () => {
     if (submitting) return;
@@ -1116,6 +1285,15 @@ const BookingPortal = () => {
               </div>
             )}
 
+            <WaitlistBox
+              dates={availableDates}
+              fullDates={fullDates}
+              defaultDate={form.date && fullDates.includes(form.date) ? form.date : (fullDates[0] || form.date)}
+              service={form.service}
+              stylist={form.stylist}
+              initialName={form.name}
+              initialPhone={form.phone}
+            />
           </>
         )}
 
