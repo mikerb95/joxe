@@ -537,10 +537,17 @@ const qrSvgDataUrl = (text, { dark = "#0C0C0C", light = "#F5F1EA", margin = 2 } 
 };
 
 // value = full URL to encode; empName = label shown al imprimir
+// El QR se imprime y se pega en la silla: siempre apunta al dominio público,
+// aunque el panel se haya abierto desde joxe.vercel.app o un preview. Solo en
+// local usa el origen actual, para poder probarlo.
+const QR_ORIGIN = /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)
+  ? window.location.origin
+  : "https://joxe.app";
+
 const ChairQRCode = ({ empId, empName, chairNum, size = 200 }) => {
   const url = chairNum
-    ? `${window.location.origin}/CheckIn.html#puesto-${chairNum}`
-    : `${window.location.origin}/CheckIn.html#chair-${empId}`;
+    ? `${QR_ORIGIN}/CheckIn.html#puesto-${chairNum}`
+    : `${QR_ORIGIN}/CheckIn.html#chair-${empId}`;
   const [dataUrl, setDataUrl] = React.useState(null);
   const [showUrl, setShowUrl] = React.useState(false);
   const [copied, setCopied] = React.useState(false);
