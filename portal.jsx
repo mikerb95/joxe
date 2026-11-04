@@ -2018,6 +2018,13 @@ const LobbyPortal = () => {
 
   const inChair = store.active.find(a => a.status === "in-service");
   const queue = store.active.filter(a => a.status === "waiting");
+  // "completed" es el historial completo: aquí solo cuentan los de hoy (COT).
+  const completedToday = (store.completed || []).filter(a => {
+    if (!a.completedAt) return a.date === todayStr();
+    const d = nowCOT(); // referencia de "hoy" en Colombia
+    const c = new Date(new Date(a.completedAt).toLocaleString("en-US", { timeZone: "America/Bogota" }));
+    return c.toDateString() === d.toDateString();
+  });
 
   const callNext = () => {
     const next = queue[0];
@@ -2040,11 +2047,13 @@ const LobbyPortal = () => {
   const reset = async () => {
     const ok = await dlg.confirm({
       title: "¿Limpiar la sala?",
-      body: "Esto borra todos los turnos activos y completados de hoy. Las citas agendadas no se ven afectadas.",
+      body: "Esto vacía la cola de la sala. Las citas agendadas y el historial de servicios completados no se tocan.",
       confirmLabel: "Limpiar",
       danger: true,
     });
-    if (ok) setStore(s => ({ ...s, active: [], completed: [] }));
+    // Antes también vaciaba "completed", que no es de hoy sino TODO el
+    // historial (precio cobrado, notas, reseñas). Ahora solo se limpia la cola.
+    if (ok) setStore(s => ({ ...s, active: [] }));
   };
 
   const timeStr = now.toLocaleTimeString("es-CO", { hour: "numeric", minute: "2-digit", hour12: true });
@@ -2202,13 +2211,13 @@ const LobbyPortal = () => {
               ))}
             </div>
 
-            {store.completed.length > 0 && (
+            {completedToday.length > 0 && (
               <div style={{ marginTop: 40 }}>
                 <PMono style={{ color: "rgba(245,241,234,0.4)", fontSize: 9 }}>
-                  Completados hoy · {store.completed.length}
+                  Completados hoy · {completedToday.length}
                 </PMono>
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
-                  {store.completed.slice(-3).reverse().map(a => (
+                  {completedToday.slice(-3).reverse().map(a => (
                     <div key={a.id} style={{
                       display: "flex", justifyContent: "space-between",
                       fontFamily: "'JetBrains Mono', monospace", fontSize: 11,

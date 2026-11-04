@@ -44,7 +44,8 @@ export default async function handler(req, res) {
 
     if (req.method === "POST") {
       // All writes require staff auth (admin or employee token). No anonymous path.
-      if (!(await verifyStaffAuth(req))) return res.status(401).json({ error: "Unauthorized" });
+      const auth = await verifyStaffAuth(req);
+      if (!auth) return res.status(401).json({ error: "Unauthorized" });
 
       const body = req.body;
       if (!body || typeof body !== "object") return res.status(400).json({ error: "Invalid body" });
@@ -62,16 +63,41 @@ export default async function handler(req, res) {
         blockRanges: body.blockRanges ?? [],
       };
 
+      // La versión es obligatoria. Antes, un POST sin _v se saltaba el control
+      // y reemplazaba la agenda entera: con un token de empleado bastaba
+      // mandar listas vacías para borrarla. El panel y el portal siempre la
+      // mandan.
+      const clientV = Number(body._v);
+      if (body._v === undefined || body._v === null || !Number.isFinite(clientV)) {
+        return res.status(400).json({ error: "Missing _v" });
+      }
+
       const rec = await kvGetWithMeta("turno_store");
       const curV = rec ? rec.updatedAt : 0;
-      const clientV = Number(body._v);
-      const guarded = Number.isFinite(clientV);
 
-      // Optimistic concurrency: if the client sent the version it based its edit
-      // on and the store has moved since (e.g. a client booking landed via
-      // /api/book), reject instead of clobbering. The client reconciles with the
-      // fresh store and retries — no silent loss of appointments.
-      if (guarded && clientV !== curV) {
+      // Un empleado mueve citas (estado, cola, completar) pero nunca las borra:
+      // eliminar es solo del admin. Si una escritura de empleado hace
+      // desaparecer citas o historial, se rechaza entera.
+      if (auth.role === "employee" && rec?.value) {
+        const ids = (arr) => new Set((Array.isArray(arr) ? arr : []).map(a => a?.id));
+        const before = rec.value;
+        const keptAll = (field) => {
+          const now = ids(payload[field]);
+          for (const id of ids(before[field])) if (!now.has(id)) return false;
+          return true;
+        };
+        // "active" (la cola de la sala) sí puede vaciarse: al completar, la cita
+        // pasa a "completed", y limpiar la sala es parte del día a día.
+        if (!keptAll("appointments") || !keptAll("completed")) {
+          return res.status(403).json({ error: "Un empleado no puede eliminar citas" });
+        }
+      }
+
+      // Optimistic concurrency: if the store has moved since the version the
+      // client based its edit on (e.g. a client booking landed via /api/book),
+      // reject instead of clobbering. The client reconciles with the fresh store
+      // and retries, so no appointment is silently lost.
+      if (clientV !== curV) {
         const fresh = { ...DEFAULT(), ...(rec?.value || {}) };
         return res.status(409).json({ error: "stale", store: fresh, _v: curV });
       }
