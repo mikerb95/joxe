@@ -21,6 +21,16 @@ Sistema web para gestión de salón/barbería con varios portales en React + Bab
 - **SEO local**: el home lleva una ficha `HairSalon` en JSON-LD (`#ld-salon`) con lo fijo (nombre, teléfono, barrio, coordenadas, mapa) y `seo.js` le suma horario, rango de precios y servicios desde `/api/catalog`, así que se actualiza sola. No lleva calle ni redes sociales mientras no estén confirmadas, ni `aggregateRating` (Google no muestra estrellas de reseñas propias de un negocio local). Las páginas públicas tienen canonical, Open Graph con `assets/marca/compartir.jpg` y favicon; las internas llevan `noindex`. `robots.txt` y `sitemap.xml` están en la raíz.
 - **Temas de temporada**: decoraciones animadas para el home (por ahora Halloween) que se manejan desde Admin → Configuración → Temas de temporada. Cada tema tiene tres modos: *automático* (se enciende solo cada año en su temporada, contada en hora de Colombia; Halloween va del 1 al 31 de octubre), *encendido* y *apagado*. Se muestra uno a la vez y el encendido a mano gana sobre los automáticos. Para ver un tema sin tocar la configuración: `/?tema=halloween`.
 
+## Acceso y seguridad
+
+- **Admin**: la contraseña vive como hash scrypt en la clave `admin_auth`, nunca en `admin_store` (el servidor descarta cualquier `password` que mande el panel). El login (`POST /api/admin?action=auth`) devuelve un token de sesión firmado de 24 h, que es lo que viaja en cada request; la contraseña solo se manda al entrar. Cambiarla (`?action=password`, pide la actual) cierra las demás sesiones. Si `admin_auth` no existe, vale la credencial vieja (`admin_store.password` y luego `ADMIN_PASSWORD`) y al primer login se copia como hash, sin cambiarla.
+- **Empleados**: token de 12 h que entrega el login con PIN. Su firma incluye una huella del PIN y cada request comprueba que el empleado siga activo: cambiar el PIN o desactivarlo corta la sesión. Un token de empleado no puede eliminar citas ni historial en `/api/store`.
+- **Límite de intentos fallidos**: admin, 10 por IP cada 15 min y 100 en total por hora; PIN, 10 por IP y 20 por empleado cada 15 min. Solo cuentan los fallos.
+- **`/api/store`** exige la versión `_v` en cada escritura.
+- **`/api/reminders`** exige `CRON_SECRET`; si no está configurado, no corre.
+- **Previews**: sin `PREVIEW_TURSO_DATABASE_URL`/`PREVIEW_TURSO_AUTH_TOKEN` leen producción pero toda escritura se rechaza.
+- Restaurar un backup en modo completo también restaura la contraseña que tuviera ese archivo.
+
 ## Nombres de personas
 
 Los nombres solo admiten letras (con tildes y ñ), espacios, apóstrofo y guion.
@@ -82,7 +92,7 @@ animaciones se detienen fuera de pantalla. Solo el home carga estos archivos:
 - `CheckIn.html`, `Lobby.html`, `Scan.html` — operación en salón.
 - `Staff.html` — acceso del equipo.
 - `Payment.html`, `Cuenta.html`, `Showcase.html`, `Agenda.html` — vistas auxiliares.
-  Mi Cuenta (`Cuenta.html`) no usa contraseña: el cliente entra con su cédula más los últimos 4 dígitos del celular con el que reservó.
+  Mi Cuenta (`Cuenta.html`) no usa contraseña: el cliente entra con su cédula.
 - `Resena.html` / `resena.jsx` — reseña del cliente: identificación por cédula o entrada directa con link firmado.
 - `Academia.html` / `academia.jsx` — página pública de las clases.
 - `movimiento/`: croquis del hero, motor de animación y su lógica con pruebas (ver "Movimiento del home").
