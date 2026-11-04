@@ -145,7 +145,17 @@
 <script src="/horario.js"></script>
 <script>
 (() => {
-  const destino = new URLSearchParams(location.search).get("url") || "https://joxe.app/cita";
+  // ?url= permite imprimir el aviso con otro destino, pero llegaba sin filtrar
+  // a innerHTML (aria-label) y un enlace armado ejecutaba código en joxe.app.
+  // Ahora solo se acepta una URL http(s) válida, y se escapa al pintarla.
+  const POR_DEFECTO = "https://joxe.app/cita";
+  const pedido = new URLSearchParams(location.search).get("url");
+  let destino = POR_DEFECTO;
+  try {
+    const u = pedido ? new URL(pedido) : null;
+    if (u && (u.protocol === "https:" || u.protocol === "http:")) destino = u.href;
+  } catch {}
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   document.getElementById("url").textContent = destino.replace(/^https?:\/\//, "");
 
   // Corrección de errores "Q" (25 %): aguanta mejor el sol, la lluvia y los rayones.
@@ -158,7 +168,7 @@
     for (let c = 0; c < n; c++)
       if (qr.isDark(r, c)) d += `M${c + q} ${r + q}h1v1h-1z`;
   document.getElementById("qr").innerHTML =
-    `<svg viewBox="0 0 ${n + 2 * q} ${n + 2 * q}" shape-rendering="crispEdges" role="img" aria-label="Código QR hacia ${destino}">` +
+    `<svg viewBox="0 0 ${n + 2 * q} ${n + 2 * q}" shape-rendering="crispEdges" role="img" aria-label="Código QR hacia ${esc(destino)}">` +
     `<rect width="100%" height="100%" fill="#fff"/><path d="${d}" fill="#0C0C0C"/></svg>`;
 
   // El horario sale del catálogo, así que el aviso queda al día cada vez que se imprime.
