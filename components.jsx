@@ -691,14 +691,18 @@ const reviewAgo = (ms) => {
 };
 
 // La reseña que va en grande: la de mejor nota y, entre esas, la de texto más
-// completo (hasta cierto largo, para no premiar un testamento). Empate: la
-// más reciente, porque la lista ya viene ordenada así.
+// completo hasta FEATURED_IDEAL caracteres; las más largas pierden puntos
+// para que la cita no se coma la sección. Empate: la más reciente, porque la
+// lista ya viene ordenada así.
+const FEATURED_IDEAL = 220;
+
 const pickFeatured = (reviews) => {
   let best = null, bestScore = -1;
   for (const r of reviews) {
     const len = (r.text || "").trim().length;
     if (len < 12) continue;
-    const score = r.rating * 1000 + Math.min(len, 280);
+    const fit = len <= FEATURED_IDEAL ? len : FEATURED_IDEAL - (len - FEATURED_IDEAL);
+    const score = r.rating * 1000 + Math.max(fit, 0);
     if (score > bestScore) { best = r; bestScore = score; }
   }
   return best;
@@ -749,12 +753,10 @@ const ReviewCard = ({ r }) => {
   const long = (r.text || "").length > LONG_TEXT;
   return (
     <article className="rv-card">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-        <ReviewAuthor r={r} />
-        <StarRow value={r.rating} size={13} />
-      </div>
+      <ReviewAuthor r={r} />
       {r.text && (
         <div>
+          <div style={{ marginBottom: 10 }}><StarRow value={r.rating} size={13} /></div>
           <p className={long && !open ? "rv-clamp" : ""} style={{
             fontFamily: "var(--display)", fontSize: 18, lineHeight: 1.55,
             margin: 0, letterSpacing: "-0.01em",
@@ -768,6 +770,7 @@ const ReviewCard = ({ r }) => {
           )}
         </div>
       )}
+      {!r.text && <StarRow value={r.rating} size={13} />}
       {r.reply?.text && <ReviewReply text={r.reply.text} />}
     </article>
   );
@@ -788,7 +791,8 @@ const FeaturedReview = ({ r }) => (
       <div data-mv="estrellas"><StarRow value={r.rating} size={16} /></div>
       <blockquote style={{
         margin: "28px 0 0", fontFamily: "var(--display)", fontWeight: 400,
-        fontSize: "clamp(24px, 2.5vw, 36px)", lineHeight: 1.3, letterSpacing: "-0.01em",
+        fontSize: r.text.length > 140 ? "clamp(20px, 1.9vw, 28px)" : "clamp(24px, 2.5vw, 36px)",
+        lineHeight: 1.35, letterSpacing: "-0.01em",
       }}>
         {r.text}
       </blockquote>
