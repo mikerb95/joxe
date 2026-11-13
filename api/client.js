@@ -1,7 +1,7 @@
 import {
   initTables, kvGet, kvGetCached, kvSet,
   applyCors, clientIp, rateLimit, signReviewToken, cleanName, sanitizeStr,
-  makeReviewEligibility, apptDoneMs,
+  makeReviewEligibility, apptDoneMs, apptStartMs,
 } from "../lib/db.js";
 import { notifyStaff } from "../lib/notify.js";
 import { waitingFor } from "../lib/waitlist.js";
@@ -23,6 +23,12 @@ const minHoursBefore = (admin) =>
 
 // Misma ventana que usa Mi Cuenta para ofrecer el botón de reseña.
 const REVIEW_WINDOW_MS = 30 * 24 * 3600 * 1000;
+
+// Una cita agendada que nadie cerró en la agenda pasa al historial cuando ya
+// pasó su hora más este margen (lo que dura un servicio largo). Antes se
+// quedaba como "agendada" para siempre: no salía en próximas (la fecha ya
+// pasó) ni en el historial (no estaba completada), y la visita desaparecía.
+const PAST_GRACE_MS = 3 * 3600 * 1000;
 
 const firstWord = (full) => String(full || "").trim().split(/\s+/)[0] || "";
 
@@ -223,6 +229,7 @@ export default async function handler(req, res) {
     const activeSet    = new Set((store.active    || []).map(a => a.id));
     const completedSet = new Set((store.completed || []).map(a => a.id));
     const cancelledIds = adminData.cancelledIds || [];
+    const noShowIds    = new Set(adminData.noShowIds || []);
 
     // Merge all lists, deduplicate, filter by cedula or phone
     const seen = new Set();
@@ -264,11 +271,15 @@ export default async function handler(req, res) {
 
     const appointments = all.map(a => {
       let computedStatus = "scheduled";
-      if (cancelledIds.includes(a.id))    computedStatus = "cancelled";
+      if (cancelledIds.includes(a.id) || a.status === "cancelled") computedStatus = "cancelled";
+      else if (noShowIds.has(a.id) || a.status === "no-show")      computedStatus = "no-show";
       else if (completedSet.has(a.id))    computedStatus = "completed";
       else if (activeSet.has(a.id)) {
         const live = store.active.find(x => x.id === a.id);
         computedStatus = live?.status || "waiting";
+      } else {
+        const start = apptStartMs(a);
+        if (start && start + PAST_GRACE_MS < Date.now()) computedStatus = "past";
       }
       // Lista blanca: solo lo que la pantalla de Mi Cuenta pinta. Antes se
       // devolvía la cita entera (...a), y con ella el celular, la cédula, el
