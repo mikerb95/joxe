@@ -13,7 +13,7 @@
 // comparten bundler, así que todo queda expuesto en window.JoxeTemas.
 //
 // Para sumar un tema: crear temas/<id>.js y agregar su entrada aquí. Una
-// temporada puede cruzar el año, como la de navidad ("11-15" a "01-06").
+// temporada puede cruzar el año, como la de navidad ("11-12" a "01-06").
 (() => {
   const TEMAS = [
     {
@@ -28,7 +28,7 @@
       id: "navidad",
       nombre: "Navidad",
       descripcion: "Nieve, guirnaldas con esferas, un muñeco de nieve que saluda, regalos y un trineo.",
-      desde: "11-15", // cruza el año: del 15 de noviembre al Día de Reyes
+      desde: "11-12", // cruza el año: del 12 de noviembre al Día de Reyes
       hasta: "01-06",
       archivo: "temas/navidad.js",
     },
