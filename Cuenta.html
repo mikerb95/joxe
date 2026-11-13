@@ -31,6 +31,9 @@
     main { padding: 28px 20px !important; }
     .appt-grid { grid-template-columns: 1fr !important; }
     .hist-grid  { grid-template-columns: 60px 1fr auto !important; }
+    /* El estado baja a su propia fila: debajo del servicio, no en la
+       columna de 60px de la fecha, donde quedaba recortado. */
+    .hist-grid > span:last-child { grid-column: 2 / -1; justify-self: start; margin-top: -8px; }
   }
 </style>
 </head>
