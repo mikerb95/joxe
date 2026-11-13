@@ -84,8 +84,10 @@
   // la derecha es su espejo.
   const guirnalda = () => {
     const enCurva = t => [320 * t, 480 * t * (1 - t)];
-    // Huecos en .34 y .62, donde cuelgan las esferas.
-    const focos = [.06, .15, .24, .43, .52, .71, .8, .89].map((t, i) => {
+    // Huecos en .34 y .62, donde cuelgan las esferas. Sin focos en los
+    // extremos: ahí la curva pasa por la franja del nav, encima del logo y de
+    // los enlaces.
+    const focos = [.15, .24, .43, .52, .71, .8].map((t, i) => {
       const [x, y] = enCurva(t);
       // Ritmos y desfases distintos para que no titilen en coro.
       const ritmo = [2.6, 3.4, 2.9, 3.8][i % 4];
@@ -287,6 +289,7 @@
       left: 0;
       top: 56vh;
       width: calc(70px * var(--nv-escala));
+      --nv-asoma: -34%;
       transform-origin: 0 100%;
       will-change: transform;
       animation: nv-asomo 26s cubic-bezier(.4, 0, .2, 1) 5s infinite both;
@@ -388,7 +391,7 @@
     }
     @keyframes nv-asomo {
       0%        { transform: translate3d(-115%, 0, 0) rotate(0deg); }
-      7%, 25%   { transform: translate3d(-34%, 0, 0) rotate(12deg); }
+      7%, 25%   { transform: translate3d(var(--nv-asoma), 0, 0) rotate(12deg); }
       32%, 100% { transform: translate3d(-115%, 0, 0) rotate(0deg); }
     }
     @keyframes nv-saludo {
@@ -418,9 +421,12 @@
 
     @media (max-width: 640px) {
       .nv-capa {
-        --nv-guirnalda: 46vw;
+        --nv-guirnalda: 36vw;
         --nv-escala: .78;
       }
+      /* En móvil el contenido arranca a 24 px del borde: el muñeco se asoma
+         menos para no taparlo. */
+      .nv-muneco { width: 50px; --nv-asoma: -52%; }
       .nv-solo-escritorio { display: none; }
     }
 
