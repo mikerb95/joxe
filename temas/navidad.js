@@ -111,8 +111,8 @@
 
     return `<svg viewBox="0 0 320 230">
       <path class="nv-cable" d="M0 0Q160 240 320 0"/>
-      ${esfera(.34, 34, 10, "noir")}
-      ${esfera(.62, 58, 8, "bronce")}
+      ${esfera(.34, 14, 10, "noir")}
+      ${esfera(.62, 26, 8, "bronce")}
       ${focos}
     </svg>`;
   };
