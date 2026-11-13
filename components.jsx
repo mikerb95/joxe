@@ -675,53 +675,239 @@ const reviewDate = (ms) => {
   } catch { return ""; }
 };
 
-const ReviewCard = ({ r }) => (
-  <article style={{
-    background: "rgba(20,18,18,0.035)",
-    padding: "28px 26px",
-    display: "flex", flexDirection: "column", gap: 14,
+// "hace 3 días", "hace 2 semanas"... La fecha exacta queda en el title.
+const reviewAgo = (ms) => {
+  if (!ms) return "";
+  const dias = Math.floor((Date.now() - ms) / 86400000);
+  if (dias < 1) return "hoy";
+  if (dias < 2) return "ayer";
+  try {
+    const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+    if (dias < 7) return rtf.format(-dias, "day");
+    if (dias < 30) return rtf.format(-Math.floor(dias / 7), "week");
+    if (dias < 365) return rtf.format(-Math.floor(dias / 30), "month");
+    return rtf.format(-Math.floor(dias / 365), "year");
+  } catch { return reviewDate(ms); }
+};
+
+// La reseña que va en grande: la de mejor nota y, entre esas, la de texto más
+// completo (hasta cierto largo, para no premiar un testamento). Empate: la
+// más reciente, porque la lista ya viene ordenada así.
+const pickFeatured = (reviews) => {
+  let best = null, bestScore = -1;
+  for (const r of reviews) {
+    const len = (r.text || "").trim().length;
+    if (len < 12) continue;
+    const score = r.rating * 1000 + Math.min(len, 280);
+    if (score > bestScore) { best = r; bestScore = score; }
+  }
+  return best;
+};
+
+const LONG_TEXT = 220;
+
+const Monogram = ({ name, dark }) => (
+  <span aria-hidden="true" style={{
+    width: 38, height: 38, borderRadius: "50%", flexShrink: 0,
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    background: dark ? "rgba(194,158,102,0.18)" : "rgba(194,158,102,0.16)",
+    color: dark ? "var(--bronze)" : "#8a6b3c",
+    fontFamily: "var(--display)", fontSize: 17, lineHeight: 1,
   }}>
-    <StarRow value={r.rating} />
-    {r.text && (
-      <p style={{
-        fontFamily: "var(--display)", fontSize: 19, lineHeight: 1.55,
-        margin: 0, letterSpacing: "-0.01em",
+    {(name || "?").trim().charAt(0).toUpperCase()}
+  </span>
+);
+
+const ReviewAuthor = ({ r, dark }) => (
+  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+    <Monogram name={r.name} dark={dark} />
+    <div style={{ minWidth: 0 }}>
+      <div style={{ fontFamily: "var(--sans)", fontSize: 14, letterSpacing: "0.03em" }}>{r.name}</div>
+      <div style={{ fontFamily: "var(--sans)", fontSize: 12, opacity: 0.5, marginTop: 2 }}
+        title={reviewDate(r.createdAt)}>
+        {[r.service, reviewAgo(r.createdAt)].filter(Boolean).join(" · ")}
+      </div>
+    </div>
+  </div>
+);
+
+const ReviewReply = ({ text, dark }) => (
+  <div style={{
+    background: dark ? "rgba(245,241,234,0.06)" : "rgba(194,158,102,0.1)",
+    padding: "14px 16px",
+  }}>
+    <Mono style={{ fontSize: 9, color: dark ? "var(--bronze)" : "#8a6b3c" }}>Respuesta de JOXE</Mono>
+    <p style={{
+      fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.6,
+      margin: "6px 0 0", opacity: 0.75,
+    }}>{text}</p>
+  </div>
+);
+
+const ReviewCard = ({ r }) => {
+  const [open, setOpen] = React.useState(false);
+  const long = (r.text || "").length > LONG_TEXT;
+  return (
+    <article className="rv-card">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <ReviewAuthor r={r} />
+        <StarRow value={r.rating} size={13} />
+      </div>
+      {r.text && (
+        <div>
+          <p className={long && !open ? "rv-clamp" : ""} style={{
+            fontFamily: "var(--display)", fontSize: 18, lineHeight: 1.55,
+            margin: 0, letterSpacing: "-0.01em",
+          }}>
+            {r.text}
+          </p>
+          {long && (
+            <button onClick={() => setOpen(o => !o)} className="rv-mas">
+              {open ? "Leer menos" : "Leer más"}
+            </button>
+          )}
+        </div>
+      )}
+      {r.reply?.text && <ReviewReply text={r.reply.text} />}
+    </article>
+  );
+};
+
+const FeaturedReview = ({ r }) => (
+  <figure className="rv-destacada" data-mv="sube" style={{
+    margin: 0, background: "var(--noir)", color: "var(--ivory)",
+    padding: "clamp(32px, 4.5vw, 64px)", position: "relative", overflow: "hidden",
+    display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 36,
+  }}>
+    <span aria-hidden="true" style={{
+      position: "absolute", top: -40, right: 24,
+      fontFamily: "var(--display)", fontSize: 260, lineHeight: 1,
+      color: "var(--bronze)", opacity: 0.16, pointerEvents: "none",
+    }}>&ldquo;</span>
+    <div style={{ position: "relative" }}>
+      <div data-mv="estrellas"><StarRow value={r.rating} size={16} /></div>
+      <blockquote style={{
+        margin: "28px 0 0", fontFamily: "var(--display)", fontWeight: 400,
+        fontSize: "clamp(24px, 2.5vw, 36px)", lineHeight: 1.3, letterSpacing: "-0.01em",
       }}>
         {r.text}
-      </p>
-    )}
-    {r.reply?.text && (
-      <div style={{
-        marginTop: 2, paddingTop: 14,
-        borderTop: "1px solid rgba(20,18,18,0.1)",
-      }}>
-        <Mono style={{ fontSize: 9, color: "var(--bronze)" }}>Respuesta de JOXE</Mono>
-        <p style={{
-          fontFamily: "var(--sans)", fontSize: 14, lineHeight: 1.6,
-          margin: "8px 0 0", opacity: 0.7,
-        }}>{r.reply.text}</p>
-      </div>
-    )}
-    <div style={{
-      paddingTop: 8,
-      display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap",
-    }}>
-      <span style={{
-        fontFamily: "var(--sans)", fontSize: 14, letterSpacing: "0.04em",
-      }}>{r.name}</span>
-      <span style={{ fontFamily: "var(--sans)", fontSize: 12, opacity: 0.45 }}>
-        {[r.service, reviewDate(r.createdAt)].filter(Boolean).join(" · ")}
-      </span>
+      </blockquote>
     </div>
-  </article>
+    <figcaption style={{ position: "relative", display: "flex", flexDirection: "column", gap: 20 }}>
+      <ReviewAuthor r={r} dark />
+      {r.reply?.text && <ReviewReply text={r.reply.text} dark />}
+    </figcaption>
+  </figure>
 );
+
+// Promedio y cuántas reseñas tiene cada nota. Las barras vienen con su ancho
+// final; el motor (data-mv="barras") las hace crecer al entrar en pantalla.
+const ReviewSummary = ({ data }) => {
+  const counts = [5, 4, 3, 2, 1].map(n => ({
+    n, c: data.reviews.filter(r => r.rating === n).length,
+  }));
+  const max = Math.max(1, ...counts.map(x => x.c));
+  return (
+    <div className="rv-resumen" style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+      <div data-mv="sube" style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{
+          fontFamily: "var(--display)", fontSize: 88, lineHeight: 1,
+          letterSpacing: "-0.03em",
+        }}>
+          <Odometro texto={data.avg.toLocaleString("es-CO", { minimumFractionDigits: 1 })} />
+        </div>
+        <div>
+          <div data-mv="estrellas"><StarRow value={Math.round(data.avg)} size={18} /></div>
+          <div style={{ fontFamily: "var(--sans)", fontSize: 13, opacity: 0.55, marginTop: 8 }}>
+            {data.count} {data.count === 1 ? "reseña verificada" : "reseñas verificadas"}
+          </div>
+        </div>
+      </div>
+      <ul data-mv="barras" aria-label="Reseñas por nota" style={{
+        listStyle: "none", margin: 0, padding: 0,
+        display: "flex", flexDirection: "column", gap: 10, maxWidth: 420,
+      }}>
+        {counts.map(({ n, c }) => (
+          <li key={n} style={{
+            display: "grid", gridTemplateColumns: "28px 1fr 24px", alignItems: "center", gap: 12,
+            fontFamily: "var(--sans)", fontSize: 12,
+          }}>
+            <span style={{ opacity: 0.6 }}>{n} ★</span>
+            <span style={{ height: 4, background: "rgba(20,18,18,0.08)", display: "block" }}>
+              <span className="mv-barra" style={{
+                display: "block", height: "100%", width: `${(c / max) * 100}%`,
+                background: "var(--bronze)",
+              }} />
+            </span>
+            <span style={{ opacity: c ? 0.7 : 0.3, textAlign: "right" }}>{c}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+
+// Entrada a /resena sin link: el cliente se identifica con su cédula.
+// "solo" la pinta como franja ancha cuando no hay más tarjetas al lado.
+const ReviewInvite = ({ solo }) => (
+  <aside className={`rv-card rv-invita${solo ? " rv-invita-solo" : ""}`}>
+    <div>
+      <h3 style={{
+        fontFamily: "var(--display)", fontWeight: 400, fontSize: 26,
+        lineHeight: 1.2, margin: 0, letterSpacing: "-0.01em",
+      }}>
+        ¿Viniste hace poco?<br />
+        <em style={{ color: "#8a6b3c" }}>Cuéntanos cómo te fue.</em>
+      </h3>
+    </div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 20, alignItems: "flex-start" }}>
+      <p style={{
+        fontFamily: "var(--sans)", fontSize: 13, lineHeight: 1.6,
+        margin: 0, opacity: 0.65,
+      }}>
+        Solo puede dejar reseña quien tuvo una cita atendida en el salón.
+        Identifícate con tu cédula y buscamos tu última visita. También te
+        enviamos el enlace por WhatsApp y lo encuentras en tu cuenta.
+      </p>
+      <a href="/resena" style={{
+        background: "var(--bronze)", color: "var(--ivory)",
+        border: "1px solid var(--bronze)", textDecoration: "none",
+        padding: "14px 28px",
+        fontFamily: "var(--sans)", fontSize: 12,
+        letterSpacing: "0.2em", textTransform: "uppercase",
+      }}>
+        Deja tu reseña
+      </a>
+    </div>
+  </aside>
+);
+
+const PAGE = 6;
 
 const Reviews = ({ data, num = "03" }) => {
   const [showAll, setShowAll] = React.useState(false);
+  const [service, setService] = React.useState("");
 
   if (!data || !data.count) return null;
 
-  const visible = showAll ? data.reviews : data.reviews.slice(0, 6);
+  const featured = pickFeatured(data.reviews);
+  const rest = data.reviews.filter(r => r !== featured);
+
+  // Los chips solo valen la pena con varias reseñas y más de un servicio.
+  const services = [...new Set(rest.map(r => r.service).filter(Boolean))];
+  const showChips = rest.length >= 4 && services.length >= 2;
+  const filtered = service ? rest.filter(r => r.service === service) : rest;
+  const visible = showAll ? filtered : filtered.slice(0, PAGE);
+
+  const chip = (value, label) => {
+    const on = service === value;
+    return (
+      <button key={label} onClick={() => { setService(value); setShowAll(false); }}
+        aria-pressed={on} className={`rv-chip${on ? " on" : ""}`}>
+        {label}
+      </button>
+    );
+  };
 
   return (
     <section id="resenas" style={{
@@ -729,80 +915,44 @@ const Reviews = ({ data, num = "03" }) => {
       padding: "120px 64px",
     }} className="section">
       <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-        <div style={{
-          display: "flex", justifyContent: "space-between", alignItems: "flex-end",
-          marginBottom: 64, flexWrap: "wrap", gap: 32,
+        <Rotulo style={{ color: "var(--bronze)" }}>{num} · Reseñas</Rotulo>
+        <h2 data-mv="lineas" style={{
+          fontFamily: "var(--display)", fontWeight: 400,
+          fontSize: "clamp(36px, 4vw, 58px)", lineHeight: 1.05,
+          margin: "24px 0 56px", letterSpacing: "-0.01em",
         }}>
-          <div>
-            <Rotulo style={{ color: "var(--bronze)" }}>{num} · Reseñas</Rotulo>
-            <h2 data-mv="lineas" style={{
-              fontFamily: "var(--display)", fontWeight: 400,
-              fontSize: "clamp(36px, 4vw, 58px)", lineHeight: 1.05,
-              margin: "24px 0 0", letterSpacing: "-0.01em",
-            }}>
-              <L>Lo que dicen</L>
-              <L><em style={{ color: "var(--bronze)" }}>quienes ya vinieron.</em></L>
-            </h2>
-          </div>
-          <div data-mv="sube" style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div style={{
-              fontFamily: "var(--display)", fontSize: 64, lineHeight: 1,
-              letterSpacing: "-0.02em",
-            }}>
-              <Odometro texto={data.avg.toLocaleString("es-CO", { minimumFractionDigits: 1 })} />
-            </div>
-            <div>
-              <div data-mv="estrellas"><StarRow value={Math.round(data.avg)} size={17} /></div>
-              <div style={{
-                fontFamily: "var(--sans)", fontSize: 13, opacity: 0.5, marginTop: 8,
-              }}>
-                {data.count} {data.count === 1 ? "reseña verificada" : "reseñas verificadas"}
-              </div>
-            </div>
-          </div>
+          <L>Lo que dicen</L>
+          <L><em style={{ color: "var(--bronze)" }}>quienes ya vinieron.</em></L>
+        </h2>
+
+        <div className={`rv-top${featured ? "" : " rv-top-solo"}`}>
+          <ReviewSummary data={data} />
+          {featured && <FeaturedReview r={featured} />}
         </div>
 
-        <div className="reviews-grid" data-mv="grupo" style={{
-          display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 24,
-          alignItems: "start",
-        }}>
+        {showChips && (
+          <div className="rv-chips" role="group" aria-label="Filtrar por servicio">
+            {chip("", "Todas")}
+            {services.map(s => chip(s, s))}
+          </div>
+        )}
+
+        <div className={`rv-lista${visible.length ? "" : " rv-lista-solo"}`} data-mv="grupo">
           {visible.map(r => <ReviewCard key={r.id} r={r} />)}
+          <ReviewInvite solo={!visible.length} />
         </div>
 
-        <div style={{
-          marginTop: 40, display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center",
-        }}>
-          {data.reviews.length > 6 && !showAll && (
-            <button onClick={() => setShowAll(true)} style={{
-              background: "transparent",
-              border: "1px solid rgba(20,18,18,0.25)", color: "var(--noir)",
-              padding: "15px 32px", cursor: "pointer",
-              fontFamily: "var(--sans)", fontSize: 12,
-              letterSpacing: "0.2em", textTransform: "uppercase",
-            }}>
-              Ver las {data.reviews.length} reseñas
-            </button>
-          )}
-          {/* Entrada a /resena sin link: el cliente se identifica con su cédula. */}
-          <a href="/resena" style={{
-            background: "var(--bronze)", color: "var(--ivory)",
-            border: "1px solid var(--bronze)", textDecoration: "none",
-            padding: "15px 32px",
+        {filtered.length > PAGE && !showAll && (
+          <button onClick={() => setShowAll(true)} style={{
+            marginTop: 32, background: "transparent",
+            border: "1px solid rgba(20,18,18,0.25)", color: "var(--noir)",
+            padding: "15px 32px", cursor: "pointer",
             fontFamily: "var(--sans)", fontSize: 12,
             letterSpacing: "0.2em", textTransform: "uppercase",
           }}>
-            Deja tu reseña
-          </a>
-        </div>
-
-        <p style={{
-          marginTop: 32, fontFamily: "var(--sans)", fontSize: 12,
-          opacity: 0.45, lineHeight: 1.6, maxWidth: 520,
-        }}>
-          Solo puede dejar reseña quien tuvo una cita atendida en el salón.
-          Identifícate con tu cédula y buscamos tu última visita. También te
-          enviamos el enlace por WhatsApp y lo encuentras en tu cuenta.
-        </p>
+            Ver las {filtered.length} reseñas
+          </button>
+        )}
       </div>
     </section>
   );
