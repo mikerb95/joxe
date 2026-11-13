@@ -12,8 +12,8 @@
 // /api/catalog. Este archivo lo cargan tanto el panel como el sitio, que no
 // comparten bundler, así que todo queda expuesto en window.JoxeTemas.
 //
-// Para sumar un tema (ej. navidad): crear temas/navidad.js y agregar su
-// entrada aquí. Una temporada puede cruzar el año: desde "12-01" hasta "01-06".
+// Para sumar un tema: crear temas/<id>.js y agregar su entrada aquí. Una
+// temporada puede cruzar el año, como la de navidad ("11-15" a "01-06").
 (() => {
   const TEMAS = [
     {
@@ -23,6 +23,14 @@
       desde: "10-01", // MM-DD, ambos días incluidos
       hasta: "10-31",
       archivo: "temas/halloween.js",
+    },
+    {
+      id: "navidad",
+      nombre: "Navidad",
+      descripcion: "Nieve, guirnaldas con esferas, un muñeco de nieve que saluda, regalos y un trineo.",
+      desde: "11-15", // cruza el año: del 15 de noviembre al Día de Reyes
+      hasta: "01-06",
+      archivo: "temas/navidad.js",
     },
   ];
 
