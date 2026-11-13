@@ -2328,6 +2328,10 @@ const CuentaPortal = () => {
     "in-service":{ label: "¡En silla!",    color: "#66C499",              bg: "rgba(102,196,153,0.15)" },
     completed:   { label: "Completada",     color: "rgba(245,241,234,0.4)", bg: "rgba(245,241,234,0.05)"},
     cancelled:   { label: "Cancelada",      color: "#C46666",              bg: "rgba(196,102,102,0.1)"  },
+    // Ya pasó su hora y nadie la cerró en la agenda: se da por realizada,
+    // igual que hace el backend para ofrecer la reseña.
+    past:        { label: "Realizada",      color: "rgba(245,241,234,0.4)", bg: "rgba(245,241,234,0.05)"},
+    "no-show":   { label: "No asististe",   color: "#C46666",              bg: "rgba(196,102,102,0.1)"  },
   };
 
   // ── Self-service: cancelar / reagendar ────────────────────
@@ -2509,14 +2513,18 @@ const CuentaPortal = () => {
   // El backend manda solo el nombre de pila: las citas ya no traen el nombre.
   const clientName = data.firstName || "";
 
+  const HISTORY_STATUSES = ["completed", "past", "no-show", "cancelled"];
   const upcoming = appts
-    .filter(a => !["cancelled","completed"].includes(a.computedStatus)
+    .filter(a => !HISTORY_STATUSES.includes(a.computedStatus)
       && (a.date >= todayStr || a.computedStatus === "waiting" || a.computedStatus === "in-service"))
     .sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.time || "").localeCompare(b.time || ""));
 
   const history = appts
-    .filter(a => ["completed","cancelled"].includes(a.computedStatus))
-    .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    .filter(a => HISTORY_STATUSES.includes(a.computedStatus))
+    .sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.time || "").localeCompare(a.time || ""));
+  // "Visitas" son las que de verdad ocurrieron; las canceladas se listan
+  // igual, pero no se cuentan como visita.
+  const visitCount = history.filter(a => a.computedStatus === "completed" || a.computedStatus === "past").length;
 
   const liveAppt = appts.find(a => a.computedStatus === "waiting" || a.computedStatus === "in-service");
 
@@ -2539,7 +2547,7 @@ const CuentaPortal = () => {
   return (
     <PortalShell tone="noir" header={
       <PortalHeader
-        subtitle="Mi Cuenta · JOXE"
+        subtitle={`Mi Cuenta · CC •••${String(cedula).slice(-4)}`}
         title={clientName ? clientName.split(" ")[0] : "Mi Cuenta"}
         right={
           <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
@@ -2897,7 +2905,8 @@ const CuentaPortal = () => {
             <PMono style={{
               color: "rgba(245,241,234,0.35)", display: "block", marginBottom: 16,
             }}>
-              Historial · {history.length} visita{history.length !== 1 ? "s" : ""}
+              Historial · {visitCount} visita{visitCount !== 1 ? "s" : ""}
+              {history.length > visitCount && ` · ${history.length - visitCount} sin realizar`}
             </PMono>
             <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
               {history.map(a => {
@@ -2917,7 +2926,7 @@ const CuentaPortal = () => {
                     <div>
                       <div style={{ fontSize: 14 }}>{a.service}</div>
                       {a.stylist && (
-                        <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>{a.stylist}</div>
+                        <div style={{ fontSize: 11, opacity: 0.4, marginTop: 2 }}>con {a.stylist}</div>
                       )}
                       {REVIEW_LABEL[a.reviewStatus] && (
                         <PMono style={{
