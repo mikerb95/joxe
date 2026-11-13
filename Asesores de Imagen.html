@@ -244,7 +244,39 @@
 
   @media (prefers-reduced-motion: reduce) {
     .cinta-pista { animation: none; }
-    .ficha-regla-fill, .srv-fila h3, .srv-fila::before, .trab-celda img { transition: none; }
+    .ficha-regla-fill, .srv-fila h3, .srv-fila::before, .trab-celda img, .rv-card, .rv-chip { transition: none; }
+  }
+
+  /* RESEÑAS */
+  .rv-top { display: grid; grid-template-columns: minmax(280px, 5fr) 7fr; gap: 64px; align-items: stretch; }
+  .rv-top-solo { grid-template-columns: 1fr; }
+  .rv-resumen { justify-content: center; }
+  .rv-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 64px; }
+  .rv-chip {
+    background: transparent; color: var(--noir); cursor: pointer;
+    border: 1px solid rgba(20,18,18,0.18); border-radius: 999px;
+    padding: 9px 18px; font-size: 13px; letter-spacing: .02em;
+    transition: background .25s, border-color .25s, color .25s;
+  }
+  .rv-chip:hover { border-color: var(--bronze); }
+  .rv-chip.on { background: var(--noir); border-color: var(--noir); color: var(--ivory); }
+  .rv-lista { columns: 3 300px; column-gap: 24px; margin-top: 40px; }
+  .rv-chips + .rv-lista { margin-top: 28px; }
+  .rv-card {
+    break-inside: avoid; margin-bottom: 24px;
+    background: rgba(20,18,18,0.035); padding: 26px 24px;
+    display: flex; flex-direction: column; gap: 18px;
+    transition: background .3s, box-shadow .3s;
+  }
+  .rv-card:not(.rv-invita):hover { background: #fff; box-shadow: 0 18px 40px -24px rgba(20,18,18,0.25); }
+  .rv-invita { background: rgba(194,158,102,0.14); gap: 22px; }
+  .rv-lista-solo { columns: auto; }
+  .rv-invita-solo { display: grid; grid-template-columns: 5fr 7fr; gap: 64px; align-items: center; padding: 40px; margin-bottom: 0; }
+  .rv-clamp { display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+  .rv-mas {
+    background: none; border: 0; padding: 0; margin-top: 10px; cursor: pointer;
+    color: #8a6b3c; font-size: 12px; letter-spacing: .14em; text-transform: uppercase;
+    text-decoration: underline; text-underline-offset: 4px;
   }
 
   /* RESPONSIVE — mobile-first priority */
@@ -263,7 +295,19 @@
     .services-grid, .philo-grid, .booking-grid, .footer-grid {
       grid-template-columns: 1fr !important; gap: 48px !important;
     }
-    .reviews-grid { grid-template-columns: 1fr !important; gap: 20px !important; }
+    .rv-top { grid-template-columns: 1fr; gap: 40px; }
+    .rv-chips { flex-wrap: nowrap; overflow-x: auto; margin: 48px -24px 0; padding: 0 24px; scrollbar-width: none; }
+    .rv-chips::-webkit-scrollbar { display: none; }
+    .rv-chip { flex-shrink: 0; }
+    .rv-lista {
+      columns: auto; display: flex; gap: 14px; align-items: flex-start;
+      overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none;
+      margin: 32px -24px 0; padding: 0 24px 4px; scroll-padding: 0 24px;
+    }
+    .rv-lista::-webkit-scrollbar { display: none; }
+    .rv-lista > * { flex: 0 0 84%; scroll-snap-align: start; margin-bottom: 0; }
+    .rv-lista-solo > * { flex-basis: 100%; }
+    .rv-invita-solo { grid-template-columns: 1fr; gap: 22px; padding: 28px 24px; }
     .trab-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: none; gap: 8px; }
     .trab-video { grid-row: 1; }
     .trab-v2 { grid-column: 2; }
@@ -278,7 +322,8 @@
     .ac-ficha-cab { grid-template-columns: 1fr !important; gap: 10px !important; }
   }
   @media (max-width: 1100px) and (min-width: 901px) {
-    .reviews-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .rv-top { gap: 40px; }
+    .rv-lista { columns: 2; }
   }
   @media (max-width: 500px) {
     .philo-stats { grid-template-columns: 1fr !important; }

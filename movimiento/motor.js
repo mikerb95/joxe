@@ -8,6 +8,7 @@
 //   traza     línea que se dibuja de izquierda a derecha
 //   odometro  los dígitos ruedan hasta su valor
 //   estrellas las estrellas de la nota aparecen una por una
+//   barras    las barras del desglose de notas crecen desde la izquierda
 //   iman      botón que se deja atraer por el cursor
 //   cinta     la cinta de servicios, cuya velocidad sigue al scroll
 //   mapa      el mapa se abre desde el centro
@@ -94,6 +95,16 @@
       ST.create({
         trigger: el, start: INICIO, once: true,
         onEnter: () => gsap.to(svgs, { scale: 1, duration: 0.6, ease: "back.out(2.2)", stagger: 0.08, delay: 0.3, clearProps: "transform" }),
+      });
+    },
+
+    // El ancho final viene en el style de React; aquí solo se escala.
+    barras(el) {
+      const barras = el.querySelectorAll(".mv-barra");
+      gsap.set(barras, { scaleX: 0, transformOrigin: "left center" });
+      ST.create({
+        trigger: el, start: INICIO, once: true,
+        onEnter: () => gsap.to(barras, { scaleX: 1, duration: 1.1, ease: "expo.out", stagger: 0.07, delay: 0.2, clearProps: "transform" }),
       });
     },
 
@@ -201,7 +212,7 @@
   // que el motor pudo haber tocado.
   const rescatar = err => {
     console.error("[motor]", err);
-    gsap.set(".mv-li, .mv-trazo, .mv-rt, [data-mv=traza], [data-mv=grupo] > *, [data-mv=sube], [data-mv=mapa], [data-mv=estrellas] svg",
+    gsap.set(".mv-li, .mv-trazo, .mv-rt, [data-mv=traza], [data-mv=grupo] > *, [data-mv=sube], [data-mv=mapa], [data-mv=estrellas] svg, .mv-barra",
       { clearProps: "transform,clipPath" });
     document.querySelectorAll(".mv-rt, [data-mv=grupo] > *, [data-mv=sube], [data-mv=mapa]")
       .forEach(e => gsap.set(e, { opacity: opacidad.get(e) ?? 1 }));
