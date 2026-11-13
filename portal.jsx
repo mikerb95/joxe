@@ -2540,7 +2540,10 @@ const CuentaPortal = () => {
     return Number.isNaN(t) ? 0 : t;
   };
   const reviewable = appts
-    .filter(a => a.reviewable && !a.reviewed)
+    // Solo visitas que ya están en el historial: una cita que empezó hace un
+    // rato sigue en "Próximas" (con check-in) y no tiene sentido pedir opinión.
+    .filter(a => a.reviewable && !a.reviewed
+      && (a.computedStatus === "completed" || a.computedStatus === "past"))
     .sort((a, b) => visitMs(b) - visitMs(a))
     .find(a => Date.now() - visitMs(a) <= REVIEW_WINDOW_MS);
 
